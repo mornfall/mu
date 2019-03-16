@@ -1,9 +1,11 @@
-#include "scene.hpp"
-#include "reader.hpp"
-#include "convert.hpp"
+#include "pic/scene.hpp"
+#include "pic/reader.hpp"
+#include "pic/convert.hpp"
 
 #include <fstream>
 #include <codecvt>
+
+using namespace umd;
 
 std::u32string read_file( std::ifstream &in )
 {
@@ -19,17 +21,17 @@ std::u32string read_file( std::ifstream &in )
     return conv.from_bytes( buffer );
 }
 
-ad::group test_scene()
+pic::group test_scene()
 {
-    ad::point origin( 0, 0 ), p1( 50, 20 ), p2( 40, -30 );
-    ad::group g;
+    pic::point origin( 0, 0 ), p1( 50, 20 ), p2( 40, -30 );
+    pic::group g;
 
-    auto &n1 = g.add< ad::node >( origin );
-    auto &n2 = g.add< ad::node >( p1 );
-    auto &box = g.add< ad::box >( p2, 30, 15 );
+    auto &n1 = g.add< pic::node >( origin );
+    auto &n2 = g.add< pic::node >( p1 );
+    auto &box = g.add< pic::box >( p2, 30, 15 );
 
-    g.add< ad::arrow >( n1.out( ad::east ), n2.in( ad::west ) );
-    g.add< ad::arrow >( box.out( ad::north ), n2.in( ad::south ) );
+    g.add< pic::arrow >( n1.out( pic::east ), n2.in( pic::west ) );
+    g.add< pic::arrow >( box.out( pic::north ), n2.in( pic::south ) );
 
     return g;
 }
@@ -44,9 +46,9 @@ int main( int argc, const char **argv )
     {
         std::ifstream f( argv[1] );
         auto buf = read_file( f );
-        auto grid = ad::reader::read_grid( buf );
+        auto grid = pic::reader::read_grid( buf );
 
-        auto scene = ad::convert::scene( grid );
+        auto scene = pic::convert::scene( grid );
         scene.emit( std::cout );
     }
     else

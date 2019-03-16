@@ -4,14 +4,14 @@
 #include <vector>
 #include <iostream>
 
-namespace ad
+namespace umd::pic
 {
     struct element
     {
         virtual void emit( std::ostream &o ) const = 0;
     };
 
-    std::ostream &operator<<( std::ostream &o, const ad::element &obj )
+    std::ostream &operator<<( std::ostream &o, const element &obj )
     {
         obj.emit( o );
         return o;
@@ -104,10 +104,10 @@ namespace ad
         {
             switch ( p )
             {
-                case north: return ad::port( _position + point( 0, _radius + 1 ), 90 );
-                case south: return ad::port( _position - point( 0, _radius + 1 ), -90 );
-                case east:  return ad::port( _position + point( _radius + 1, 0 ), 0 );
-                case west:  return ad::port( _position - point( _radius + 1, 0 ), 180 );
+                case north: return pic::port( _position + point( 0, _radius + 1 ), 90 );
+                case south: return pic::port( _position - point( 0, _radius + 1 ), -90 );
+                case east:  return pic::port( _position + point( _radius + 1, 0 ), 0 );
+                case west:  return pic::port( _position - point( _radius + 1, 0 ), 180 );
             }
         }
 
@@ -127,14 +127,14 @@ namespace ad
         box( point p, int w, int h ) : _position( p ), _w( w ), _h( h ) {}
         box( int x, int y, int w, int h ) : _position( x, y ), _w( w ), _h( h ) {}
 
-        ad::port port( dir_t p ) const override
+        pic::port port( dir_t p ) const override
         {
             switch ( p )
             {
-                case north: return ad::port( _position + point( 0, +_h / 2 + 1.5 ), 90 );
-                case south: return ad::port( _position + point( 0, -_h / 2 - 1.5 ), -90 );
-                case east: return  ad::port( _position + point( +_w / 2 + 1.5, 0 ), 0 );
-                case west: return  ad::port( _position + point( -_w / 2 - 1.5, 0 ), 180 );
+                case north: return pic::port( _position + point( 0, +_h / 2 + 1.5 ), 90 );
+                case south: return pic::port( _position + point( 0, -_h / 2 - 1.5 ), -90 );
+                case east: return  pic::port( _position + point( +_w / 2 + 1.5, 0 ), 0 );
+                case west: return  pic::port( _position + point( -_w / 2 - 1.5, 0 ), 180 );
             }
         }
 

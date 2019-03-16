@@ -1,7 +1,7 @@
 #include "scene.hpp"
 #include "reader.hpp"
 
-namespace ad::convert
+namespace umd::pic::convert
 {
     reader::point diff( dir_t dir )
     {
@@ -14,11 +14,11 @@ namespace ad::convert
         }
     }
 
-    struct object_map : std::map< reader::point, ad::object * >
+    struct object_map : std::map< reader::point, pic::object * >
     {
         // object_ptr at( int x, int y ) const { return at( point( x, y ) ); }
 
-        ad::object *at( reader::point p ) const
+        pic::object *at( reader::point p ) const
         {
             if ( auto i = find( p ) ; i != end() )
                 return i->second;
@@ -30,7 +30,7 @@ namespace ad::convert
     struct state
     {
         object_map objects;
-        ad::group group;
+        pic::group group;
         const reader::grid &grid;
 
         state( const reader::grid &g ) : grid( g ) {}
@@ -45,7 +45,7 @@ namespace ad::convert
             assert( to_obj );
             auto to_port = to_obj->port( at_dir );
 
-            ad::object *from_obj;
+            pic::object *from_obj;
 
             while ( true )
             {
@@ -61,7 +61,7 @@ namespace ad::convert
             }
 
             auto from_port = from_obj->port( opposite( at_dir ) );
-            group.add< ad::arrow >( from_port, to_port );
+            group.add< pic::arrow >( from_port, to_port );
         }
 
         reader::point line( reader::point p, dir_t dir )
@@ -85,7 +85,7 @@ namespace ad::convert
             int w = ne.x() - nw.x();
             int h = sw.y() - nw.y();
             std::cerr << "found box of size " << w << ", " << h << std::endl;
-            auto obj = &group.add< ad::box >( 10 * p.x() + 5 * w, -10 * p.y() + 5 * h, 10 * w, 10 * h );
+            auto obj = &group.add< pic::box >( 6 * p.x() + 3 * w, -10 * p.y() - 5 * h, 6 * w, 10 * h );
 
             std::cerr << std::endl;
             for ( int x = p.x(); x <= p.x() + w; ++x )

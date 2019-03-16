@@ -4,7 +4,7 @@
 #include <map>
 #include <bitset>
 
-namespace ad::reader
+namespace umd::pic::reader
 {
     struct point : std::pair< int, int >
     {

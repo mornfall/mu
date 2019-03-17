@@ -40,7 +40,6 @@ namespace umd::pic::convert
         {
             auto to_dir = grid[ p ].arrow_dir();
             auto at_dir = grid[ p ].attach_dir();
-            std::cerr << "requesting object at " << p + diff( to_dir ) << std::endl;
             auto to_obj = objects.at( p + diff( to_dir ) );
             assert( to_obj );
             auto to_port = to_obj->port( at_dir );
@@ -84,23 +83,18 @@ namespace umd::pic::convert
                  se1 = line( ne, south ),
                  se2 = line( sw, east );
 
-            std::cerr << "checking box at " << p << std::endl;
             if ( se1 != se2 )
                 return; /* not a box */
 
             int w = ne.x() - nw.x();
             int h = sw.y() - nw.y();
-            std::cerr << "found box of size " << w << ", " << h << std::endl;
             auto obj = &group.add< pic::box >( 6 * p.x() + 3 * w, -10 * p.y() - 5 * h, 6 * w, 10 * h );
 
-            std::cerr << std::endl;
             for ( int x = p.x(); x <= p.x() + w; ++x )
                 for ( int y = p.y(); y <= p.y() + h; ++y )
                 {
-                    std::cerr << reader::point( x, y ) << " ";
                     objects[ reader::point( x, y ) ] = obj;
                 }
-            std::cerr << std::endl;
 
             if ( grid[ sw ].attach( south ) )
                 box( sw );
@@ -110,7 +104,6 @@ namespace umd::pic::convert
         void object( int x, int y ) { object( reader::point( x, y ) ); }
         void object( reader::point p )
         {
-            std::cerr << "checking object at " << p << std::endl;
             auto c = grid.at( p );
             if ( objects.at( p ) ) return; /* already taken up by an object */
 

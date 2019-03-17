@@ -108,7 +108,6 @@ namespace umd::pic::reader
 
         void add( uint32_t c )
         {
-            std::cerr << "add " << c << " at [" << _x << ", " << _y << "]" << std::endl;
             if ( c == U'\n' )
             {
                 _indexable.emplace_back();

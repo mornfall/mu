@@ -43,7 +43,7 @@ namespace umd::doc
         virtual void enum_start( int level )
         {
             out.emit( "\\startitemize[packed,",
-                      // level == 0 ? 'n' : level == 1 ? 'a' : 'r',
+                      level == 0 ? 'n' : level == 1 ? 'a' : 'r',
                       "][distance=-4pt]", "\n" );
         }
 
@@ -52,8 +52,8 @@ namespace umd::doc
 
         virtual void bullet_start( int level )
         {
-            out.emit( "\\startitemize[packed,"
-                      // level == 0 ? 1 : level == 1 ? 5 : 4,
+            out.emit( "\\startitemize[packed,",
+                      level == 0 ? 1 : level == 1 ? 5 : 4,
                       "][distance=-4pt]", "\n" );
         }
 

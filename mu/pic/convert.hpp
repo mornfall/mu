@@ -89,12 +89,27 @@ namespace umd::pic::convert
             int w = ne.x() - nw.x();
             int h = sw.y() - nw.y();
             auto obj = &group.add< pic::box >( 6 * p.x() + 3 * w, -10 * p.y() - 5 * h, 6 * w, 10 * h );
+            std::u32string txt;
+            int last_x = p.x(), last_y = 0;
 
-            for ( int x = p.x(); x <= p.x() + w; ++x )
-                for ( int y = p.y(); y <= p.y() + h; ++y )
+            for ( int y = p.y(); y <= p.y() + h; ++y )
+                for ( int x = p.x(); x <= p.x() + w; ++x )
                 {
+                    reader::point p( x, y );
+                    if ( grid[ p ].text() )
+                    {
+                        if ( y != last_y && !txt.empty() )
+                            txt += U"\\break{}";
+                        if ( x != last_x + 1 && !txt.empty() )
+                            txt += ' ';
+                        txt += grid[ p ].character();
+                        last_x = x, last_y = y;
+                    }
                     objects[ reader::point( x, y ) ] = obj;
                 }
+
+            if ( !txt.empty() )
+                group.add< pic::label >( 5 * p.x() + 2.5 * w, -8 * p.y() - 4 * h, txt );
 
             if ( grid[ sw ].attach( south ) )
                 box( sw );

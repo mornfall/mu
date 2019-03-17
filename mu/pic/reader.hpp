@@ -81,6 +81,11 @@ namespace umd::pic::reader
                 case U'╯': set_rounded( true );
                 case U'┘': set_attach( west ); set_attach( north ); break;
 
+                case U'┤': set_attach( west ); set_attach( north ); set_attach( south ); break;
+                case U'├': set_attach( east ); set_attach( north ); set_attach( south ); break;
+                case U'┬': set_attach( east ); set_attach( west );  set_attach( south ); break;
+                case U'┴': set_attach( east ); set_attach( west );  set_attach( north ); break;
+
                 case U'┼': case U'●':
                     set_attach( north ); set_attach( south );
                     set_attach( east ); set_attach( west );

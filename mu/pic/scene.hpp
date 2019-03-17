@@ -113,10 +113,10 @@ namespace umd::pic
         int _radius = 5;
         point _position;
 
-        node( point p ) : _position( p ) {}
-        node( int x, int y ) : _position( x, y ) {}
+        node( point p, int r = 5 ) : _position( p ), _radius( r ) {}
+        node( int x, int y, int r = 5 ) : _position( x, y ), _radius( r ) {}
 
-        ad::port port( dir_t p ) const override
+        pic::port port( dir_t p ) const override
         {
             switch ( p )
             {

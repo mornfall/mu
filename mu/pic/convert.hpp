@@ -125,6 +125,9 @@ namespace umd::pic::convert
             auto c = grid.at( p );
             if ( objects.at( p ) ) return; /* already taken up by an object */
 
+            if ( c.node() )
+                objects[ p ] = &group.add< pic::node >( 6 * p.x(), -10 * p.y(), 2 );
+
             if ( c.attach( south ) && c.attach( east ) )
                 box( p );
         }

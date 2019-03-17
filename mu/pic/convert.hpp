@@ -66,7 +66,13 @@ namespace umd::pic::convert
 
         reader::point line( reader::point p, dir_t dir )
         {
-            for ( ; grid[ p ].attach( dir ); p = p + diff( dir ) );
+            bool first = true;
+            for ( ; grid[ p ].attach( dir ); p = p + diff( dir ) )
+            {
+                if ( !first && ( grid[ p ].attach( cw( dir ) ) || grid[ p ].attach( ccw( dir ) ) ) )
+                    break;
+                first = false;
+            }
             return p;
         }
 
@@ -95,6 +101,10 @@ namespace umd::pic::convert
                     objects[ reader::point( x, y ) ] = obj;
                 }
             std::cerr << std::endl;
+
+            if ( grid[ sw ].attach( south ) )
+                box( sw );
+
         }
 
         void object( int x, int y ) { object( reader::point( x, y ) ); }

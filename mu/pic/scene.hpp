@@ -1,21 +1,22 @@
 #pragma once
 #include "types.hpp"
+#include "writer.hpp"
+
 #include <memory>
 #include <vector>
-#include <iostream>
 #include <codecvt>
 
 namespace umd::pic
 {
     struct element
     {
-        virtual void emit( std::ostream &o ) const = 0;
+        virtual void emit( writer &w ) const = 0;
     };
 
-    std::ostream &operator<<( std::ostream &o, const element &obj )
+    writer &operator<<( writer &w, const element &obj )
     {
-        obj.emit( o );
-        return o;
+        obj.emit( w );
+        return w;
     }
 
     struct point : element
@@ -27,9 +28,9 @@ namespace umd::pic
         point operator-( point o ) const { return point( x - o.x, y - o.y ); }
         point operator+( point o ) const { return point( x + o.x, y + o.y ); }
 
-        void emit( std::ostream &o ) const override
+        void emit( writer &w ) const override
         {
-            o << "(" << x << ", " << y << ")";
+            w << "(" << x << ", " << y << ")";
         }
     };
 
@@ -40,9 +41,9 @@ namespace umd::pic
         dir( int a ) : angle( a ) {}
         dir operator-() const { return dir( angle + 180 ); }
 
-        void emit( std::ostream &o ) const override
+        void emit( writer &w ) const override
         {
-            o << "{dir " << angle << "}";
+            w << "{dir " << angle << "}";
         }
     };
 
@@ -52,13 +53,13 @@ namespace umd::pic
         dir _dir;
 
         port( point pos, dir dir ) : _position( pos ), _dir( dir ) {}
-        void emit( std::ostream & ) const override { assert( 0 ); }
+        void emit( writer & ) const override { assert( 0 ); }
     };
 
     struct port_in : port
     {
         port_in( port p ) : port( p ) {}
-        void emit( std::ostream &o ) const override
+        void emit( writer &o ) const override
         {
             o << -_dir << _position;
         }
@@ -67,7 +68,7 @@ namespace umd::pic
     struct port_out : port
     {
         port_out( port p ) : port( p ) {}
-        void emit( std::ostream &o ) const override
+        void emit( writer &o ) const override
         {
             o << _position << _dir;
         }
@@ -80,7 +81,7 @@ namespace umd::pic
 
         arrow( port_out f, port_in t ) : _from( f ), _to( t ) {}
 
-        void emit( std::ostream &o ) const override
+        void emit( writer &o ) const override
         {
             o << "drawarrow "<< _from << ".." << _to << " withcolor fg;" << std::endl;
         }
@@ -94,10 +95,12 @@ namespace umd::pic
         label( point pos, std::u32string s ) : _position( pos ), _text( s ) {}
         label( int x, int y, std::u32string s ) : _position( x, y ), _text( s ) {}
 
-        void emit( std::ostream &o ) const override
+        void emit( writer &o ) const override
         {
             std::wstring_convert< std::codecvt_utf8< char32_t >, char32_t > conv;
-            o << "label( btex " << conv.to_bytes( _text ) << " etex, " << _position << ");" << std::endl;
+            o << "label( btex \\strut{}";
+            o.emit_tex( _text );
+            o << "\\strut etex, " << _position << ");\n";
         }
     };
 
@@ -127,11 +130,10 @@ namespace umd::pic
             }
         }
 
-        void emit( std::ostream &o ) const override
+        void emit( writer &o ) const override
         {
             o << "fill fullcircle scaled " << 2 * _radius << " shifted " << _position
-              << " withcolor fg;"
-              << std::endl;
+              << " withcolor fg;\n";
         }
     };
 
@@ -157,7 +159,7 @@ namespace umd::pic
             }
         }
 
-        void emit( std::ostream &o ) const override
+        void emit( writer &o ) const override
         {
             point nw = _position + point( -_w/2,  _h/2 ),
                   ne = _position + point(  _w/2,  _h/2 ),
@@ -170,8 +172,7 @@ namespace umd::pic
               << ne - round_x( 1 ) << " .. controls " << ne << " .. " << ne - round_y( 1 ) << " -- "
               << se + round_y( 2 ) << " .. controls " << se << " .. " << se - round_x( 2 ) << " -- "
               << sw + round_x( 3 ) << " .. controls " << sw << " .. " << sw + round_y( 3 ) << " -- "
-              << nw - round_y( 0 ) << " .. controls " << nw << " .. " << " cycle withcolor fg;"
-              << std::endl;
+              << nw - round_y( 0 ) << " .. controls " << nw << " .. " << " cycle withcolor fg;\n";
         }
     };
 
@@ -190,7 +191,7 @@ namespace umd::pic
             return *ptr;
         }
 
-        void emit( std::ostream &o ) const override
+        void emit( writer &o ) const override
         {
             for ( auto obj : _objects )
                 obj->emit( o );

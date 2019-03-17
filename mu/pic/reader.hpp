@@ -22,14 +22,18 @@ namespace umd::pic::reader
 
     struct cell
     {
-        uint32_t _char = U' ';
+        char32_t _char = U' ';
         std::bitset< 4 > _attach;
         std::bitset< 4 > _arrow;
         bool _rounded = false;
 
+        bool text() const { return std::isalnum( _char ); }
+        bool node() const { return _char == U'●'; }
         bool rounded() const { return _rounded; }
         bool attach( dir_t dir ) const { return _attach[ dir ]; }
         bool attach() const { return _attach.any(); }
+
+        char32_t character() const { return _char; }
         dir_t attach_dir() const { return dir( _attach ); }
         dir_t attach_dir( dir_t except ) const
         {

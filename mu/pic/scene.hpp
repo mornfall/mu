@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 #include <iostream>
+#include <codecvt>
 
 namespace umd::pic
 {
@@ -82,6 +83,21 @@ namespace umd::pic
         void emit( std::ostream &o ) const override
         {
             o << "drawarrow "<< _from << ".." << _to << " withcolor fg;" << std::endl;
+        }
+    };
+
+    struct label : element
+    {
+        point _position;
+        std::u32string _text;
+
+        label( point pos, std::u32string s ) : _position( pos ), _text( s ) {}
+        label( int x, int y, std::u32string s ) : _position( x, y ), _text( s ) {}
+
+        void emit( std::ostream &o ) const override
+        {
+            std::wstring_convert< std::codecvt_utf8< char32_t >, char32_t > conv;
+            o << "label( btex " << conv.to_bytes( _text ) << " etex, " << _position << ");" << std::endl;
         }
     };
 

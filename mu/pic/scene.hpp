@@ -139,9 +139,12 @@ namespace umd::pic
     {
         point _position;
         float _w, _h;
+        std::bitset< 4 > _rounded;
 
         box( point p, int w, int h ) : _position( p ), _w( w ), _h( h ) {}
         box( int x, int y, int w, int h ) : _position( x, y ), _w( w ), _h( h ) {}
+
+        void set_rounded( int c, bool r ) { _rounded[ c ] = r; }
 
         pic::port port( dir_t p ) const override
         {
@@ -156,8 +159,19 @@ namespace umd::pic
 
         void emit( std::ostream &o ) const override
         {
-            o << "draw unitsquare xscaled " << _w << " yscaled " << _h << " shifted ("
-              << _position << " + (" << -_w / 2 << ", " << -_h / 2 << ")) withcolor fg;" << std::endl;
+            point nw = _position + point( -_w/2,  _h/2 ),
+                  ne = _position + point(  _w/2,  _h/2 ),
+                  se = _position + point(  _w/2, -_h/2 ),
+                  sw = _position + point( -_w/2, -_h/2 );
+            auto round_x = [&]( int p ) { return point( _rounded[ p ] ? 8 : 0, 0 ); };
+            auto round_y = [&]( int p ) { return point( 0, _rounded[ p ] ? 8 : 0 ); };
+
+            o << "draw " << nw + round_x( 0 ) << " -- "
+              << ne - round_x( 1 ) << " .. controls " << ne << " .. " << ne - round_y( 1 ) << " -- "
+              << se + round_y( 2 ) << " .. controls " << se << " .. " << se - round_x( 2 ) << " -- "
+              << sw + round_x( 3 ) << " .. controls " << sw << " .. " << sw + round_y( 3 ) << " -- "
+              << nw - round_y( 0 ) << " .. controls " << nw << " .. " << " cycle withcolor fg;"
+              << std::endl;
         }
     };
 

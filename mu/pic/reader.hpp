@@ -25,7 +25,9 @@ namespace umd::pic::reader
         uint32_t _char = U' ';
         std::bitset< 4 > _attach;
         std::bitset< 4 > _arrow;
+        bool _rounded = false;
 
+        bool rounded() const { return _rounded; }
         bool attach( dir_t dir ) const { return _attach[ dir ]; }
         bool attach() const { return _attach.any(); }
         dir_t attach_dir() const { return dir( _attach ); }
@@ -52,6 +54,7 @@ namespace umd::pic::reader
         cell &set_attach( dir_t d ) { _attach[ d ] = true; return *this; }
         cell &set_arrow( dir_t d )  { _arrow[ d ] = true; return *this; }
         cell &set_char( uint32_t c ) { _char = c; return *this; }
+        cell &set_rounded( bool b ) { _rounded = b; return *this; }
 
         cell( uint32_t c ) : _char( c )
         {
@@ -65,9 +68,13 @@ namespace umd::pic::reader
                 case U'│': set_attach( north ); set_attach( south ); break;
                 case U'─': set_attach( east ); set_attach( west ); break;
 
+                case U'╭': set_rounded( true );
                 case U'┌': set_attach( east ); set_attach( south ); break;
+                case U'╮': set_rounded( true );
                 case U'┐': set_attach( west ); set_attach( south ); break;
+                case U'╰': set_rounded( true );
                 case U'└': set_attach( east ); set_attach( north ); break;
+                case U'╯': set_rounded( true );
                 case U'┘': set_attach( west ); set_attach( north ); break;
 
                 case U'┼': case U'●':

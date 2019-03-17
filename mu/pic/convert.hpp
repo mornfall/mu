@@ -77,18 +77,21 @@ namespace umd::pic::convert
 
         void box( reader::point p )
         {
-            auto nw = p,
-                 ne = line( p, east ),
-                 sw = line( p, south ),
-                 se1 = line( ne, south ),
-                 se2 = line( sw, east );
+            std::vector< reader::point > c( 4 );
+            auto nw = c[ corner_nw ] = p;
+            auto ne = c[ corner_ne ] = line( p, east );
+            auto sw = c[ corner_sw ] = line( p, south );
+            auto se = c[ corner_se ] = line( ne, south );
 
-            if ( se1 != se2 )
+            if ( line( sw, east ) != se )
                 return; /* not a box */
 
             int w = ne.x() - nw.x();
             int h = sw.y() - nw.y();
-            auto obj = &group.add< pic::box >( 6 * p.x() + 3 * w, -10 * p.y() - 5 * h, 6 * w, 10 * h );
+            auto obj = &group.add< pic::box >( 5 * p.x() + 2.5 * w, -8 * p.y() - 4 * h, 5 * w, 8 * h );
+            for ( int i = 0; i < c.size(); ++i )
+                obj->set_rounded( i, grid[ c[ i ] ].rounded() );
+
             std::u32string txt;
             int last_x = p.x(), last_y = 0;
 

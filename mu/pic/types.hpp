@@ -8,4 +8,14 @@ namespace umd::pic
     {
         return dir_t( ( dir + 2 ) % 4 );
     }
+
+    dir_t cw( dir_t dir )
+    {
+        return dir_t( ( dir + 1 ) % 4 );
+    }
+
+    dir_t ccw( dir_t dir )
+    {
+        return dir_t( ( dir + 3 ) % 4 );
+    }
 }

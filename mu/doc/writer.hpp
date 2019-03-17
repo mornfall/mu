@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
-#include <codecvt>
+#include <codecvt> // codecvt_utf8
+#include <locale>  // wstring_convert
 
 namespace umd::doc
 {

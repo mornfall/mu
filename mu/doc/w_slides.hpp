@@ -90,9 +90,8 @@ namespace umd::doc
             out.emit( "|]", rules ? "\\HL" : "", "\n" );
         }
 
-        virtual void table_cell( std::u32string_view c ) { out.emit( "\\NC ", c ); }
-
-        virtual void table_next_row()
+        virtual void table_new_cell() { out.emit( "\\NC " ); }
+        virtual void table_new_row()
         {
             out.emit( "\\NR", "\n" );
             if ( ++table_rows == 1 && table_rules )

@@ -69,8 +69,8 @@ namespace umd::doc
 
         /* tables */
         virtual void table_start( columns, bool ) = 0;
-        virtual void table_cell( std::u32string_view ) = 0;
-        virtual void table_next_row() = 0;
+        virtual void table_new_cell() = 0;
+        virtual void table_new_row() = 0;
         virtual void table_stop() = 0;
 
         /* blocks */

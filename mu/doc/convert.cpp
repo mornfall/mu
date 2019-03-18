@@ -288,7 +288,7 @@ namespace umd::doc
         {
             for ( int i = 0; i < l.size(); ++i )
                 if ( i && l[ i ] == U'│' )
-                    w.table_cell( txt ), txt.clear();
+                    w.table_new_cell(), emit_text( txt ), txt.clear();
                 else
                     txt += l[ i ];
         };
@@ -317,10 +317,10 @@ namespace umd::doc
 
         w.table_start( cols, rules );
         emit_line( hdr );
-        w.table_next_row();
+        w.table_new_row();
 
         while ( !todo.empty() && nonwhite() == U'│' )
-            emit_line( fetch_line() ), w.table_next_row();
+            emit_line( fetch_line() ), w.table_new_row();
         w.table_stop();
     }
 

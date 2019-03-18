@@ -38,6 +38,8 @@ namespace umd::doc
         virtual void em_stop()  { out.emit( "}" ); }
         virtual void tt_start() { out.emit( "{\\tt{}" ); }
         virtual void tt_stop()  { out.emit( "}" ); }
+        virtual void math_start() { out.emit( "\\math{" ); }
+        virtual void math_stop() { out.emit( "}" ); }
 
         /* lists */
         virtual void enum_start( int level )

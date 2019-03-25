@@ -32,6 +32,23 @@ namespace umd::doc
 
     };
 
+    template< typename SV, typename C, typename S >
+    void process( SV string, C char_cb, S seg_cb )
+    {
+        int start = 0, end;
+        auto flush = [&]( int n = 0 )
+        {
+            seg_cb( string.substr( start, end - start - n ) );
+            start = end + 1 - n;
+        };
+
+        for ( end = 0; end < string.size(); ++end )
+            char_cb( flush, string[ end ] );
+
+        if ( end > start )
+            seg_cb( string.substr( start, end ) );
+    }
+
     template< typename T, typename... Ts >
     void stream::emit( const T &t, const Ts & ... ts )
     {

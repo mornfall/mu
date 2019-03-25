@@ -102,7 +102,7 @@ namespace umd::doc
         {
             out.emit( "\\startitemize[packed,",
                       level == 0 ? 'n' : level == 1 ? 'a' : 'r',
-                      "][distance=-4pt]", "\n" );
+                      "][distance=-2pt]", "\n" );
         }
 
         virtual void enum_item() { out.emit( "\\item " ); }
@@ -162,13 +162,13 @@ namespace umd::doc
         /* blocks */
         virtual void code_start( std::string type )
         {
-            out.emit( "\\starttyping[margin=10pt,option=", type, "]", "\n" );
+            out.emit( "\\starttyping[margin=10pt,option=", type, "]\n" );
         }
 
         virtual void code_line( std::u32string_view l ) { out.emit( l, "\n" ); }
-        virtual void code_stop() { out.emit( "\\stoptyping" ); }
-        virtual void quote_start() { out.emit( "\\startblockquote" ); }
-        virtual void quote_stop() { out.emit( "\\stopblockquote" );  }
+        virtual void code_stop() { out.emit( "\\stoptyping\n" ); }
+        virtual void quote_start() { out.emit( "\\startblockquote\n" ); }
+        virtual void quote_stop() { out.emit( "\\stopblockquote\n" );  }
 
         /* paging */
         virtual void pagebreak() { out.emit( "\\stopmakeup\\startmakeup[slide]", "\n" ); }

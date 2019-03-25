@@ -293,9 +293,9 @@ namespace umd::doc
             }
         };
 
-        auto substr = []( auto l, int from, int to )
+        auto substr = []( auto l, size_t from, size_t to )
         {
-            int f = 0, t = l.npos, idx = 0;
+            size_t f = 0, t = l.npos, idx = 0;
             for ( int i = 0; i < l.size(); ++i )
             {
                 if ( !u_getCombiningClass( l[ i ] ) ) ++idx;

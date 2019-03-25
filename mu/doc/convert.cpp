@@ -155,39 +155,29 @@ namespace umd::doc
 
     void convert::emit_text( std::u32string_view v )
     {
-        int i;
-        using wt = doc::writer;
-        void (wt::*action)() = nullptr;
-
-        for ( i = 0; i < v.size(); ++i )
+        auto char_cb = [&]( auto flush, char32_t c )
         {
-            switch ( v[ i ] )
+            switch ( c )
             {
-                case U'｢': action = &wt::tt_start; break;
-                case U'｣': action = &wt::tt_stop; break;
-                case U'‹': action = &wt::em_start; break;
-                case U'›': action = &wt::em_stop; break;
+                case U'｢': flush(); w.tt_start(); break;
+                case U'｣': flush(); w.tt_stop(); break;
+                case U'‹': flush(); w.em_start(); break;
+                case U'›': flush(); w.em_stop(); break;
                 case U'⟦':
                     if ( !in_math )
-                        action = &wt::math_start;
+                        flush(), w.math_start();
                     ++ in_math;
                     break;
                 case U'⟧':
                     if ( in_math )
-                        action = &wt::math_stop;
+                        flush(), w.math_stop();
                     -- in_math;
                     break;
                 default: ;
             }
+        };
 
-            if ( action )
-            {
-                w.text( v.substr( 0, i ) );
-                (w.*action)();
-                return emit_text( v.substr( i + 1, v.npos ) );
-            }
-        }
-        w.text( v );
+        process( v, char_cb, [&]( auto s ) { w.text( s ); } );
     }
 
     void convert::emit_quote()

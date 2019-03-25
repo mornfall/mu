@@ -4,8 +4,10 @@
 #include "doc/writer.hpp"
 #include "doc/convert.hpp"
 
+#include <set>
 #include <sstream>
 #include <codecvt>
+#include <unicode/uchar.h>
 
 namespace umd::doc
 {
@@ -258,6 +260,83 @@ namespace umd::doc
         todo = todo.substr( i, todo.npos );
     }
 
+    void convert::try_dispmath()
+    {
+        if ( !white_count() )
+            return;
+
+        if ( nonwhite() == U'⟦' ) // may be single-line block
+        {
+            int count = 0, i, white = white_count();
+            for ( i = white; i < todo.size() && todo[ i ] != '\n'; ++i )
+            {
+                if ( todo[ i ] == U'⟦' ) ++count;
+                else if ( todo[ i ] == U'⟧' ) --count;
+                else if ( !count ) return; /* not continuous */
+            }
+            skip_white(); skip( U'⟦' );
+            w.eqn_start();
+            w.eqn_new_cell();
+            w.text( fetch_line().substr( 0, i - white - 2 ) );
+            w.eqn_new_row();
+            w.eqn_stop();
+            return;
+        }
+
+        auto for_index = []( auto l, auto f )
+        {
+            int idx = 0;
+            for ( int i = 0; i < l.size(); ++i )
+            {
+                if ( !u_getCombiningClass( l[ i ] ) ) ++idx;
+                f( idx, l[ i ] );
+            }
+        };
+
+        auto substr = []( auto l, int from, int to )
+        {
+            int f = 0, t = l.npos, idx = 0;
+            for ( int i = 0; i < l.size(); ++i )
+            {
+                if ( !u_getCombiningClass( l[ i ] ) ) ++idx;
+                if ( idx == from ) f = i;
+                if ( idx == to ) t = i;
+            }
+            return l.substr( f, t );
+        };
+
+        if ( white_count() <= 3 && nonwhite() == U'‣' ) // multi-line display math
+        {
+            w.eqn_start();
+            std::vector< std::u32string_view > lines;
+            std::set< int > align;
+            int offset = white_count() + 1;
+            while ( white_count() )
+                lines.push_back( fetch_line() ), lines.back().remove_prefix( offset );
+
+            /* compute alignment on equal signs */
+            for_index( lines.front(),
+                       [&]( int idx, char32_t c ) { if ( c == U'=' ) align.insert( idx ); } );
+            for ( auto l : lines )
+                for_index( l, [&]( int idx, char32_t c ) { if ( c != U'=' ) align.erase( idx ); } );
+
+            for ( auto l : lines )
+            {
+                int last = 0;
+                for ( int i : align )
+                {
+                    w.eqn_new_cell();
+                    w.text( substr( l, last, i ) );
+                    last = i;
+                }
+                w.eqn_new_cell();
+                w.text( substr( l, last, l.npos ) );
+                w.eqn_new_row();
+            }
+            w.eqn_stop();
+        }
+    }
+
     void convert::try_table()
     {
         auto l = todo;
@@ -318,6 +397,7 @@ namespace umd::doc
     void convert::run()
     {
         try_table();
+        try_dispmath();
         try_picture();
 
         if ( todo.empty() ) return;

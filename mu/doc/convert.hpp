@@ -54,6 +54,7 @@ namespace umd::doc
 
         void try_picture();
         void try_table();
+        void try_dispmath();
 
         void run();
     };

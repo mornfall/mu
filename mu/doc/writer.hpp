@@ -71,6 +71,12 @@ namespace umd::doc
         virtual void math_start() = 0;
         virtual void math_stop() = 0;
 
+        /* aligned equations */
+        virtual void eqn_start() = 0;
+        virtual void eqn_new_cell() = 0;
+        virtual void eqn_new_row() = 0;
+        virtual void eqn_stop() = 0;
+
         /* lists */
         virtual void enum_start( int level ) = 0;
         virtual void enum_item() = 0;

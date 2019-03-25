@@ -16,6 +16,8 @@ namespace umd::doc
 
         bool table_rules;
         int table_rows;
+        bool in_math = false;
+        int math_negspace = 0;
 
         std::string heading_cmd( int l )
         {
@@ -38,8 +40,32 @@ namespace umd::doc
         virtual void em_stop()  { out.emit( "}" ); }
         virtual void tt_start() { out.emit( "{\\code{}" ); }
         virtual void tt_stop()  { out.emit( "}" ); }
-        virtual void math_start() { out.emit( "\\math{" ); }
-        virtual void math_stop() { out.emit( "}" ); }
+        virtual void math_start() { out.emit( "\\math{" ); in_math = true; }
+        virtual void math_stop() { out.emit( "}" ); in_math = false; }
+
+        /* display math */
+        virtual void eqn_start()
+        {
+            out.emit( "\\startformula\\startmathalignment\\noalign{\\blank[-1.5ex]}\n" );
+            in_math = true;
+            math_negspace = 2;
+        }
+
+        virtual void eqn_new_cell() { assert( in_math ); out.emit( "\\NC " ); }
+        virtual void eqn_new_row()
+        {
+            assert( in_math );
+            out.emit( "\\NR\\noalign{\\blank[-.8ex]}\n" );
+            if ( math_negspace ) -- math_negspace;
+        }
+
+        virtual void eqn_stop()
+        {
+            if ( math_negspace )
+                out.emit( "\\noalign{\\blank[-1.5ex]}" );
+            out.emit( "\\stopmathalignment\\stopformula\n" );
+            in_math = false;
+        }
 
         /* lists */
         virtual void enum_start( int level )

@@ -29,7 +29,37 @@ namespace umd::doc
             return s.str();
         }
 
-        virtual void text( std::u32string_view t ) { out.emit( t ); }
+        virtual void text( std::u32string_view t )
+        {
+            auto char_cb = [&]( auto flush, char32_t c )
+            {
+                if ( in_math )
+                    switch ( c )
+                    {
+                        case 0x0307: flush( 2 ); out.emit( "\\dot " ); flush(); break;
+                        case U'┆': flush(); out.emit( "\\NC " ); break;
+                        default: ;
+                    }
+                else
+                    switch ( c )
+                    {
+                        case U'&': flush(); out.emit( "\\&" ); break;
+                        case U'%': flush(); out.emit( "\\%" ); break;
+                        case U'$': flush(); out.emit( "\\$" ); break;
+                        case U'#': flush(); out.emit( "\\#" ); break;
+                        case U'_': flush(); out.emit( "\\_" ); break;
+                        case U'{': flush(); out.emit( "\\{" ); break;
+                        case U'}': flush(); out.emit( "\\}" ); break;
+                        case U'~': flush(); out.emit( "\\textasciitilde{}" ); break;
+                        case U'^': flush(); out.emit( "\\textasciicircum{}" ); break;
+                        case U'\\': flush(); out.emit( "\\textbackslash{}" ); break;
+                        default: ;
+                    }
+            };
+
+            process( t, char_cb, [&]( auto s ) { out.emit( s ); } );
+        }
+
         virtual void heading( std::u32string_view t, int level )
         {
             out.emit( heading_cmd( level ), "[title={", t, "}]" );

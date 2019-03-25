@@ -77,6 +77,7 @@ namespace umd::doc
         skip_white();
         while ( skip( U'#' ) )
             ++ level;
+        skip_white();
         w.heading( fetch_line(), level );
     }
 

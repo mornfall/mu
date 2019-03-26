@@ -1,5 +1,6 @@
 .CURDIR ?= .
-CXXFLAGS += -MD -MP -I$(.CURDIR) -std=c++17
+CXXFLAGS += -MD -MP -I$(.CURDIR) -std=c++17 -I/usr/local/include
+LDADD += -L/usr/local/lib -licuuc
 
 SRC_common = doc/convert.cpp
 SRC = $(SRC_common) slides.cpp
@@ -12,7 +13,7 @@ DEP = ${SRC:%.cpp=%.d}
 all: $(BIN)
 
 umd-slides: $(LIB) slides.o
-	$(CXX) -o umd-slides $(LIB) slides.o
+	$(CXX) -o umd-slides $(LIB) slides.o $(LDADD)
 
 clean:
 	rm -f $(OBJ) $(DEP) $(BIN)

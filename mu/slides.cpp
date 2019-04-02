@@ -21,8 +21,6 @@ std::u32string read_file( std::ifstream &in )
 
 int main( int argc, const char **argv )
 {
-    std::cout << "\\input{prelude.tex}\\startmakeup[slide]" << std::endl;
-
     if ( argc != 2 )
         return std::cerr << "need one (file) argument" << std::endl, 1;
 

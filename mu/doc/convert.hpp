@@ -34,8 +34,22 @@ namespace umd::doc
         bool skip( char32_t c );
         void skip_item_lead();
 
-        std::u32string_view fetch_line( std::u32string_view &v );
-        std::u32string_view fetch_line() { return fetch_line( todo ); }
+        template< typename F >
+        std::u32string_view fetch( std::u32string_view &v, F pred )
+        {
+            auto l = v;
+            while ( !v.empty() && !pred( v[ 0 ] ) )
+                v.remove_prefix( 1 );
+            if ( !v.empty() )
+                v.remove_prefix( 1 );
+            return l.substr( 0, l.size() - v.size() - 1 );
+        }
+
+        static bool newline( char32_t c ) { return c == U'\n'; }
+        static bool space( char32_t c )   { return std::isspace( c ); }
+
+        std::u32string_view fetch_line() { return fetch( todo, newline ); }
+        std::u32string_view fetch_word() { return fetch( todo, space ); }
 
         void emit_text( std::u32string_view v );
 

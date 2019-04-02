@@ -63,16 +63,6 @@ namespace umd::doc
         }
     }
 
-    std::u32string_view convert::fetch_line( std::u32string_view &v )
-    {
-        auto l = v;
-        while ( !v.empty() && v[ 0 ] != U'\n' )
-            v.remove_prefix( 1 );
-        if ( !v.empty() )
-            v.remove_prefix( 1 );
-        return l.substr( 0, l.size() - v.size() - 1 );
-    }
-
     void convert::heading()
     {
         int level = 0;
@@ -344,7 +334,7 @@ namespace umd::doc
         skip_white( l );
         if ( l.empty() ) return;
         if ( l[ 0 ] != U'│' ) return; /* does not start with the right character */
-        fetch_line( l );
+        fetch( l, newline );
         if ( wc != white_count( l ) ) return; /* misaligned → not a table */
         skip_white( l );
         if ( l[ 0 ] != U'├' ) return; /* the separator is wrong */

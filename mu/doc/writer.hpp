@@ -59,7 +59,10 @@ namespace umd::doc
     struct writer
     {
         using columns = std::vector< char >;
+        using sv = std::u32string_view;
 
+        virtual void meta( sv k, sv v ) {}
+        virtual void meta_end() {}
         virtual void text( std::u32string_view ) = 0;
         virtual void heading( std::u32string_view txt, int level ) = 0;
 

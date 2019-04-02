@@ -70,6 +70,8 @@ namespace umd::doc
         void try_table();
         void try_dispmath();
 
+        void header();
+        void body();
         void run();
     };
 

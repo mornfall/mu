@@ -29,6 +29,16 @@ namespace umd::doc
             return s.str();
         }
 
+        virtual void meta( sv key, sv value )
+        {
+            out.emit( "\\def\\mm", key, "{", value, "}\n" );
+        }
+
+        virtual void meta_end()
+        {
+            out.emit( "\\input{prelude.tex}\n\\startmakeup[slide]" );
+        }
+
         virtual void text( std::u32string_view t )
         {
             auto char_cb = [&]( auto flush, char32_t c )

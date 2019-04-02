@@ -384,7 +384,7 @@ namespace umd::doc
         w.table_stop();
     }
 
-    void convert::run()
+    void convert::body()
     {
         try_table();
         try_dispmath();
@@ -393,15 +393,15 @@ namespace umd::doc
         if ( todo.empty() ) return;
 
         if ( todo[ 0 ] == U'' )
-            return w.pagebreak(), fetch_line(), run();
+            return w.pagebreak(), fetch_line(), body();
 
         if ( todo[ 0 ] == U'>' )
-            return emit_quote(), run();
+            return emit_quote(), body();
         else
             end_quote();
 
         if ( _list.empty() && white_count() >= 4 )
-            return emit_code(), run();
+            return emit_code(), body();
         else
             end_code();
 
@@ -423,7 +423,30 @@ namespace umd::doc
                 }
         }
 
-        run();
+        body();
+    }
+
+    void convert::header()
+    {
+        if ( todo[ 0 ] != U':' )
+            return w.meta_end();
+        skip( U':' );
+        skip_white();
+        auto key = fetch_word();
+        skip_white();
+        if ( skip( U':' ) )
+        {
+            skip_white();
+            w.meta( key, fetch_line() );
+        }
+
+        header();
+    }
+
+    void convert::run()
+    {
+        header();
+        body();
     }
 
 }

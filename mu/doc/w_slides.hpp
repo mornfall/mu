@@ -1,5 +1,6 @@
 #pragma once
 #include "writer.hpp"
+#include "w_tex.hpp"
 #include <vector>
 #include <sstream>
 #include <iostream>
@@ -9,66 +10,13 @@
 namespace umd::doc
 {
 
-    struct w_slides : writer
+    struct w_slides : w_tex
     {
-        stream &out;
-        w_slides( stream &out ) : out( out ) {}
+        w_slides( stream &out ) : w_tex( out ) { format = U"slides"; }
 
         bool table_rules;
         int table_rows;
-        bool in_math = false;
         int math_negspace = 0;
-
-        std::string heading_cmd( int l )
-        {
-            std::stringstream s;
-            s << "\\";
-            while ( l > 1 )
-                --l, s << "sub";
-            s << "section";
-            return s.str();
-        }
-
-        virtual void meta( sv key, sv value )
-        {
-            out.emit( "\\def\\mm", key, "{", value, "}\n" );
-        }
-
-        virtual void meta_end()
-        {
-            out.emit( "\\input{prelude.tex}\n\\startmakeup[slide]" );
-        }
-
-        virtual void text( std::u32string_view t )
-        {
-            auto char_cb = [&]( auto flush, char32_t c )
-            {
-                if ( in_math )
-                    switch ( c )
-                    {
-                        case 0x0307: flush( 2 ); out.emit( "\\dot " ); flush(); break;
-                        case U'┆': flush(); out.emit( "\\NC " ); break;
-                        default: ;
-                    }
-                else
-                    switch ( c )
-                    {
-                        case U'&': flush(); out.emit( "\\&" ); break;
-                        case U'%': flush(); out.emit( "\\%" ); break;
-                        case U'$': flush(); out.emit( "\\$" ); break;
-                        case U'#': flush(); out.emit( "\\#" ); break;
-                        case U'_': flush(); out.emit( "\\_" ); break;
-                        case U'{': flush(); out.emit( "\\{" ); break;
-                        case U'}': flush(); out.emit( "\\}" ); break;
-                        case U'~': flush(); out.emit( "\\textasciitilde{}" ); break;
-                        case U'^': flush(); out.emit( "\\textasciicircum{}" ); break;
-                        case U'\\': flush(); out.emit( "\\textbackslash{}" ); break;
-                        default: ;
-                    }
-            };
-
-            process( t, char_cb, [&]( auto s ) { out.emit( s ); } );
-        }
 
         virtual void heading( std::u32string_view t, int level )
         {

@@ -1,6 +1,6 @@
 #include "common.hpp"
 #include "doc/convert.hpp"
-#include "doc/w_slides.hpp"
+#include "doc/w_paper.hpp"
 #include <fstream>
 #include <iostream>
 
@@ -14,10 +14,10 @@ int main( int argc, const char **argv )
     std::ifstream f( argv[1] );
     auto buf = read_file( f );
     doc::stream out( std::cout );
-    doc::w_slides swr( out );
+    doc::w_paper swr( out );
     doc::convert s( buf, swr );
     s.run();
 
     s.end_list( -1 );
-    std::cout << "\\stopmakeup\\stoptext" << std::endl;
+    std::cout << "\\end{document}" << std::endl;
 }

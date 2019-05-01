@@ -4,16 +4,18 @@ LDADD += -L/usr/local/lib -licuuc
 
 SRC_common = doc/convert.cpp
 SRC = $(SRC_common) slides.cpp
-BIN = umd-slides
+BIN = mu-slides
 
 LIB = ${SRC_common:%.cpp=%.o}
 OBJ = ${SRC:%.cpp=%.o}
 DEP = ${SRC:%.cpp=%.d}
 
+.SUFFIXES: .pdf .mu
+
 all: $(BIN)
 
-umd-slides: $(LIB) slides.o
-	$(CXX) -o umd-slides $(LIB) slides.o $(LDADD)
+mu-slides: slides.o $(LIB)
+	$(CXX) -o $@ $(LIB) slides.o $(LDADD)
 
 clean:
 	rm -f $(OBJ) $(DEP) $(BIN)
@@ -22,7 +24,9 @@ clean:
 	@mkdir -p $$(dirname $@)
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-.umd.pdf: umd-slides
-	./umd-slides $< > $@.tex
+.mu.pdf: mu-slides
+	@mkdir -p $$(dirname $@)
+	./mu-slides $< > $*.tex
+	env TEXINPUTS=$(.CURDIR)/dat context --result=$*.pdf $*.tex
 
 -include $(DEP)

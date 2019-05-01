@@ -1,5 +1,8 @@
 #include "scene.hpp"
 #include "reader.hpp"
+#include "util.hpp"
+
+#include <array>
 
 namespace umd::pic::convert
 {
@@ -63,28 +66,56 @@ namespace umd::pic::convert
             group.add< pic::arrow >( from_port, to_port );
         }
 
-        reader::point line( reader::point p, dir_t dir )
+        std::pair< reader::point, int > line( reader::point p, dir_t dir, int joins = 1, bool jcw = true )
         {
+            int joined = 0;
             bool first = true;
             for ( ; grid[ p ].attach( dir ); p = p + diff( dir ) )
             {
-                if ( !first && ( grid[ p ].attach( cw( dir ) ) || grid[ p ].attach( ccw( dir ) ) ) )
-                    break;
-                first = false;
+                if ( first )
+                {
+                    first = false;
+                    continue;
+                }
+                if ( ( !jcw && grid[ p ].attach( cw( dir ) ) ) ||
+                     ( jcw && grid[ p ].attach( ccw( dir ) ) ) )
+                    if ( ++joined == joins )
+                        break;
             }
-            return p;
+            return { p, joined };
         }
 
-        void box( reader::point p )
-        {
-            std::vector< reader::point > c( 4 );
-            auto nw = c[ corner_nw ] = p;
-            auto ne = c[ corner_ne ] = line( p, east );
-            auto sw = c[ corner_sw ] = line( p, south );
-            auto se = c[ corner_se ] = line( ne, south );
+        using joins = std::array< int, 4 >;
 
-            if ( line( sw, east ) != se )
+        void box( reader::point p, joins mj = { 1, 1, 1, 1 } )
+        {
+            std::array< reader::point, 4 > c;
+            joins j;
+
+            auto nw = p;
+            auto [ ne, jn ] = line( p, east,   mj[ 0 ], false );
+            auto [ sw, je ] = line( p, south,  mj[ 1 ], true );
+            auto [ se, jw ] = line( ne, south, mj[ 2 ], false );
+            auto [ sx, js ] = line( sw, east,  mj[ 3 ], true );
+
+            c[ corner_ne ] = ne; j[ 0 ] = jn;
+            c[ corner_nw ] = nw; j[ 1 ] = je;
+            c[ corner_se ] = se; j[ 2 ] = jw;
+            c[ corner_sw ] = sw; j[ 3 ] = js;
+
+            if ( se != sx )
+            {
+                auto idx = index_sort( mj );
+                for ( auto i : idx )
+                    if ( mj[ i ] == j[ i ] )
+                    {
+                        mj[ i ] ++;
+                        return box( p, mj );
+                        mj[ i ] --;
+                    }
+
                 return; /* not a box */
+            }
 
             int w = ne.x() - nw.x();
             int h = sw.y() - nw.y();
@@ -102,7 +133,7 @@ namespace umd::pic::convert
                     if ( grid[ p ].text() )
                     {
                         if ( y != last_y && !txt.empty() )
-                            txt += U"\\break{}";
+                            txt += U"\n";
                         if ( x != last_x + 1 && !txt.empty() )
                             txt += ' ';
                         txt += grid[ p ].character();
@@ -117,6 +148,8 @@ namespace umd::pic::convert
             if ( grid[ sw ].attach( south ) )
                 box( sw );
 
+            if ( grid[ ne ].attach( east ) )
+                box( ne );
         }
 
         void object( int x, int y ) { object( reader::point( x, y ) ); }

@@ -3,8 +3,8 @@ CXXFLAGS += -MD -MP -I$(.CURDIR) -std=c++17 -I/usr/local/include
 LDADD += -L/usr/local/lib -licuuc
 
 SRC_common = doc/convert.cpp
-SRC = $(SRC_common) slides.cpp paper.cpp
-BIN = mu-slides mu-paper
+SRC = $(SRC_common) slides.cpp paper.cpp pic.cpp
+BIN = mu-slides mu-paper mu-pic
 
 LIB = ${SRC_common:%.cpp=%.o}
 OBJ = ${SRC:%.cpp=%.o}
@@ -19,6 +19,9 @@ mu-slides: slides.o $(LIB)
 
 mu-paper: paper.o $(LIB)
 	$(CXX) -o $@ $(LIB) paper.o $(LDADD)
+
+mu-pic: pic.o $(LIB)
+	$(CXX) -o $@ $(LIB) pic.o $(LDADD)
 
 clean:
 	rm -f $(OBJ) $(DEP) $(BIN)

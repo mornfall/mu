@@ -28,11 +28,13 @@ namespace umd::pic::reader
         std::bitset< 4 > _attach;
         std::bitset< 4 > _arrow;
         bool _rounded = false;
+        bool _dashed = false;
 
         bool text() const { return ( _char < 0x2500 || _char > 0x2580 ) && !attach() && !arrow() && !empty(); }
         bool empty() const { return _char == U' '; }
         bool node() const { return _char == U'●'; }
         bool rounded() const { return _rounded; }
+        bool dashed() const { return _dashed; }
         bool attach( dir_t dir ) const { return _attach[ dir ]; }
         bool attach() const { return _attach.any(); }
 
@@ -74,7 +76,7 @@ namespace umd::pic::reader
                 case U'▼': set_attach( north ); set_arrow( south ); break;
 
                 case U'│': set_attach( north ); set_attach( south ); break;
-                case U'─': set_attach( east ); set_attach( west ); break;
+                case U'┄': _dashed = true; case U'─': set_attach( east ); set_attach( west ); break;
 
                 case U'╭': set_rounded( true );
                 case U'┌': set_attach( east ); set_attach( south ); break;

@@ -48,6 +48,7 @@ namespace umd::pic::convert
             auto to_obj = objects.at( p + diff( to_dir ) );
             assert( to_obj );
             auto to_port = to_obj->port( at_dir );
+            bool dashed = false;
 
             pic::object *from_obj;
 
@@ -56,6 +57,8 @@ namespace umd::pic::convert
                 auto next = p + diff( at_dir );
                 from_obj = objects.at( next );
 
+                if ( grid[ p ].dashed() )
+                    dashed = true;
                 p = next;
 
                 if ( from_obj )
@@ -67,7 +70,8 @@ namespace umd::pic::convert
             }
 
             auto from_port = from_obj->port( opposite( at_dir ) );
-            group.add< pic::arrow >( from_port, to_port );
+            auto &arrow = group.add< pic::arrow >( from_port, to_port );
+            arrow._dashed = dashed;
         }
 
         std::pair< reader::point, int > line( reader::point p, dir_t dir, int joins = 1,

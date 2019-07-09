@@ -89,12 +89,14 @@ namespace umd::pic
     {
         port_out _from;
         port_in _to;
+        bool _dashed = false;
 
         arrow( port_out f, port_in t ) : _from( f ), _to( t ) {}
 
         void emit( writer &o ) const override
         {
-            o << "drawarrow "<< _from << ".. tension 1.25 .. " << _to << " withcolor fg;\n";
+            o << "drawarrow "<< _from << ".. tension 1.25 .. " << _to
+              << ( _dashed ? " dashed evenly" : "" ) << " withcolor fg;\n";
         }
     };
 

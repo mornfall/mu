@@ -66,12 +66,15 @@ namespace umd::pic::convert
             group.add< pic::arrow >( from_port, to_port );
         }
 
-        std::pair< reader::point, int > line( reader::point p, dir_t dir, int joins = 1, bool jcw = true )
+        std::pair< reader::point, int > line( reader::point p, dir_t dir, int joins = 1,
+                                              bool jcw = true, bool *dashed = nullptr )
         {
             int joined = 0;
             bool first = true;
             for ( ; grid[ p ].attach( dir ); p = p + diff( dir ) )
             {
+                if ( dashed && grid[ p ].dashed() )
+                    *dashed = true;
                 if ( first )
                 {
                     first = false;
@@ -91,12 +94,13 @@ namespace umd::pic::convert
         {
             std::array< reader::point, 4 > c;
             joins j;
+            bool dashed;
 
             auto nw = p;
-            auto [ ne, jn ] = line( p, east,   mj[ 0 ], false );
-            auto [ sw, je ] = line( p, south,  mj[ 1 ], true );
-            auto [ se, jw ] = line( ne, south, mj[ 2 ], false );
-            auto [ sx, js ] = line( sw, east,  mj[ 3 ], true );
+            auto [ ne, jn ] = line( p, east,   mj[ 0 ], false, &dashed );
+            auto [ sw, je ] = line( p, south,  mj[ 1 ], true,  &dashed );
+            auto [ se, jw ] = line( ne, south, mj[ 2 ], false, &dashed );
+            auto [ sx, js ] = line( sw, east,  mj[ 3 ], true,  &dashed );
 
             c[ corner_ne ] = ne; j[ 0 ] = jn;
             c[ corner_nw ] = nw; j[ 1 ] = je;
@@ -122,6 +126,7 @@ namespace umd::pic::convert
             auto obj = &group.add< pic::box >( 5 * p.x() + 2.5 * w, -8 * p.y() - 4 * h, 5 * w, 8 * h );
             for ( int i = 0; i < c.size(); ++i )
                 obj->set_rounded( i, grid[ c[ i ] ].rounded() );
+            obj->set_dashed( dashed );
 
             std::u32string txt;
             int last_x = p.x(), last_y = 0;

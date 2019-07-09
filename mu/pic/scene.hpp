@@ -142,11 +142,13 @@ namespace umd::pic
         point _position;
         float _w, _h;
         std::bitset< 4 > _rounded;
+        bool _dashed = false;
 
         box( point p, int w, int h ) : _position( p ), _w( w ), _h( h ) {}
         box( int x, int y, int w, int h ) : _position( x, y ), _w( w ), _h( h ) {}
 
         void set_rounded( int c, bool r ) { _rounded[ c ] = r; }
+        void set_dashed( bool d ) { _dashed = d; }
 
         pic::port port( dir_t p ) const override
         {
@@ -172,7 +174,8 @@ namespace umd::pic
               << ne - round_x( 1 ) << " .. controls " << ne << " .. " << ne - round_y( 1 ) << " -- "
               << se + round_y( 2 ) << " .. controls " << se << " .. " << se - round_x( 2 ) << " -- "
               << sw + round_x( 3 ) << " .. controls " << sw << " .. " << sw + round_y( 3 ) << " -- "
-              << nw - round_y( 0 ) << " .. controls " << nw << " .. " << " cycle withcolor fg;\n";
+              << nw - round_y( 0 ) << " .. controls " << nw << " .. " << " cycle "
+              << ( _dashed ? " dashed evenly" : "" ) << " withcolor fg;\n";
         }
     };
 

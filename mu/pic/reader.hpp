@@ -34,6 +34,7 @@ namespace umd::pic::reader
         bool attach() const { return _attach.any(); }
 
         char32_t character() const { return _char; }
+        bool attach_all() const { return _attach.count() == 4; }
         dir_t attach_dir() const { return dir( _attach ); }
         dir_t attach_dir( dir_t except ) const
         {

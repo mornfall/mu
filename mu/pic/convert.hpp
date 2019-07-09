@@ -59,7 +59,9 @@ namespace umd::pic::convert
                 if ( from_obj )
                     break;
 
-                at_dir = grid[ next ].attach_dir( opposite( at_dir ) );
+                auto cell = grid[ next ];
+                if ( !cell.attach_all() ) /* continue in the same direction if omni-directional */
+                    at_dir = cell.attach_dir( opposite( at_dir ) );
             }
 
             auto from_port = from_obj->port( opposite( at_dir ) );

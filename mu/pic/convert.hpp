@@ -14,8 +14,13 @@ namespace umd::pic::convert
         {
             case north: return { 0, -1 };
             case south: return { 0, +1 };
-            case east: return  { +1, 0 };
-            case west: return  { -1, 0 };
+            case east:  return { +1, 0 };
+            case west:  return { -1, 0 };
+
+            case north_east: return { +1, -1 };
+            case north_west: return { -1, -1 };
+            case south_east: return { +1, +1 };
+            case south_west: return { -1, +1 };
         }
     }
 

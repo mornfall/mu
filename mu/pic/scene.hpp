@@ -176,6 +176,7 @@ namespace umd::pic
                 case south: return pic::port( _position - point( 0, _radius + 1 ), -90 );
                 case east:  return pic::port( _position + point( _radius + 1, 0 ), 0 );
                 case west:  return pic::port( _position - point( _radius + 1, 0 ), 180 );
+                default: __builtin_trap();
             }
         }
 
@@ -214,6 +215,7 @@ namespace umd::pic
                 case south: return pic::port( _position + point( 0, -_h / 2 - 1.5 ), -90 );
                 case east: return  pic::port( _position + point( +_w / 2 + 1.5, 0 ), 0 );
                 case west: return  pic::port( _position + point( -_w / 2 - 1.5, 0 ), 180 );
+                default: __builtin_trap();
             }
         }
 

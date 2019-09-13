@@ -1,3 +1,5 @@
+// -*- mode: C++; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+
 #include "scene.hpp"
 #include "reader.hpp"
 #include "util.hpp"

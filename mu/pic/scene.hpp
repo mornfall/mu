@@ -1,3 +1,5 @@
+// -*- mode: C++; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+
 #pragma once
 #include "types.hpp"
 #include "writer.hpp"

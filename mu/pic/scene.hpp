@@ -85,7 +85,7 @@ namespace umd::pic
 
         void emit( writer &o ) const override
         {
-            o << "drawarrow "<< _from << ".." << _to << " withcolor fg;" << std::endl;
+            o << "drawarrow "<< _from << ".. tension 1.25 .. " << _to << " withcolor fg;\n";
         }
     };
 

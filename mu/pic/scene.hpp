@@ -61,6 +61,8 @@ namespace umd::pic
         point _position;
         dir _dir;
 
+        point position() const { return _position; }
+        dir direction() const { return _dir; }
         port( point pos, dir dir ) : _position( pos ), _dir( dir ) {}
         void emit( writer & ) const override { assert( 0 ); }
     };

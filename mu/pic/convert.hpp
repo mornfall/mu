@@ -47,8 +47,9 @@ namespace umd::pic::convert
             auto at_dir = grid[ p ].attach_dir();
             auto to_obj = objects.at( p + diff( to_dir ) );
             assert( to_obj );
-            auto to_port = to_obj->port( at_dir );
-            bool dashed = false;
+            auto to_port = to_obj->port( opposite( to_dir ) );
+            std::vector< pic::point > points;
+            bool dashed = false, curved = false;
 
             pic::object *from_obj;
 
@@ -59,19 +60,27 @@ namespace umd::pic::convert
 
                 if ( grid[ p ].dashed() )
                     dashed = true;
+                if ( grid[ p ].rounded() )
+                    curved = true;
                 p = next;
 
                 if ( from_obj )
                     break;
 
                 auto cell = grid[ next ];
+                auto ndir = at_dir;
                 if ( !cell.attach_all() ) /* continue in the same direction if omni-directional */
-                    at_dir = cell.attach_dir( opposite( at_dir ) );
+                    ndir = cell.attach_dir( opposite( at_dir ) );
+                if ( at_dir != ndir )
+                    points.emplace_back( 5 * next.x(), -8 * next.y() );
+                at_dir = ndir;
             }
 
             auto from_port = from_obj->port( opposite( at_dir ) );
             auto &arrow = group.add< pic::arrow >( from_port, to_port );
             arrow._dashed = dashed;
+            arrow._curved = curved;
+            std::copy( points.rbegin(), points.rend(), std::back_inserter( arrow._controls ) );
         }
 
         std::pair< reader::point, int > line( reader::point p, dir_t dir, int joins = 1,

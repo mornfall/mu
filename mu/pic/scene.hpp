@@ -144,8 +144,8 @@ namespace umd::pic
         std::bitset< 4 > _rounded;
         bool _dashed = false;
 
-        box( point p, int w, int h ) : _position( p ), _w( w ), _h( h ) {}
-        box( int x, int y, int w, int h ) : _position( x, y ), _w( w ), _h( h ) {}
+        box( point p, float w, float h ) : _position( p ), _w( w ), _h( h ) {}
+        box( float x, float y, float w, float h ) : _position( x, y ), _w( w ), _h( h ) {}
 
         void set_rounded( int c, bool r ) { _rounded[ c ] = r; }
         void set_dashed( bool d ) { _dashed = d; }

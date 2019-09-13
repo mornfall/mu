@@ -142,7 +142,7 @@ namespace umd::pic::convert
                     if ( grid[ p ].text() )
                     {
                         if ( y != last_y && !txt.empty() )
-                            txt += U"\n";
+                            txt += U"\\break ";
                         if ( x != last_x + 1 && !txt.empty() )
                             txt += ' ';
                         txt += grid[ p ].character();

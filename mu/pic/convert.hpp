@@ -168,7 +168,7 @@ namespace umd::pic::convert
             if ( objects.at( p ) ) return; /* already taken up by an object */
 
             if ( c.node() )
-                objects[ p ] = &group.add< pic::node >( 6 * p.x(), -10 * p.y(), 2 );
+                objects[ p ] = &group.add< pic::node >( 5 * p.x(), -8 * p.y(), 2 );
 
             if ( c.attach( south ) && c.attach( east ) )
                 box( p );

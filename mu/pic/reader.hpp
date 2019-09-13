@@ -130,9 +130,9 @@ namespace umd::pic::reader
         cell at( int x, int y ) const
         {
             if ( x < 0 || y < 0 ) return cell();
-            if ( y >= _indexable.size() ) return cell();
+            if ( y >= int( _indexable.size() ) ) return cell();
             auto &row = _indexable[ y ];
-            if ( x >= row.size() ) return cell();
+            if ( x >= int( row.size() ) ) return cell();
             return row[ x ];
         }
 

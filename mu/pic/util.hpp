@@ -7,7 +7,7 @@ namespace umd::pic
     std::array< int, n > index_sort( const std::array< T, n > &t )
     {
         std::array< int, n > idx;
-        for ( int i = 0; i < n; ++i )
+        for ( int i = 0; i < int( n ); ++i )
             idx[ i ] = i;
 
         std::sort( idx.begin(), idx.end(), [&]( auto a, auto b ) { return t[ a ] > t[ b ]; } );

@@ -146,7 +146,7 @@ namespace umd::pic::convert
             int w = ne.x() - nw.x();
             int h = sw.y() - nw.y();
             auto obj = &group.add< pic::box >( 5 * p.x() + 2.5 * w, -8 * p.y() - 4 * h, 5 * w, 8 * h );
-            for ( int i = 0; i < c.size(); ++i )
+            for ( int i = 0; i < int( c.size() ); ++i )
                 obj->set_rounded( i, grid[ c[ i ] ].rounded() );
             obj->set_dashed( dashed );
 

@@ -14,6 +14,7 @@ namespace umd::pic
     struct element
     {
         virtual void emit( writer &w ) const = 0;
+        virtual ~element() {}
     };
 
     static inline writer &operator<<( writer &w, const element &obj )
@@ -109,7 +110,7 @@ namespace umd::pic
 
             o << _from.position() << " .. ";
 
-            for ( int i = 0; i < _controls.size(); ++i )
+            for ( int i = 0; i < int( _controls.size() ); ++i )
                 o << through[ i ] << " .. controls " << _controls[ i ] << " .. ";
 
             if ( !_controls.empty() )
@@ -162,8 +163,8 @@ namespace umd::pic
 
     struct node : object
     {
-        int _radius = 5;
         point _position;
+        int _radius = 5;
 
         node( point p, int r = 5 ) : _position( p ), _radius( r ) {}
         node( int x, int y, int r = 5 ) : _position( x, y ), _radius( r ) {}
@@ -190,7 +191,7 @@ namespace umd::pic
     struct text : object, label
     {
         using label::label;
-        pic::port port( dir_t p ) const override { abort(); }
+        pic::port port( dir_t ) const override { abort(); }
         void emit( writer &o ) const override { label::emit( o ); }
     };
 

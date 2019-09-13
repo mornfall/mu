@@ -55,12 +55,12 @@ namespace umd::doc
                     case U'%': flush(); out.emit( "\\%" ); break;
                     case U'$': flush(); out.emit( "\\$" ); break;
                     case U'#': flush(); out.emit( "\\#" ); break;
-                    case U'_': flush(); out.emit( "\\_" ); break;
+                    case U'_': if ( !in_math ) flush(), out.emit( "\\_" ); break;
                     case U'{': if ( !in_math ) flush(), out.emit( "\\{" ); break;
                     case U'}': if ( !in_math ) flush(), out.emit( "\\}" ); break;
                     case U'~': flush(); out.emit( "\\textasciitilde{}" ); break;
-                    case U'^': flush(); out.emit( "\\textasciicircum{}" ); break;
-                    case U'\\': flush(); out.emit( "\\textbackslash{}" ); break;
+                    case U'^': if ( !in_math ) flush(), out.emit( "\\textasciicircum{}" ); break;
+                    case U'\\': if ( !in_math ) flush(), out.emit( "\\textbackslash{}" ); break;
                     default: ;
                 }
             };

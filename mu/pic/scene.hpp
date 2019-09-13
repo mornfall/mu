@@ -30,6 +30,8 @@ namespace umd::pic
 
         point operator-( point o ) const { return point( x - o.x, y - o.y ); }
         point operator+( point o ) const { return point( x + o.x, y + o.y ); }
+        point operator*( float s ) const { return point( x * s, y * s ); }
+        point operator/( float s ) const { return point( x / s, y / s ); }
 
         void emit( writer &w ) const override
         {

@@ -7,6 +7,7 @@
 #include <memory>
 #include <vector>
 #include <codecvt>
+#include <cmath>
 
 namespace umd::pic
 {
@@ -48,6 +49,12 @@ namespace umd::pic
             w << "{dir " << angle << "}";
         }
     };
+
+    static inline point dir_to_vec( dir d )
+    {
+        auto rad = 4 * std::atan( 1 ) * float( d.angle ) / 180;
+        return point( std::cos( rad ), std::sin( rad ) );
+    }
 
     struct port : element
     {

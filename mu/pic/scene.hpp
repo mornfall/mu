@@ -89,14 +89,48 @@ namespace umd::pic
     {
         port_out _from;
         port_in _to;
-        bool _dashed = false;
+        bool _dashed = false, _curved = false;
+        std::vector< point > _controls;
 
         arrow( port_out f, port_in t ) : _from( f ), _to( t ) {}
 
+        void emit_curved( writer &o ) const
+        {
+            std::vector< point > through;
+
+            if ( !_controls.empty() )
+                through.emplace_back( ( _from.position() + _controls.front() ) / 2 );
+
+            for ( auto i = _controls.begin();
+                  i != _controls.end() && std::next( i ) != _controls.end(); ++i )
+                through.emplace_back( ( *i + *std::next( i ) ) / 2 );
+
+            o << _from.position() << " .. ";
+
+            for ( int i = 0; i < _controls.size(); ++i )
+                o << through[ i ] << " .. controls " << _controls[ i ] << " .. ";
+
+            if ( !_controls.empty() )
+                o << ( _controls.back() + _to.position() ) / 2 << " .. ";
+            o << _to.position();
+        }
+
+        void emit_angled( writer &o ) const
+        {
+            o << _from.position() << " -- ";
+            for ( auto c : _controls )
+                o << c << " -- ";
+            o << _to.position();
+        }
+
         void emit( writer &o ) const override
         {
-            o << "drawarrow "<< _from << ".. tension 1.25 .. " << _to
-              << ( _dashed ? " dashed evenly" : "" ) << " withcolor fg;\n";
+            o << "drawarrow ";
+            if ( _curved )
+                emit_curved( o );
+            else
+                emit_angled( o );
+            o << ( _dashed ? " dashed evenly" : "" ) << " withcolor fg;\n";
         }
     };
 

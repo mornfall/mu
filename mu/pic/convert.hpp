@@ -199,7 +199,7 @@ namespace umd::pic::convert
             int spaces = 0;
             for ( int i = 0; ; ++i, p = p + reader::point( 1, 0 ) )
             {
-                if ( grid.at( p ).empty() )
+                if ( grid.at( p ).empty() || grid.at( p ).attach() )
                     ++ spaces;
                 else
                     spaces = 0;

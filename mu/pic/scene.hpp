@@ -89,7 +89,7 @@ namespace umd::pic
         }
     };
 
-    struct label : element
+    struct label : virtual element
     {
         point _position;
         std::u32string _text;
@@ -106,7 +106,7 @@ namespace umd::pic
         }
     };
 
-    struct object : element
+    struct object : virtual element
     {
         virtual port port( dir_t p ) const = 0;
         port_out out( dir_t p ) const { return port( p ); }
@@ -137,6 +137,13 @@ namespace umd::pic
             o << "fill fullcircle scaled " << 2 * _radius << " shifted " << _position
               << " withcolor fg;\n";
         }
+    };
+
+    struct text : object, label
+    {
+        using label::label;
+        pic::port port( dir_t p ) const override { abort(); }
+        void emit( writer &o ) const override { label::emit( o ); }
     };
 
     struct box : object

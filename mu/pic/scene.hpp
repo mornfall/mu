@@ -171,10 +171,10 @@ namespace umd::pic
             auto round_y = [&]( int p ) { return point( 0, _rounded[ p ] ? 8 : 0 ); };
 
             o << "draw " << nw + round_x( 0 ) << " -- "
-              << ne - round_x( 1 ) << " .. controls " << ne << " .. " << ne - round_y( 1 ) << " -- "
-              << se + round_y( 2 ) << " .. controls " << se << " .. " << se - round_x( 2 ) << " -- "
-              << sw + round_x( 3 ) << " .. controls " << sw << " .. " << sw + round_y( 3 ) << " -- "
-              << nw - round_y( 0 ) << " .. controls " << nw << " .. " << " cycle "
+              << "     " << ne - round_x( 1 ) << " .. controls " << ne << " .. " << ne - round_y( 1 ) << " -- \n"
+              << "     " << se + round_y( 2 ) << " .. controls " << se << " .. " << se - round_x( 2 ) << " -- \n"
+              << "     " << sw + round_x( 3 ) << " .. controls " << sw << " .. " << sw + round_y( 3 ) << " -- \n"
+              << "     " << nw - round_y( 0 ) << " .. controls " << nw << " .. " << " cycle "
               << ( _dashed ? " dashed evenly" : "" ) << " withcolor fg;\n";
         }
     };

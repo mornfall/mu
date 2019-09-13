@@ -11,7 +11,7 @@ namespace umd::doc
     {
         doc::writer &w;
         std::u32string_view todo;
-        convert( std::u32string_view t, doc::writer &w ) : todo( t ), w( w ) {}
+        convert( std::u32string_view t, doc::writer &w ) : w( w ), todo( t ) {}
 
         enum list_type { bullets, numbered };
         std::stack< list_type > _list;

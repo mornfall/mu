@@ -101,13 +101,13 @@ namespace umd::doc
 
     void convert::ensure_list( int l, list_type t )
     {
-        while ( _list.size() > l )
+        while ( int( _list.size() ) > l )
             end_list();
 
-        if ( _list.size() == l - 1 )
+        if ( int( _list.size() ) == l - 1 )
             start_list( t );
 
-        assert( _list.size() == l );
+        assert( int( _list.size() ) == l );
         skip_white();
         skip_item_lead();
 
@@ -197,7 +197,6 @@ namespace umd::doc
 
     void convert::emit_code()
     {
-        bool was_in_code = in_code;
         for ( int i = 0; i < 4; ++i )
             skip( ' ' );
         auto l = fetch_line();
@@ -233,13 +232,13 @@ namespace umd::doc
         bool special = false;
         int i = 0;
 
-        for ( ; i < todo.size() && todo[ i ] != '\n'; ++i )
+        for ( ; i < int( todo.size() ) && todo[ i ] != '\n'; ++i )
             if ( todo[ i ] >= 0x2500 && todo[ i ] < 0x2580 )
                 special = true;
 
         if ( !special ) return;
 
-        for ( ; i < todo.size() - 1 && ( todo[ i ] != '\n' || todo[ i + 1 ] != '\n' ) ; ++ i );
+        for ( ; i < int( todo.size() ) - 1 && ( todo[ i ] != '\n' || todo[ i + 1 ] != '\n' ) ; ++ i );
 
         w.mpost_start();
         auto grid = pic::reader::read_grid( todo.substr( 0, i ) );
@@ -258,7 +257,7 @@ namespace umd::doc
         if ( nonwhite() == U'⟦' ) // may be single-line block
         {
             int count = 0, i, white = white_count();
-            for ( i = white; i < todo.size() && todo[ i ] != '\n'; ++i )
+            for ( i = white; i < int( todo.size() ) && todo[ i ] != '\n'; ++i )
             {
                 if ( todo[ i ] == U'⟦' ) ++count;
                 else if ( todo[ i ] == U'⟧' ) --count;
@@ -276,7 +275,7 @@ namespace umd::doc
         auto for_index = []( auto l, auto f )
         {
             int idx = 0;
-            for ( int i = 0; i < l.size(); ++i )
+            for ( int i = 0; i < int( l.size() ); ++i )
             {
                 if ( !u_getCombiningClass( l[ i ] ) ) ++idx;
                 f( idx, l[ i ] );
@@ -286,7 +285,7 @@ namespace umd::doc
         auto substr = []( auto l, size_t from, size_t to )
         {
             size_t f = 0, t = l.npos, idx = 0;
-            for ( int i = 0; i < l.size(); ++i )
+            for ( int i = 0; i < int( l.size() ); ++i )
             {
                 if ( !u_getCombiningClass( l[ i ] ) ) ++idx;
                 if ( idx == from ) f = i;
@@ -346,7 +345,7 @@ namespace umd::doc
         std::u32string txt;
         auto emit_line = [&]( auto l )
         {
-            for ( int i = 0; i < l.size(); ++i )
+            for ( int i = 0; i < int( l.size() ); ++i )
                 if ( i && l[ i ] == U'│' )
                     w.table_new_cell(), emit_text( txt ), txt.clear();
                 else
@@ -357,12 +356,12 @@ namespace umd::doc
         int finished = 0;
         bool rules = false;
 
-        for ( int i = 0; i < sep.size(); ++i )
+        for ( int i = 0; i < int( sep.size() ); ++i )
             switch ( sep[ i ] )
             {
                 case U'◀': cols.push_back( 'l' ); break;
                 case U'▶':
-                    if ( finished != cols.size() && cols.back() == 'l' )
+                    if ( finished != int( cols.size() ) && cols.back() == 'l' )
                         cols.back() = 'c';
                     else
                         cols.push_back( 'r' );
@@ -370,7 +369,7 @@ namespace umd::doc
                 case U'─': rules = true; break;
                 case U'┄': break;
                 default:
-                    if ( finished == cols.size() )
+                    if ( finished == int( cols.size() ) )
                         cols.push_back( 'l' );
                     ++ finished;
             }

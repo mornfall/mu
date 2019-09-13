@@ -42,7 +42,7 @@ namespace umd::doc
             start = end + 1 - n;
         };
 
-        for ( end = 0; end < string.size(); ++end )
+        for ( end = 0; end < int( string.size() ); ++end )
             char_cb( flush, string[ end ] );
 
         if ( end > start )
@@ -61,7 +61,7 @@ namespace umd::doc
         using columns = std::vector< char >;
         using sv = std::u32string_view;
 
-        virtual void meta( sv k, sv v ) {}
+        virtual void meta( sv, sv ) {}
         virtual void meta_end() {}
         virtual void text( std::u32string_view ) = 0;
         virtual void heading( std::u32string_view txt, int level ) = 0;

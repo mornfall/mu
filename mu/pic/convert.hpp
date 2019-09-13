@@ -173,6 +173,35 @@ namespace umd::pic::convert
             if ( c.attach( south ) && c.attach( east ) )
                 box( p );
         }
+
+        void label( int x, int y ) { label( reader::point( x, y ) ); }
+        void label( reader::point p )
+        {
+            if ( objects.at( p ) )
+                return;
+
+            auto origin = p;
+            std::u32string txt;
+
+            int spaces = 0;
+            for ( int i = 0; ; ++i, p = p + reader::point( 1, 0 ) )
+            {
+                if ( grid.at( p ).empty() )
+                    ++ spaces;
+                else
+                    spaces = 0;
+
+                if ( spaces == 2 )
+                    break;
+                else
+                    txt += grid.at( p ).character();
+            }
+
+            auto w = p.x() - origin.x();
+            auto obj = &group.add< pic::text >( 5 * origin.x() + 2.5 * w, -8 * p.y() + 1, txt );
+            while ( p != origin ) /* fixme off by one */
+                objects[ p ] = obj, p = p + reader::point( -1, 0 );
+        }
     };
 
     static inline group scene( const reader::grid &grid )
@@ -180,14 +209,16 @@ namespace umd::pic::convert
         state s( grid );
 
         for ( auto [ x, y, c ] : grid )
-        {
             if ( c.attach() )
                 s.object( x, y );
-        }
 
         for ( auto [ x, y, c ] : grid )
             if ( c.arrow() )
                 s.arrow( x, y );
+
+        for ( auto [ x, y, c ] : grid )
+            if ( c.text() )
+                s.label( x, y );
 
         return s.group;
     }

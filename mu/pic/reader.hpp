@@ -29,7 +29,8 @@ namespace umd::pic::reader
         std::bitset< 4 > _arrow;
         bool _rounded = false;
 
-        bool text() const { return _char < 0x2500 || _char > 0x2580; }
+        bool text() const { return ( _char < 0x2500 || _char > 0x2580 ) && !attach() && !arrow() && !empty(); }
+        bool empty() const { return _char == U' '; }
         bool node() const { return _char == U'●'; }
         bool rounded() const { return _rounded; }
         bool attach( dir_t dir ) const { return _attach[ dir ]; }

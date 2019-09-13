@@ -8,7 +8,7 @@
 
 namespace umd::pic::convert
 {
-    reader::point diff( dir_t dir )
+    static inline reader::point diff( dir_t dir )
     {
         switch ( dir )
         {
@@ -175,7 +175,7 @@ namespace umd::pic::convert
         }
     };
 
-    group scene( const reader::grid &grid )
+    static inline group scene( const reader::grid &grid )
     {
         state s( grid );
 

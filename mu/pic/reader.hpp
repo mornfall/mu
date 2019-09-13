@@ -144,7 +144,7 @@ namespace umd::pic::reader
         auto end() const { return _iterable.end(); }
     };
 
-    grid read_grid( std::u32string_view ptr )
+    static inline grid read_grid( std::u32string_view ptr )
     {
         grid g;
         while ( !ptr.empty() )

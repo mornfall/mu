@@ -16,7 +16,7 @@ namespace umd::pic
         virtual void emit( writer &w ) const = 0;
     };
 
-    writer &operator<<( writer &w, const element &obj )
+    static inline writer &operator<<( writer &w, const element &obj )
     {
         obj.emit( w );
         return w;

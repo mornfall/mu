@@ -142,7 +142,7 @@ namespace umd::doc
         if ( alpha )
             ensure_list( 2, numbered );
 
-        return true;
+        return digits || alpha;
     }
 
     void convert::emit_text( std::u32string_view v )

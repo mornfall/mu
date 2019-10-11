@@ -135,7 +135,7 @@ namespace brq
         if ( x )
             return;
         assert_failed f( l );
-        format_args( f, y... );
+        format_args_nofail( f, y... );
         throw f;
     }
 
@@ -144,7 +144,7 @@ namespace brq
     void assert_die_fn( const trace_location &l, const T & ... args )
     {
         assert_failed f( l, "unreachable executed:" );
-        format_args( f, args... );
+        format_args_nofail( f, args... );
         throw f;
     }
 
@@ -162,7 +162,7 @@ namespace brq
         {
             assert_failed f( l );
             f << "\n   but got " << a << " " << inv << " " << b << "\n";
-            format_args( f, args... );
+            format_args_nofail( f, args... );
             throw f;
         }
         /* trace_fn( l, "assert passed:", l._statement, "[", x, op_str, y, "]" ); */

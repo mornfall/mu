@@ -74,6 +74,7 @@ namespace brq
         std::string_view data() const noexcept { return std::string_view( _buffer, _offset ); }
         operator std::string_view() const noexcept { return data(); }
         int size() const noexcept { return _offset; }
+        int rewind( int x ) noexcept { int rv = _offset; _offset = x; return rv; }
         bool truncated() const noexcept { return _oom; }
         void kill() { clear(); _oom = true; }
 

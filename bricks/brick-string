@@ -160,10 +160,11 @@ namespace brq
         const char *_start;
         int _split, _end;
 
-        template< typename T >
-        string_window( const T &sv )
+        string_window( std::string_view sv )
             : _start( sv.data() ), _split( 0 ), _end( sv.end() - sv.begin() )
         {}
+
+        string_window( const std::string &s ) : string_window( std::string_view( s ) ) {}
 
         std::string_view flush()
         {

@@ -71,6 +71,13 @@ namespace brq
             return *this;
         }
 
+        curl &set_ua( std::string_view ua )
+        {
+            TRACE( "set_ua", ua );
+            curl_easy_setopt( _curl, CURLOPT_USERAGENT, std::string( ua ).c_str() );
+            return *this;
+        }
+
         using string = std::string;
 
         template< typename T > T info( CURLINFO i )

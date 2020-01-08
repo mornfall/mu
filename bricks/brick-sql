@@ -147,7 +147,7 @@ namespace brq::sql
         bool operator==( fixnum o ) const { return value == o.value; }
         explicit operator bool() const { return value; }
 
-        static bool from_string( std::string_view s, fixnum &n ) try
+        static parse_result from_string( std::string_view s, fixnum &n ) try
         {
             base_t integral = std::stoi( std::string( s ) ) * scale;
             base_t fract = 0, f_scale = scale;
@@ -158,9 +158,9 @@ namespace brq::sql
                     fract += s[ off ] - '0', fract *= 10, f_scale /= 10, off ++;
             }
             n.value = integral + fract;
-            return true;
+            return {};
         }
-        catch ( ... ) { return false; }
+        catch ( std::exception &e ) { return no_parse( e.what() ); }
 
         friend string_builder &operator<<( string_builder &s, fixnum n )
         {

@@ -316,13 +316,9 @@ namespace brq
         format_args< nofail >( sep, acc_, as... );
     }
 
-    template< typename char_t >
-    using split_view_t = std::pair< std::basic_string_view< char_t >, std::basic_string_view< char_t > >;
-    using split_view = split_view_t< char >; // std::pair< std::string_view, std::string_view >;
+    using split_view = std::pair< std::string_view, std::string_view >;
 
-    template< typename char_t >
-    static inline split_view_t< char_t > split( std::basic_string_view< char_t > p,
-                                                char_t d, bool reverse = false )
+    static inline split_view split( std::string_view p, char d, bool reverse = false )
     {
         using view = std::basic_string_view< char_t >;
         auto s = reverse ? p.rfind( d ) : p.find( d );
@@ -331,42 +327,19 @@ namespace brq
         return { p.substr( 0, s ), p.substr( s + 1, p.npos ) };
     }
 
-    static inline split_view split( std::string_view p, char d, bool reverse = false )
-    {
-        return split< char >( p, d, reverse );
-    }
-
-    template< typename char_t >
-    static inline bool starts_with( std::basic_string_view< char_t > s,
-                                    std::basic_string_view< char_t > t )
-    {
-        return s.size() >= t.size() && s.compare( 0, t.size(), t ) == 0;
-    }
-
-    template< typename char_t >
-    static inline bool ends_with( std::basic_string_view< char_t > s,
-                                  std::basic_string_view< char_t > t )
-    {
-        return s.size() >= t.size() && s.compare( s.size() - t.size(), s.npos, t ) == 0;
-    }
-
     static inline bool starts_with( std::string_view s, std::string_view t )
     {
-        return starts_with< char >( s, t );
+        if ( s.size() >= t.size() )
+        {
+            s.remove_suffix( s.size() - t.size() );
+            return s.compare( t ) == 0;
+        }
+        else
+            return false;
     }
 
     static inline bool ends_with( std::string_view s, std::string_view t )
     {
-        return ends_with< char >( s, t );
-    }
-
-    static inline bool starts_with( std::u32string_view s, std::u32string_view t )
-    {
-        return starts_with< char32_t >( s, t );
-    }
-
-    static inline bool ends_with( std::u32string_view s, std::u32string_view t )
-    {
-        return ends_with< char32_t >( s, t );
+        return s.size() >= t.size() && s.compare( s.size() - t.size(), s.npos, t ) == 0;
     }
 }

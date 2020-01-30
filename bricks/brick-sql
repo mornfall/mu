@@ -1212,6 +1212,10 @@ BRICK_SQL_OP( | )
         using type = typename T::car_t::base;
     };
 
+    template< typename T >
+    using to_view = std::conditional_t< std::is_same_v< T, const std::string & >,
+                                        std::string_view, T >;
+
     template< typename table >
     struct insert
     {
@@ -1224,7 +1228,7 @@ BRICK_SQL_OP( | )
         insert( conn &c, bool q ) : _conn( c ), _quiet( q ) {}
 
         template< typename... cols >
-        stmt values( const typename cols::type &... v )
+        stmt values( to_view< const typename cols::type & >... v )
         {
             string_builder bld;
             bld << "insert into " << get_name( table() );

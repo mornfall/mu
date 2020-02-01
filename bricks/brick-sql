@@ -326,6 +326,7 @@ namespace brq::sql
         static constexpr bool is_expr = true;
         static constexpr bool is_column = true;
         static constexpr bool is_function = false;
+        static constexpr bool is_asc = false;
         static constexpr bool is_query = false;
         static constexpr bool is_enum = false;
     };
@@ -916,7 +917,11 @@ BRICK_SQL_OP( | )
             {
                 s << ( count++ ? ", " : "" );
                 if constexpr ( std::remove_reference_t< decltype( c ) >::is_column )
-                    s << std::string( c.column_name( c ) ) + " desc ";
+                {
+                    s << std::string( c.column_name( c ) );
+                    if ( !c.is_asc )
+                        s << " desc ";
+                }
                 else
                     c.print( s, id );
             };

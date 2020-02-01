@@ -282,6 +282,8 @@ namespace brq::sql
             v.each( item );
             s << " ";
         }
+        else if constexpr ( V::is_function )
+            v.print( s, id );
         else if constexpr ( V::is_column )
             s << v.column_name( v );
         else if constexpr ( V::is_query )
@@ -298,6 +300,7 @@ namespace brq::sql
         if      constexpr ( is_value< V > ) s.bind( v ) ;
         else if constexpr ( std::is_same_v< V, where_operator > ) /* nothing */ ;
         else if constexpr ( is_list_v< V > ) /* nothing */ ;
+        else if constexpr ( V::is_function ) v.bind( s ) ;
         else if constexpr ( V::is_column || V::is_enum ) /* nothing */ ;
         else
             v.bind( s );
@@ -322,6 +325,7 @@ namespace brq::sql
 
         static constexpr bool is_expr = true;
         static constexpr bool is_column = true;
+        static constexpr bool is_function = false;
         static constexpr bool is_query = false;
         static constexpr bool is_enum = false;
     };
@@ -357,19 +361,36 @@ namespace brq::sql
     template< typename T >
     using unqualify = std::conditional_t< T::is_qualified, typename T::bare, T >;
 
-    template< template< typename > class self, typename col >
-    struct function : col
+    template< template< typename... > class self, typename... args >
+    struct function : cons_list_t< args... >::car_t
     {
         static constexpr bool is_qualified = true;
-        using bare = col;
+        static constexpr bool is_function  = true;
 
-        template< typename CT >
-        static std::string_view column_name( const CT & )
+        using args_t = brq::cons_list_t< args... >;
+        using bare = typename args_t::car_t;
+        args_t _args;
+
+        template< typename... Ts >
+        function( Ts... ts )
+            : args_t::car_t( args_t( ts... ).car() ), _args( ts... )
+        {}
+
+        template< typename stream >
+        void print( stream &s, int &id ) const
         {
-            static auto name = std::string( get_name( self< col >(), 0 ) ) + "( " +
-                               std::string( col().column_name( col() ) ) + " )::" +
-                               sql_type< typename self< col >::type >();
-            return name;
+            s << get_name< self< args... >() >( 0 ) << "( ";
+            sql::print( s, _args, id );
+            s << " )";
+            using type = typename self< args... >::type;
+            if constexpr ( !std::is_same_v< type, void > )
+                s << "::" << sql_type< type >();
+        }
+
+        template< typename stmt >
+        void bind( stmt &s ) const
+        {
+            _args.each( [&]( auto &v ) { sql::bind( s, v ); } );
         }
     };
 
@@ -690,6 +711,8 @@ namespace brq::sql
         static constexpr bool is_column = false;
         static constexpr bool is_query = false;
         static constexpr bool is_enum = false;
+        static constexpr bool is_function = false;
+        using type = void; /* we don't know :( */
 
         cons_list_t< args... > _args;
         bool _parens = false;
@@ -744,6 +767,7 @@ namespace brq::sql
         static constexpr bool is_column = false;
         static constexpr bool is_enum = false;
         static constexpr bool is_query = false;
+        static constexpr bool is_function = false;
         static constexpr bool is_expr = true;
 
         brq::cons_list_t< cols... > _cols;
@@ -820,6 +844,7 @@ BRICK_SQL_OP( | )
         static constexpr bool is_query = true;
         static constexpr bool is_expr = true;
         static constexpr bool is_enum = false;
+        static constexpr bool is_function = false;
     };
 
     template< typename q, typename col >

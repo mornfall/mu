@@ -262,7 +262,12 @@ namespace brq::sql
     static void print( stream &s, const V &v, int &id )
     {
         if constexpr ( is_value< V > )
-            s << "$" << id++ << "::" << sql_type< V >();
+        {
+            if ( id >= 0 )
+                s << "$" << id++ << "::" << sql_type< V >();
+            else
+                s << v << "::" << sql_type< V >();
+        }
         else if constexpr ( std::is_same_v< V, where_operator > )
             s << v.sql;
         else if constexpr ( brq::is_list_v< V > )
@@ -1545,7 +1550,7 @@ BRICK_SQL_OP( | )
     std::enable_if_t< view::is_view > create( txn &txn, view )
     {
         string_builder s;
-        int id = 1;
+        int id = -1;
         s << "create view " << get_name( view() );
         print_columns( s, typename view::columns::template map_t< get_bare >(), "( ", " )" );
         s << " with ( security_barrier ) as ";

@@ -401,6 +401,13 @@ namespace brq::sql
     template< typename col > struct every : function< every, col > { using type = typename col::type; };
     template< typename col, typename T > struct cast : col { using type = T; };
 
+    template< typename col, typename val >
+    struct coalesce : function< coalesce, col, val >
+    {
+        coalesce( const col &c, const val &v ) : function< coalesce, col, val >( c, v ) {}
+        using type = typename col::type;
+    };
+
     template< typename tab, typename col, bool _nullable = false >
     struct foreign_key : col
     {

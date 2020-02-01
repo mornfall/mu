@@ -38,7 +38,7 @@ namespace brq::sql
     };
 
     template< typename T >
-    std::string_view get_name( T, char quote = '"' )
+    std::string_view get_name( char quote = '"' )
     {
         static std::string name;
         if ( name.empty() )
@@ -55,6 +55,9 @@ namespace brq::sql
         }
         return name;
     }
+
+    template< typename T >
+    std::string_view get_name( T, char quote = '"' ) { return get_name< T >( quote ); }
 
     struct date
     {

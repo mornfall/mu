@@ -1307,7 +1307,7 @@ BRICK_SQL_OP( | )
         auto exec() { return this->_exec( this ); }
 
         template< typename stmt >
-        void bind( stmt &s ) { this->_query.bind( s ); s.bind_list( _values ); }
+        void bind( stmt &s ) const { this->_query.bind( s ); s.bind_list( _values ); }
 
         cons_list_t< typename cols::type... > _values;
         update_set( update u, const typename cols::type &... v )

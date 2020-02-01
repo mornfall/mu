@@ -246,6 +246,58 @@ namespace brq::sql
         return brq::sql::type_map< T >::name();
     }
 
+    template< typename T, typename = void > struct is_expr : std::false_type {};
+    template< typename T > struct is_expr< T, std::enable_if_t< T::is_expr > > : std::true_type {};
+    template< typename T > struct is_expr< T, std::enable_if_t< T::is_enum > > : std::true_type {};
+    template< typename T > constexpr bool is_expr_v = is_expr< T >::value;
+    struct where_operator { const char *sql; where_operator( const char *s = "" ) : sql( s ) {} };
+
+    template< typename T >
+    static constexpr bool is_value = ( std::is_convertible_v< T, std::string_view > ||
+                                       std::is_convertible_v< T, std::u32string_view > ||
+                                       std::is_convertible_v< T, timestamp > ||
+                                       std::is_convertible_v< T, int > ) && !is_list_v< T >;
+
+    template< bool bind = true, typename stream, typename V >
+    static void print( stream &s, const V &v, int &id )
+    {
+        if constexpr ( is_value< V > )
+            s << "$" << id++ << "::" << sql_type< V >();
+        else if constexpr ( std::is_same_v< V, where_operator > )
+            s << v.sql;
+        else if constexpr ( brq::is_list_v< V > )
+        {
+            bool first = true;
+            auto item = [&]( const auto &i )
+            {
+                s << ( first ? "" : ", " );
+                print( s, i, id );
+                first = false;
+            };
+            v.each( item );
+            s << " ";
+        }
+        else if constexpr ( V::is_column )
+            s << v.column_name( v );
+        else if constexpr ( V::is_query )
+            s << "( ", v.print( s, id ), s << " )";
+        else if constexpr ( V::is_enum )
+            s << get_name( v, '\'' );
+        else
+            v.print( s, id );
+    }
+
+    template< typename stmt, typename V >
+    static auto bind( stmt &s, const V &v )
+    {
+        if      constexpr ( is_value< V > ) s.bind( v ) ;
+        else if constexpr ( std::is_same_v< V, where_operator > ) /* nothing */ ;
+        else if constexpr ( is_list_v< V > ) /* nothing */ ;
+        else if constexpr ( V::is_column || V::is_enum ) /* nothing */ ;
+        else
+            v.bind( s );
+    }
+
     template< typename T, bool _nullable = false >
     struct column
     {
@@ -626,47 +678,6 @@ namespace brq::sql
         }
     };
 
-    template< typename T, typename = void > struct is_expr : std::false_type {};
-    template< typename T > struct is_expr< T, std::enable_if_t< T::is_expr > > : std::true_type {};
-    template< typename T > struct is_expr< T, std::enable_if_t< T::is_enum > > : std::true_type {};
-    template< typename T > constexpr bool is_expr_v = is_expr< T >::value;
-    struct where_operator { const char *sql; where_operator( const char *s = "" ) : sql( s ) {} };
-
-    template< typename T >
-    static constexpr bool is_value = std::is_convertible_v< T, std::string_view > ||
-                                     std::is_convertible_v< T, std::u32string_view > ||
-                                     std::is_convertible_v< T, timestamp > ||
-                                     std::is_convertible_v< T, int >;
-
-    template< typename stream, typename V >
-    static void print( stream &s, const V &v, int &id )
-    {
-        if constexpr ( is_value< V > )
-            s << "$" << id++ << "::" << sql_type< V >();
-        else if constexpr ( std::is_same_v< V, where_operator > )
-            s << v.sql;
-        else if constexpr ( brq::is_list_v< V > )
-        {
-            bool first = true;
-            auto item = [&]( const auto &i )
-            {
-                s << ( first ? "" : ", " );
-                print( s, i, id );
-                first = false;
-            };
-            v.each( item );
-            s << " ";
-        }
-        else if constexpr ( V::is_column )
-            s << v.column_name( v );
-        else if constexpr ( V::is_query )
-            s << "( ", v.print( s, id ), s << " )";
-        else if constexpr ( V::is_enum )
-            s << get_name( v, '\'' );
-        else
-            v.print( s, id );
-    }
-
     template< typename... args >
     struct where_expr
     {
@@ -685,18 +696,6 @@ namespace brq::sql
 
         where_expr() = default;
 
-        template< typename stmt, typename V >
-        auto bind( stmt &s, V v ) const
-        {
-            if constexpr ( is_value< V > )
-                s.bind( v );
-            else if constexpr ( std::is_same_v< V, where_operator > ) /* nothing */ ;
-            else if constexpr ( is_list_v< V > ) /* nothing */ ;
-            else if constexpr ( V::is_column || V::is_enum ) /* nothing */ ;
-            else
-                v.bind( s );
-        }
-
         template< typename stream >
         stream &print( stream &s, int &id ) const
         {
@@ -708,7 +707,7 @@ namespace brq::sql
         template< typename stmt >
         void bind( stmt &s ) const
         {
-            _args.each( [&]( auto &v ) { bind( s, v ); } );
+            _args.each( [&]( auto &v ) { sql::bind( s, v ); } );
         }
     };
 
@@ -751,7 +750,10 @@ namespace brq::sql
             s << "( "; sql::print( s, _cols, id ); s << " )";
         }
 
-        template< typename stmt > void bind( stmt & ) {}
+        template< typename stmt > void bind( stmt &s ) const
+        {
+            _cols.each( [&]( const auto &c ) { sql::bind( s, c ); } );
+        }
     };
 
 #define BRICK_SQL_OP(op) BRICK_SQL_OP_(operator op, #op)
@@ -828,7 +830,7 @@ BRICK_SQL_OP( | )
         extend( query q ) : _query( q ) {}
 
         template< typename stmt >
-        void bind( stmt &s ) { _query.bind( s ); }
+        void bind( stmt &s ) const { _query.bind( s ); }
 
         template< typename T >
         stmt _exec( T *t )
@@ -888,13 +890,8 @@ BRICK_SQL_OP( | )
         void bind( stmt &s )
         {
             this->_query.bind( s );
-            _cols.each( [&]( auto &c )
-            {
-                if constexpr ( !std::remove_reference_t< decltype( c ) >::is_column )
-                    c.bind( s );
-            } );
+            _cols.each( [&]( auto &c ) { sql::bind( s, c ); } );
         }
-
     };
 
     template< typename query, typename expr >
@@ -911,18 +908,14 @@ BRICK_SQL_OP( | )
         {
             this->_query.print( s, id );
             s << " " << _clause << " ";
-            if constexpr ( is_value< expr > )
-                s << ( _expr ? "true" : "false" );
-            else
-                _expr.print( s, id );
+            sql::print( s, _expr, id );
         }
 
         template< typename stmt >
-        void bind( stmt &s )
+        void bind( stmt &s ) const
         {
             this->_query.bind( s );
-            if constexpr ( !is_value< expr > )
-                _expr.bind( s );
+            sql::bind( s, _expr );
         }
 
         template< typename... group_cols >
@@ -1172,7 +1165,7 @@ BRICK_SQL_OP( | )
         query_head( sql::txn &t ) : _txn( t ) {}
 
         template< typename stmt >
-        void bind( stmt & ) {}
+        void bind( stmt & ) const {}
     };
 
     template< typename... cols >
@@ -1201,6 +1194,12 @@ BRICK_SQL_OP( | )
             if ( !_distinct )
                 s << "select ";
             sql::print( s, _cols, id );
+        }
+
+        template< typename stmt >
+        void bind( stmt &s ) const
+        {
+            _cols.each( [&]( const auto &c ) { sql::bind( s, c ); } );
         }
 
         sql::raw_sql< select_cols > raw_sql( std::string_view sv ) { return { *this, sv }; }

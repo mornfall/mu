@@ -48,7 +48,7 @@
  * in production code, just like ASSERT macros allow for sanity checks and
  * pre/post-condition checking. If compiled with NDEBUG, it's a noop and in
  * debug builds, the output must be enabled by setting environment variables
- * BRICK_TRACE and optionally BRICK_NOTRACE, which accept either `all`, a file
+ * TRACE and optionally BRICK_NOTRACE, which accept either `all`, a file
  * name (without path) or a file name and a line number (formatted like
  * `file.cpp:15`). A runtime-disabled trace point compiles to a few lookups in
  * std::unordered_set.
@@ -108,7 +108,7 @@ namespace brq
     /* In debug builds, decide which traces are active at run-time. This is to
      * prevent swamping the user with irrelevant traces from library code they
      * might be using. For short programs (e.g. unit tests), it might be okay
-     * to just say `env BRICK_TRACE=all program`. */
+     * to just say `env TRACE=+ program`. */
 
     template< typename T >
     [[gnu::destructor]] void singleton_destroy( T *x ) noexcept( std::is_nothrow_destructible_v< T > )

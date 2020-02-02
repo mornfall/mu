@@ -508,7 +508,7 @@ namespace brq
         brq::raise() << "ensuring path: " << dir << " exists and looks like a dangling symlink";
     }
 
-    inline void create_dir( std::string dir )
+    inline void create_dir( std::string dir, int mode = 0777 )
     {
         std::pair< std::string, std::string > abs = absolute_prefix( dir );
         auto split = split_path( abs.second );
@@ -516,17 +516,17 @@ namespace brq
         for ( auto &x : split )
         {
             todo.emplace_back( x );
-            mkdir_if_missing( abs.first + join_path( todo ), 0777 );
+            mkdir_if_missing( abs.first + join_path( todo ), mode );
         }
     }
 
-    inline void create_file( std::string file )
+    inline void create_file( std::string file, int mode = 0666 )
     {
         auto dir = split_filename( file ).first;
         if ( !dir.empty() )
             create_dir( dir );
 
-        int fd = ::open( file.c_str(), O_CREAT | O_RDONLY, 0666 );
+        int fd = ::open( file.c_str(), O_CREAT | O_RDONLY, mode );
         if ( fd == -1 )
             raise< system_error >() << "creating file " << file;
         ::close( fd );
@@ -815,7 +815,7 @@ namespace brq
     struct with_dir
     {
         change_dir _ch;
-        with_dir( std::string dir ) : _ch( ( create_dir( dir ), dir ) ) {}
+        with_dir( std::string dir, int mode = 0777 ) : _ch( ( create_dir( dir, mode ), dir ) ) {}
     };
 
 #if defined( __unix__ ) || defined( __divine__ )

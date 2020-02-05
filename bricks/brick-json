@@ -73,19 +73,24 @@ namespace brq
 
         std::string decode( std::vector< std::string_view > v )
         {
+            int i = 0, j = 0;
             brq::string_builder b;
 
-            for ( auto sv : v )
-                while ( !sv.empty() )
-                {
-                    if ( sv[ 0 ] == '\\' )
-                        sv = decode_escape( b, sv );
-                    else
-                    {
-                        b << rawchr( sv[ 0 ] );
-                        sv.remove_prefix( 1 );
-                    }
-                }
+            auto fetch = [&]
+            {
+                if ( j < v[ i ].size() )
+                    return v[ i ][ j++ ];
+                while ( ++i < v.size() )
+                    if ( v[ i ].size() )
+                        return j = 0, v[ i ][ j++ ];
+                return char( 0 );
+            };
+
+            while ( char c = fetch() )
+                if ( c == '\\' )
+                    decode_escape( b, fetch );
+                else
+                    b << rawchr( c );
 
             return std::string( b.data() );
         }
@@ -308,6 +313,8 @@ namespace brq
                 }
             }
 
+            _splice.push_back( _chunk );
+            _chunk = "";
             return {}; /* incomplete number */
         }
 
@@ -408,6 +415,9 @@ namespace brq
                         comma();
                 }
             }
+
+            _splice.push_back( _chunk );
+            _chunk = "";
         }
 
         void value()
@@ -452,7 +462,7 @@ namespace brq
                         raise< json_error >() << "unexpected character " << next();
             }
 
-            if ( !_stack.empty() )
+            if ( !_stack.empty() && !_chunk.empty() )
                 comma();
         }
     };

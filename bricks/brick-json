@@ -29,6 +29,11 @@ namespace brq
         using std::runtime_error::runtime_error;
     };
 
+    template< typename T > struct any { using type = T; };
+    template< typename T > struct is_any : std::false_type {};
+    template< typename T > struct is_any< any< T > > : std::true_type {};
+    template< typename T > constexpr bool is_any_v = is_any< T >::value;
+
     struct json_listener
     {
         template< typename F >
@@ -466,6 +471,48 @@ namespace brq
 
             if ( !_stack.empty() && !_chunk.empty() )
                 comma();
+        }
+    };
+
+    struct json_stack : json_listener
+    {
+        using any_index_t = any< int >;
+        using any_key_t = any< std::string >;
+
+        constexpr static const any_key_t any_key;
+        constexpr static const any_index_t any_index;
+
+        using item_t = std::variant< int, std::string >;
+        std::vector< item_t > _stack;
+
+        virtual void close() {}
+
+        void object_start() override { _stack.push_back( "" ); }
+        void object_end()   override { _stack.pop_back(); close(); }
+        void array_start()  override { _stack.push_back( -1 ); }
+        void array_end()    override { _stack.pop_back(); close(); }
+
+        void object_item( std::string k ) override { _stack.back() = k; }
+        void array_item() override { std::get< int >( _stack.back() ) += 1; }
+
+        bool in_context() { return true; }
+
+        template< typename arg_t, typename... args_t >
+        bool in_context( arg_t arg, args_t... args )
+        {
+            if ( _stack.size() <= sizeof...( args ) )
+                return false;
+
+            bool match = true;
+            auto &item = _stack.rbegin()[ sizeof...( args ) ];
+
+            TRACE( "in_context", arg, item );
+            if constexpr ( is_any_v< arg_t > )
+                match = std::holds_alternative< typename arg_t::type >( item );
+            else
+                match = item == item_t( arg );
+
+            return match && in_context( args... );
         }
     };
 }

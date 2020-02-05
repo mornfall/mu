@@ -26,6 +26,21 @@
 
 namespace brq
 {
+    template< typename T >
+    struct rawchr
+    {
+        T c;
+        rawchr( T c ) : c( c ) {}
+
+        template< typename stream >
+        friend auto operator<<( stream &out, rawchr< T > r ) -> decltype( out << "" )
+        {
+            return out << std::basic_string_view< T >( &r.c, 1 );
+        }
+    };
+
+    using rawchr32 = rawchr< char32_t >;
+
     template< int i = 0, typename... T >
     auto &operator<<( string_builder &b, const std::tuple< T... > &t ) noexcept
     {

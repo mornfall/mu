@@ -380,7 +380,7 @@ namespace brq::sql
         template< typename stream >
         void print( stream &s, int &id ) const
         {
-            s << get_name< self< args... >() >( 0 ) << "( ";
+            s << get_name< self< args... > >( 0 ) << "( ";
             sql::print( s, _args, id );
             s << " )";
             using type = typename self< args... >::type;

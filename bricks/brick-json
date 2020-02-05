@@ -199,7 +199,7 @@ namespace brq
         void chomp( int count = 1 )
         {
             _chunk.remove_prefix( count );
-            while ( _chunk.size() && std::isblank( next() ) )
+            while ( _chunk.size() && ( std::isblank( next() ) || next() == '\n' ) )
                 _chunk.remove_prefix( 1 );
         }
 

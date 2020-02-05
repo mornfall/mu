@@ -164,16 +164,19 @@ namespace brq
                 case read_decimal:
                 case read_exponent:
                 case read_exponent_digits:
-                case read_number:   return number();
-                case read_string:   return string();
+                case read_number:   number(); break;
+                case read_string:   string(); break;
 
                 case read_colon:
                 case read_name_str:
-                case read_name:     return name( false );
-                case read_comma:    return comma();
-                case read_value:    return value();
-                case read_bareword: return bareword();
+                case read_name:     name( false ); break;
+                case read_comma:    comma(); break;
+                case read_value:    value(); break;
+                case read_bareword: bareword(); break;
             }
+
+            if ( !_stack.empty() && !_chunk.empty() )
+                comma();
         }
 
         json_parser( json_listener &l ) : _l( l ) {}
@@ -228,7 +231,12 @@ namespace brq
                 return;
 
             if ( auto v = scan_string(); !v.empty() )
+            {
                 _l.string( v );
+
+                if ( !_stack.empty() )
+                    comma();
+            }
         }
 
         std::vector< std::string_view > scan_number()
@@ -306,7 +314,11 @@ namespace brq
         void number()
         {
             if ( auto v = scan_number(); !v.empty() )
+            {
                 _l.number( _integer, v );
+                if ( !_stack.empty() )
+                    comma();
+            }
         }
 
         void name( bool set )
@@ -391,7 +403,9 @@ namespace brq
                     else if ( w == "false" ) _l.boolean( false );
                     else if ( w == "null" ) _l.null();
                     else raise< json_error >() << "unexpected bareword " << w;
-                    return;
+
+                    if ( !_stack.empty() )
+                        comma();
                 }
             }
         }

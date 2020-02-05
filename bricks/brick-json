@@ -254,7 +254,7 @@ namespace brq
                         if ( _chunk[ i ] == '-' )
                             next_state( read_digits, false );
                         else if ( _chunk[ i ] == '0' )
-                            next_state( read_decimal, false );
+                            next_state( read_digits_tail, false ); /* FIXME lenient */
                         else if ( std::isdigit( _chunk[ i ] ) )
                             next_state( read_digits_tail, false );
                         else
@@ -401,6 +401,8 @@ namespace brq
 
         void bareword()
         {
+            next_state( read_bareword, false );
+
             for ( int i = 0; i < _chunk.size(); ++i )
             {
                 if ( !std::isalpha( _chunk[ i ] ) )

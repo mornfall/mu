@@ -31,21 +31,25 @@ namespace brq
 
     struct json_listener
     {
-        std::string_view decode_escape( string_builder &b, std::string_view sv )
+        template< typename F >
+        void decode_escape( string_builder &b, F fetch )
         {
-            auto unhex = [&]( int idx, int shift )
+            auto unhex = [&]( int shift )
             {
-                char32_t v = sv[ idx ];
+                char32_t v = fetch();
 
-                if      ( v >= '0' && v <= '9' ) v -= '0';
-                else if ( v >= 'a' && v <= 'f' ) v -= 'a';
-                else if ( v >= 'A' && v <= 'F' ) v -= 'A';
-                else raise< json_error >() << "error decoding \\u-sequence " << sv.substr( 0, 6 );
+                if      ( v >= '0' && v <= '9' ) v = v - '0';
+                else if ( v >= 'a' && v <= 'f' ) v = v - 'a' + 10;
+                else if ( v >= 'A' && v <= 'F' ) v = v - 'A' + 10;
+                else raise< json_error >() << "invalid character '" << rawchr32( v )
+                                           << "' in a \\u-sequence";
 
                 return v << shift;
             };
 
-            switch ( sv[ 1 ] )
+            char c = fetch();
+
+            switch ( c )
             {
                 case 'b': b << "\b"; break;
                 case 'n': b << "\n"; break;
@@ -53,17 +57,18 @@ namespace brq
                 case 't': b << "\t"; break;
                 case 'f': b << "\f"; break;
                 case 'u':
-                    if ( sv.size() < 6 )
-                        b << rawchr32( U'�' );
-                    else
-                        b << rawchr32( unhex( 2, 24 ) | unhex( 3, 16 ) |
-                                       unhex( 4, 8 )  | unhex( 5, 0 ) );
-                    return sv.substr( 6 );
+                {
+                    char32_t ch = 0;
+                    ch |= unhex( 12 );
+                    ch |= unhex( 8 );
+                    ch |= unhex( 4 );
+                    ch |= unhex( 0 );
+                    b << rawchr32( ch );
+                    break;
+                }
 
-                default: b << rawchr( sv[ 1 ] );
+                default: b << rawchr( c );
             }
-
-            return sv.substr( 2 );
         }
 
         std::string decode( std::vector< std::string_view > v )

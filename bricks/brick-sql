@@ -557,6 +557,12 @@ namespace brq::sql
         void fetch_one( timestamp &t ) { fetch_raw( t.fract ); t.fract = be64toh( t.fract ); }
         template< typename T, int s > void fetch_one( fixnum< s, T > &n ) { fetch_one( n.value ); }
 
+        template< typename T, size_t s > void fetch_one( std::array< T, s > &n )
+        {
+            ASSERT_EQ( PQgetlength( _result, _row, _col ), n.size() * sizeof( T ) );
+            std::memcpy( n.begin(), PQgetvalue( _result, _row, _col ), n.size() * sizeof( T ) );
+        }
+
         void fetch_one( interval &i )
         {
             fetch_raw( i );

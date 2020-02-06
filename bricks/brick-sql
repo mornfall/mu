@@ -221,6 +221,8 @@ namespace brq::sql
     template<> struct type_map< timestamp >      { static auto name() { return "timestamp"; }; };
     template<> struct type_map< interval >       { static auto name() { return "interval"; }; };
 
+    template< typename T > struct type_map< std::optional< T > > : type_map< T > {};
+
     template< typename T, int v > struct type_map< fixnum< v, T > >
     {
         static auto name() { return type_map< T >::name(); }
@@ -312,7 +314,7 @@ namespace brq::sql
         template< typename CT >
         static std::string_view column_name( const CT &ct ) { return get_name( ct ); }
 
-        using type = T;
+        using type = std::conditional_t< _nullable, std::optional< T >, T >;
         using bare = void;
         using table = void;
         using qualifier = void;
@@ -414,6 +416,9 @@ namespace brq::sql
     {
         using column = col;
         using table = tab;
+        using base_type = typename col::type;
+        static constexpr bool adds_null = _nullable && !col::is_nullable;
+        using type = std::conditional_t< adds_null, std::optional< base_type >, base_type >;
         static constexpr bool is_nullable = _nullable;
         static constexpr bool is_foreign = true;
     };
@@ -573,6 +578,14 @@ namespace brq::sql
             s = std::string( data, data + PQgetlength( _result, _row, _col ) );
         }
 
+        template< typename T > void fetch_one( std::optional< T > &opt )
+        {
+            if ( PQgetisnull( _result, _row, _col ) )
+                opt = std::nullopt;
+            else
+                opt = T(), fetch_one( *opt );
+        }
+
         row< cols... > operator*()
         {
             row< cols... > r;
@@ -674,6 +687,17 @@ namespace brq::sql
         std::enable_if_t< T::is_enum > bind_one( T v )
         {
             v._value.match( [&]( auto x ) { bind_one( std::string( get_name( x, 0 ) ) ); } );
+        }
+
+        template< typename T > void bind_one( std::optional< T > v )
+        {
+            if ( v.has_value() )
+                bind_one( *v );
+            else
+            {
+                _lengths.push_back( 0 );
+                _params.push_back( nullptr );
+            }
         }
 
         stmt &exec()

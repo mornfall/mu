@@ -144,6 +144,12 @@ namespace brq::sql
             ASSERT_EQ( months, 0 );
             return time_t( days ) * 3600 * 24 + seconds / 1000000;
         }
+
+        template< typename stream >
+        friend auto operator<<( stream &s, interval i ) -> decltype ( s << std::string() )
+        {
+            return s << i.as_seconds();
+        }
     };
 
     template< int scale, typename base_t = int64_t >

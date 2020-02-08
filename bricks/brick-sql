@@ -133,7 +133,13 @@ namespace brq::sql
     struct interval
     {
         std::int64_t seconds; std::int32_t days, months;
-        time_t as_seconds()
+
+        static interval from_seconds( time_t s )
+        {
+            return { s * 1000000, 0, 0 };
+        }
+
+        time_t as_seconds() const
         {
             ASSERT_EQ( months, 0 );
             return time_t( days ) * 3600 * 24 + seconds / 1000000;

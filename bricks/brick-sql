@@ -282,7 +282,7 @@ namespace brq::sql
             if ( id >= 0 )
                 s << "$" << id++ << "::" << sql_type< V >();
             else
-                s << v << "::" << sql_type< V >();
+                s << "'" << v << "'::" << sql_type< V >();
         }
         else if constexpr ( std::is_same_v< V, where_operator > )
             s << v.sql;

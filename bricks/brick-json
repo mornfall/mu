@@ -479,8 +479,8 @@ namespace brq
         using any_index_t = any< int >;
         using any_key_t = any< std::string >;
 
-        constexpr static const any_key_t any_key;
-        constexpr static const any_index_t any_index;
+        constexpr static const any_key_t any_key{};
+        constexpr static const any_index_t any_index{};
 
         using item_t = std::variant< int, std::string >;
         std::vector< item_t > _stack;

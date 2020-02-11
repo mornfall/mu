@@ -367,6 +367,7 @@ namespace brq
 
                     chomp();
                     value();
+                    break;
 
                 default:
                     __builtin_unreachable();

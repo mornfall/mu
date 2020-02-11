@@ -27,6 +27,7 @@
 #include <cxxabi.h>
 #include <codecvt>
 #include <endian.h> /* beNNtoh / htobeNN */
+#include <sys/select.h>
 
 #include <libpq-fe.h>
 

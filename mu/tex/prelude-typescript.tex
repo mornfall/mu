@@ -1,0 +1,60 @@
+\enabletrackers [fonts.missing]
+\definefontfallback[cambriamath] [name:cambriamath]
+                   [ arrows, greekandcoptic, mathematicaloperators, superscriptsandsubscripts ]
+\definefontfallback[dejavumath] [name:dejavusansmono]
+                   [ arrows, greekandcoptic, mathematicaloperators, superscriptsandsubscripts ]
+\definefontfeature[iosevkacode] [ language=DFLT, script=latn, cv19=yes, cv31=yes, cv36=yes, cv38=yes ]
+
+\starttypescript  [cambria]
+  \definetypeface [cambria] [rm] [serif] [\typescriptone] [default,fallbacks=cambriamath]
+  \definetypeface [cambria] [tt] [mono]  [dejavu]         [default] [rscale=0.88]
+  \definetypeface [cambria] [mm] [math]  [\typescriptone] [default]
+  \definetypeface [cambria] [ss] [sans]  [calibri]        [default]
+\stoptypescript
+
+\starttypescript [sans] [lato]
+  \definefontsynonym [Sans]            [name:Lato-Light]  [features=default]
+  \definefontsynonym [SansItalic]      [name:Lato-LightItalic]  [features=default]
+  \definefontsynonym [SansBold]        [LatoDemiRegular]  [features=default]
+  \definefontsynonym [SansBoldItalic]  [LatoDemiItalic]   [features=default]
+  \definefontsynonym [SansSlanted]     [SansItalic]       [features=default]
+  \definefontsynonym [SansBoldSlanted] [SansBoldItalic]   [features=default]
+  \definefontsynonym [SansCaps]        [Sans]             [features=smallcaps]
+\stoptypescript
+
+\starttypescript [serif] [aleo]
+  \definefontsynonym [Serif]            [name:Aleo-Light]   [features=default,fallbacks=cambriamath]
+  \definefontsynonym [SerifItalic]      [name:Aleo-LightItalic]  [features=default]
+  \definefontsynonym [SerifBold]        [name:Aleo-Bold]    [features=default]
+  \definefontsynonym [SerifBoldItalic]  [LatoDemiItalic]    [features=default]
+  \definefontsynonym [SerifSlanted]     [SerifItalic]       [features=default]
+  \definefontsynonym [SerifBoldSlanted] [SerifBoldItalic]   [features=default]
+  \definefontsynonym [SerifCaps]        [Serif]             [features=smallcaps]
+\stoptypescript
+
+\starttypescript [mono] [iosev]
+  \definefontsynonym [Mono]        [name:iosevka-slab-light] [features=iosevkacode,fallbacks=dejavumath]
+  \definefontsynonym [MonoItalic]  [name:iosevka-slab-light-italic]  [features=default]
+  \definefontsynonym [MonoBold]        [name:Aleo-Bold]    [features=default]
+  \definefontsynonym [MonoBoldItalic]  [LatoDemiItalic]    [features=default]
+  \definefontsynonym [MonoSlanted]     [MonoItalic]       [features=default]
+  \definefontsynonym [MonoBoldSlanted] [MonoBoldItalic]   [features=default]
+  \definefontsynonym [MonoCaps]        [Mono]             [features=smallcaps]
+\stoptypescript
+
+\starttypescript  [aleo]
+  \definetypeface [aleo] [rm] [serif] [aleo]     [default]
+  \definetypeface [aleo] [tt] [mono]  [iosev]    [default] [rscale=0.96]
+  \definetypeface [aleo] [mm] [math]  [cambria]  [default]
+  \definetypeface [aleo] [ss] [sans]  [lato]     [default]
+\stoptypescript
+
+\definebodyfont[11pt]
+\definebodyfont[24pt]
+\definebodyfont[13pt]
+\definebodyfont[12.96pt]
+\definebodyfont[12.6pt]
+\definebodyfont[10.8pt]
+\definebodyfont[10.5pt]
+\definebodyfont[8.64pt]
+\definebodyfont[8.4pt]

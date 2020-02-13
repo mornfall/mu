@@ -1,0 +1,179 @@
+\newif\ifslides
+\ifnotes\else\slidestrue\fi
+
+%
+% page geometry, layout and numbering
+%
+
+\definepapersize[A7w][width=65mm,height=97.5mm]
+\ifnotes  \setuppapersize[A4][A4] \fi
+\ifslides \setuppapersize[A7w,landscape][A7w,landscape] \fi
+
+\setuplayout [width=middle, height=middle, grid=yes, header=0cm]
+\ifnotes  \setuplayout [backspace=.60cm, topspace=.8cm, bottomspace=.40cm, footer=.8cm] \fi
+\ifslides \setuplayout [backspace=.35cm, topspace=.0cm, bottomspace=.10cm, footer=.2cm] \fi
+
+\definemakeup [slide] [pagestate=start, top=\vfill, bottom=\vfill,
+                       headerstate=start, footerstate=start, page=yes]
+\definemakeup [titleslide] [pagestate=start, headerstate=stop, footerstate=start, page=yes]
+
+\ifnotes % embedded slides
+  \def\startslide{\blank[small]
+                  \startframed[align=width, width=96mm, frame=off, background=color,
+                               backgroundcolor=gray, offset=6pt]}
+  %\penalty-8000\blank\hrule\penalty10000\blank[small]\startnarrower}
+  \def\stopslide{\vskip-4pt\stopframed\blank[small]}
+ n%\blank[small]\stopnarrower\penalty10000\hrule\blank\penalty-8000}
+\else
+  \def\startslide{\startmakeup[slide]}
+  \def\stopslide{\stopmakeup}
+\fi
+
+\definemixedcolumns [sectioncolumns] [n=2, balance=no]
+\setcounter         [userpage] [1]
+\setupfooter        [state=start]
+\setuppagenumbering [state=start]
+\setuptolerance     [verytolerant, stretch]
+
+\input{prelude-typescript.tex}
+\setupbodyfont[aleo]
+
+%
+% slide setup
+%
+
+\definecolor[blackcoffee] [r=0.1, g=.04, b=.02]
+\definecolor[coffee]      [r=0.7, g=.29, b=.15]
+\definecolor[dark]        [r=0.27, g=0.27, b=0.27]
+\definecolor[lightcoffee] [r=0.98, g=.406, b=.21]
+\definecolor[brownish]    [r=0.6, g=.3, b=.1]
+\definecolor[midgreen]    [r=0.05, g=.55, b=.05]
+
+%
+% emphasis and colours
+%
+
+\def\emcolor{\darkred}
+\def\bf{\red}
+\def\em{\emcolor}
+\def\code{\midgreen\tt}
+\setuptype[color=midgreen]
+
+\ifslides \startcolor[white] \fi % set the foreground (text) colour
+\ifslides \setupbackgrounds[page] [background=color, backgroundcolor=black] \fi
+
+%
+% source code syntax highlighting
+%
+
+\unprotect
+\definestartstop[SynSnippetKeyword]  [\c!color=darkred,\c!style=boldface]
+\definestartstop[SynSnippetOperator] [\c!color=darkred]
+\definestartstop[SynSnippetBoundary] [\c!color=darkblue,\c!style=boldface]
+\definestartstop[SynSnippet]         [DefaultSnippet]
+\definestartstop[SynSnippetName]     [\c!color=,before={\it}]
+\definestartstop[SynSnippetType]     [\c!color=darkgreen]
+\definestartstop[SynSnippetMagic]    [\c!color=darkmagenta]
+\definestartstop[SynSnippetQuote]    [\c!color=darkgreen]
+\definestartstop[SynSnippetString]   [\c!color=darkgreen]
+\definestartstop[SynSnippetComment]  [\c!color=brownish]
+\protect
+
+\registerctxluafile{syn-cxx.lua}    {1.001}
+\registerctxluafile{syn-python.lua} {1.001}
+\registerctxluafile{syn-llvm.lua}   {1.001}
+
+\definetyping[cxx]    [option=cxx]
+\definetyping[python] [option=python]
+\definetyping[plain]
+
+\setuptyping        [before={\switchtobodyfont[\codesize]\blank[1ex]},after={\blank[1ex]}]
+\setuptyping[plain] [before={\switchtobodyfont[\codesize]}, option=plain, color=midgreen]
+
+%
+% helper macros
+%
+
+\let\center\raggedcenter
+\define[1]\d{{\mathrm d}#1} % differential
+
+%
+% named font sizes
+%
+
+\def\titlesize{18pt}
+\def\sectionsize{14.5pt} % only for notes
+\def\subsectionsize{13pt}
+\def\bodysize{10pt}
+\def\listsize{9.6pt}
+\def\codesize{9.4pt}
+\def\notesize{8.6pt}
+
+%
+% sectioning
+%
+
+\setuphead[section]    [align=center, sectionnumber=yes, placehead=yes,
+                        aftersection={\page}, sectionstarter=Part , sectionstopper=:, number=yes]
+\setuphead[subsection] [before={}, after={}, aftersection={}]
+
+\ifslides
+  \setuphead[section, subsection] [before={\startmakeup[titleslide]}, after={\stopmakeup}]
+\else
+  \setuphead[section]    [style={\switchtobodyfont[\sectionsize]}]
+  \setuphead[subsection] [style={\switchtobodyfont[\subsectionsize]}]
+\fi
+
+%
+% set up spacing in various objects
+%
+
+\setupitemize  [before={\penalty10000\blank[.6ex]\penalty10000\switchtobodyfont[\listsize]},
+                after={\blank[.8ex]}, width=14pt]
+\setuptables   [distance=small, rulethickness=.4mm]
+\setuptabulate [distance=small, bodyfont=\notesize]
+\setupnarrower [middle=3mm]
+
+%
+% metapost graphics
+%
+
+\startMPinclusions[+]
+input roundrect;
+
+color fg;
+fg := black;
+\stopMPinclusions
+
+\ifslides \startMPinclusions[+] fg := white \stopMPinclusions
+          \setupMPinstance[metafun][textcolor=white] \fi
+
+\startMPenvironment \setupbodyfont[sans,\notesize] \stopMPenvironment
+
+%
+% title (top of first page if notes, a separate slide for slides)
+%
+
+\starttext
+
+\ifslides
+ \setupfootertexts [{ \switchtobodyfont[sans,\notesize]
+                      \color[white]{\hfill\tfxx \currentdate} }]
+ \startmakeup[titleslide]
+ \blank[2*big, force]
+\fi
+
+\startalignment[center]
+\switchtobodyfont[\titlesize]      \mmtitle   \ifslides \blank[medium] \else \blank[small] \fi
+\switchtobodyfont[\subsectionsize] \mmauthors \ifslides \blank[big] \fi
+\stopalignment
+
+\ifslides
+  \stopmakeup
+  \setupfootertexts [{ \switchtobodyfont[sans, 10.5pt]
+                        \color[white]{ \tfxx \rlap{\mmtitle} \hfill
+                                       \pagenumber/\lastpagenumber \hfill
+                                       \llap{\currentdate} } }]
+\fi
+
+\switchtobodyfont[\notesize]

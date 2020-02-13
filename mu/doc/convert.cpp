@@ -345,8 +345,8 @@ namespace umd::doc
         std::u32string txt;
         auto emit_line = [&]( auto l )
         {
-            for ( int i = 0; i < int( l.size() ); ++i )
-                if ( i && l[ i ] == U'│' )
+            for ( int i = 1; i < int( l.size() ); ++i )
+                if ( l[ i ] == U'│' )
                     w.table_new_cell(), emit_text( txt ), txt.clear();
                 else
                     txt += l[ i ];

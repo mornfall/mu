@@ -23,14 +23,6 @@ namespace umd::doc
             out.emit( heading_cmd( level ), "[title={", t, "}]" );
         }
 
-        /* spans ; may be also called within mpost btex/etex */
-        virtual void em_start() { out.emit( "{\\em{}" ); }
-        virtual void em_stop()  { out.emit( "}" ); }
-        virtual void tt_start() { out.emit( "{\\code{}" ); }
-        virtual void tt_stop()  { out.emit( "}" ); }
-        virtual void math_start() { out.emit( "\\math{" ); in_math = true; }
-        virtual void math_stop() { out.emit( "}" ); in_math = false; }
-
         /* display math */
         virtual void eqn_start()
         {
@@ -63,7 +55,6 @@ namespace umd::doc
                       "][distance=-2pt]", "\n" );
         }
 
-        virtual void enum_item() { out.emit( "\\item " ); }
         virtual void enum_stop() { out.emit( "\\stopitemize", "\n" ); }
 
         virtual void bullet_start( int level )

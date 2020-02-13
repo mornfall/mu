@@ -110,4 +110,41 @@ namespace umd::doc
         virtual void pagebreak() {}
     };
 
+    struct w_noop : writer
+    {
+        virtual void text( std::u32string_view ) {}
+        virtual void heading( std::u32string_view, int ) {}
+
+        virtual void math_start() {}
+        virtual void math_stop() {}
+
+        /* aligned equations */
+        virtual void eqn_start() {}
+        virtual void eqn_new_cell() {}
+        virtual void eqn_new_row() {}
+        virtual void eqn_stop() {}
+
+        /* lists */
+        virtual void enum_start( int ) {}
+        virtual void enum_item() {}
+        virtual void enum_stop() {}
+        virtual void bullet_start( int ) {}
+        virtual void bullet_item() {}
+        virtual void bullet_stop() {}
+
+        /* metapost figures */
+        virtual void mpost_start() {}
+        virtual void mpost_write( std::string_view ) {}
+        virtual void mpost_stop() {}
+
+        /* tables */
+        virtual void table_start( columns, bool ) {}
+        virtual void table_new_cell() {}
+        virtual void table_new_row() {}
+        virtual void table_stop() {}
+        virtual void code_start( std::string ) {}
+        virtual void code_line( std::u32string_view ) {}
+        virtual void code_stop() {}
+    };
+
 }

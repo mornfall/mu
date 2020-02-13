@@ -165,7 +165,7 @@ namespace brq
                 _print_location = true;
             }
             else
-                add_rule( "+", 0, 0 ); /* print info-level messages by default */
+                add_rule( "+", 1, 0 ); /* print info-level messages by default */
         }
 
         static constexpr std::array< const char *, 5 > levels =

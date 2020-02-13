@@ -480,6 +480,7 @@ namespace umd::doc
     {
         header();
         body();
+        w.end();
     }
 
 }

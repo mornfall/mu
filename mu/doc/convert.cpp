@@ -356,7 +356,7 @@ namespace umd::doc
         int finished = 0;
         bool rules = false;
 
-        for ( int i = 0; i < int( sep.size() ); ++i )
+        for ( int i = 1; i < int( sep.size() ); ++i )
             switch ( sep[ i ] )
             {
                 case U'◀': cols.push_back( 'l' ); break;
@@ -368,10 +368,13 @@ namespace umd::doc
                     break;
                 case U'─': rules = true; break;
                 case U'┄': break;
-                default:
+                case U'┼': case U'┤':
                     if ( finished == int( cols.size() ) )
                         cols.push_back( 'l' );
                     ++ finished;
+                    break;
+                default:
+                    throw std::runtime_error( "unexpected char in table header" );
             }
 
         w.table_start( cols, rules );

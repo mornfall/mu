@@ -157,10 +157,11 @@ fg := black;
 \starttext
 
 \ifslides
- \setupfootertexts [{ \switchtobodyfont[sans,\notesize]
-                      \color[white]{\hfill\tfxx \currentdate} }]
- \startmakeup[titleslide]
- \blank[2*big, force]
+  \def\footfont{\switchtobodyfont[sans, \notesize]}
+  \def\foottext{\tfxx\rlap{\mmtitle}\hfill\pagenumber/\lastpagenumber\hfill\llap{\currentdate}}
+  \setupfootertexts [{\footfont\color[white]{\hfill\tfxx\currentdate}}]
+  \startmakeup[titleslide]
+  \blank[2*big, force]
 \fi
 
 \startalignment[center]
@@ -170,10 +171,7 @@ fg := black;
 
 \ifslides
   \stopmakeup
-  \setupfootertexts [{ \switchtobodyfont[sans, 10.5pt]
-                        \color[white]{ \tfxx \rlap{\mmtitle} \hfill
-                                       \pagenumber/\lastpagenumber \hfill
-                                       \llap{\currentdate} } }]
+  \setupfootertexts [{\footfont\color[white]{\foottext}}]
 \fi
 
 \switchtobodyfont[\notesize]

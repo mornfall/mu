@@ -108,6 +108,10 @@ namespace umd::doc
 
         /* paging */
         virtual void pagebreak() {}
+
+        virtual void nest_start() {}
+        virtual void nest_end() {}
+        virtual void end() {}
     };
 
     struct w_noop : writer

@@ -386,13 +386,44 @@ namespace umd::doc
         w.table_stop();
     }
 
+    void convert::try_nested()
+    {
+        std::u32string buf;
+
+        while ( true )
+        {
+            if ( todo.empty() ) break;
+            if ( todo[ 0 ] != U'│' ) break;
+
+            auto l = fetch_line();
+            l.remove_prefix( std::min( 2lu, l.size() ) ); /* strip │ and a space */
+            buf += l;
+            buf += U"\n";
+        }
+
+        if ( !buf.empty() )
+        {
+            auto backup = todo;
+            todo = buf;
+            w.nest_start();
+            body();
+            w.nest_end();
+            todo = backup;
+        }
+    }
+
     void convert::body()
     {
         try_table();
         try_dispmath();
         try_picture();
+        try_nested();
 
-        if ( todo.empty() ) return;
+        if ( todo.empty() )
+        {
+            end_list( -1 );
+            return;
+        }
 
         if ( todo[ 0 ] == U'' )
             return w.pagebreak(), fetch_line(), body();

@@ -4,7 +4,7 @@ LDADD += -L/usr/local/lib -licuuc
 
 SRC_common = doc/convert.cpp
 SRC = $(SRC_common) slides.cpp paper.cpp pic.cpp
-BIN = mu-slides mu-paper mu-pic
+BIN = mu mu-pic
 
 LIB = ${SRC_common:%.cpp=%.o}
 OBJ = ${SRC:%.cpp=%.o}

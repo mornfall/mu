@@ -18,7 +18,7 @@
 \definemakeup [titleslide] [pagestate=start, headerstate=stop, footerstate=start, page=yes]
 
 \ifnotes % embedded slides
-  \def\startslide{\blank[small]
+  \def\startslide{\blank[6pt]
                   \startframed[align=width, width=96mm, frame=off, background=color,
                                backgroundcolor=gray, offset=6pt]}
   %\penalty-8000\blank\hrule\penalty10000\blank[small]\startnarrower}
@@ -87,7 +87,7 @@
 \definetyping[python] [option=python]
 \definetyping[plain]
 
-\setuptyping        [before={\switchtobodyfont[\codesize]\blank[1ex]},after={\blank[1ex]}]
+\setuptyping        [before={\switchtobodyfont[\codesize]\blank[8pt]}, after={\blank[8pt]}]
 \setuptyping[plain] [before={\switchtobodyfont[\codesize]}, option=plain, color=midgreen]
 
 %
@@ -128,8 +128,8 @@
 % set up spacing in various objects
 %
 
-\setupitemize  [before={\penalty10000\blank[.6ex]\penalty10000\switchtobodyfont[\listsize]},
-                after={\blank[.8ex]}, width=14pt]
+\setupitemize  [before={\blank[4pt]\switchtobodyfont[\listsize]},
+                after={\blank[2pt]}, width=16pt]
 \setuptables   [distance=small, rulethickness=.4mm]
 \setuptabulate [distance=small, bodyfont=\notesize]
 \setupnarrower [middle=3mm]
@@ -161,7 +161,7 @@ fg := black;
   \def\foottext{\tfxx\rlap{\mmtitle}\hfill\pagenumber/\lastpagenumber\hfill\llap{\currentdate}}
   \setupfootertexts [{\footfont\color[white]{\hfill\tfxx\currentdate}}]
   \startmakeup[titleslide]
-  \blank[2*big, force]
+  \blank[24pt, force]
 \fi
 
 \startalignment[center]

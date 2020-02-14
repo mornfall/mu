@@ -161,7 +161,10 @@ namespace umd::pic::convert
                 for ( int x = p.x(); x <= p.x() + w; ++x )
                 {
                     reader::point p( x, y );
-                    if ( grid[ p ].text() )
+
+                    if ( grid[ p ].shade() )
+                        obj->set_shaded( grid[ p ].shade() );
+                    else if ( grid[ p ].text() )
                     {
                         if ( y != last_y && !txt.empty() )
                             txt += U"\\break ";
@@ -170,6 +173,7 @@ namespace umd::pic::convert
                         txt += grid[ p ].character();
                         last_x = x, last_y = y;
                     }
+
                     objects[ reader::point( x, y ) ] = obj;
                 }
 

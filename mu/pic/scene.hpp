@@ -201,10 +201,12 @@ namespace umd::pic
         float _w, _h;
         std::bitset< 4 > _rounded;
         bool _dashed = false;
+        int _shaded = 0;
 
         box( point p, float w, float h ) : _position( p ), _w( w ), _h( h ) {}
         box( float x, float y, float w, float h ) : _position( x, y ), _w( w ), _h( h ) {}
 
+        void set_shaded( int s ) { _shaded = s; }
         void set_rounded( int c, bool r ) { _rounded[ c ] = r; }
         void set_dashed( bool d ) { _dashed = d; }
 
@@ -220,21 +222,33 @@ namespace umd::pic
             }
         }
 
-        void emit( writer &o ) const override
+        writer &path( writer &o ) const
         {
+            auto round_x = [&]( int p ) { return point( _rounded[ p ] ? 8 : 0, 0 ); };
+            auto round_y = [&]( int p ) { return point( 0, _rounded[ p ] ? 8 : 0 ); };
+
             point nw = _position + point( -_w/2,  _h/2 ),
                   ne = _position + point(  _w/2,  _h/2 ),
                   se = _position + point(  _w/2, -_h/2 ),
                   sw = _position + point( -_w/2, -_h/2 );
-            auto round_x = [&]( int p ) { return point( _rounded[ p ] ? 8 : 0, 0 ); };
-            auto round_y = [&]( int p ) { return point( 0, _rounded[ p ] ? 8 : 0 ); };
 
-            o << "draw " << nw + round_x( 0 ) << " -- "
+            o <<            nw + round_x( 0 ) << " -- "
               << "     " << ne - round_x( 1 ) << " .. controls " << ne << " .. " << ne - round_y( 1 ) << " -- \n"
               << "     " << se + round_y( 2 ) << " .. controls " << se << " .. " << se - round_x( 2 ) << " -- \n"
               << "     " << sw + round_x( 3 ) << " .. controls " << sw << " .. " << sw + round_y( 3 ) << " -- \n"
-              << "     " << nw - round_y( 0 ) << " .. controls " << nw << " .. " << " cycle "
-              << ( _dashed ? " dashed evenly" : "" ) << " withcolor fg;\n";
+              << "     " << nw - round_y( 0 ) << " .. controls " << nw << " .. " << " cycle ";
+
+            return o;
+        }
+
+        void emit( writer &o ) const override
+        {
+            auto col = 1 - _shaded * 1.0 / 4;
+
+            if ( _shaded )
+                o << "fill ", path( o ) << " withcolor (" << col << ", " << col << ", " << col << ");\n";
+
+            o << "draw ", path( o ) << ( _dashed ? " dashed evenly" : "" ) << " withcolor fg;\n";
         }
     };
 

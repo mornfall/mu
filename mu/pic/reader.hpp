@@ -29,6 +29,7 @@ namespace umd::pic::reader
         std::bitset< 4 > _arrow;
         bool _rounded = false;
         bool _dashed = false;
+        int _shade = 0; /* 0 = empty, 4 = full */
 
         bool text() const { return ( _char < 0x2500 || _char > 0x2580 ) && !attach() && !arrow() && !empty(); }
         bool empty() const { return _char == U' '; }
@@ -37,6 +38,7 @@ namespace umd::pic::reader
         bool dashed() const { return _dashed; }
         bool attach( dir_t dir ) const { return _attach[ dir ]; }
         bool attach() const { return _attach.any(); }
+        int shade() const { return _shade; }
 
         char32_t character() const { return _char; }
         bool attach_all() const { return _attach.count() == 4; }
@@ -65,6 +67,7 @@ namespace umd::pic::reader
         cell &set_arrow( dir_t d )  { _arrow[ d ] = true; return *this; }
         cell &set_char( uint32_t c ) { _char = c; return *this; }
         cell &set_rounded( bool b ) { _rounded = b; return *this; }
+        cell &set_shade( int i ) { _shade = i; return *this; }
 
         cell( uint32_t c ) : _char( c )
         {
@@ -97,6 +100,10 @@ namespace umd::pic::reader
                     set_attach( east ); set_attach( west );
                     break;
 
+                case U'░': set_shade( 1 ); break;
+                case U'▒': set_shade( 2 ); break;
+                case U'▓': set_shade( 3 ); break;
+                case U'█': set_shade( 4 ); break;
                 default: ;
             }
         }

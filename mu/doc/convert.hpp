@@ -55,7 +55,7 @@ namespace umd::doc
 
         void heading();
         void start_list( list_type l );
-        void end_list( int count = 1 );
+        bool end_list( int count = 1, bool xspace = true );
         void ensure_list( int l, list_type t );
         bool try_enum();
 

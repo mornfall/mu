@@ -83,10 +83,10 @@ namespace umd::doc
         /* lists */
         virtual void enum_start( int level ) = 0;
         virtual void enum_item() = 0;
-        virtual void enum_stop() = 0;
+        virtual void enum_stop( bool xspace = false ) = 0;
         virtual void bullet_start( int level ) = 0;
         virtual void bullet_item() = 0;
-        virtual void bullet_stop() = 0;
+        virtual void bullet_stop( bool xspace = false ) = 0;
 
         /* metapost figures */
         virtual void mpost_start() = 0;
@@ -131,10 +131,10 @@ namespace umd::doc
         /* lists */
         virtual void enum_start( int ) {}
         virtual void enum_item() {}
-        virtual void enum_stop() {}
+        virtual void enum_stop( bool ) {}
         virtual void bullet_start( int ) {}
         virtual void bullet_item() {}
-        virtual void bullet_stop() {}
+        virtual void bullet_stop( bool ) {}
 
         /* metapost figures */
         virtual void mpost_start() {}

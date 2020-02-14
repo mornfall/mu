@@ -55,7 +55,10 @@ namespace umd::doc
                       "][distance=-2pt]", "\n" );
         }
 
-        virtual void enum_stop() { out.emit( "\\stopitemize", "\n" ); }
+        virtual void enum_stop( bool xspace )
+        {
+            out.emit( "\\stopitemize", xspace ? "\\vskip3pt" : "\n" );
+        }
 
         virtual void bullet_start( int level )
         {
@@ -65,7 +68,10 @@ namespace umd::doc
         }
 
         virtual void bullet_item() { out.emit( "\\item " ); }
-        virtual void bullet_stop() { out.emit( "\\stopitemize", "\n" ); }
+        virtual void bullet_stop( bool xspace )
+        {
+            out.emit( "\\stopitemize", xspace ? "\\vskip3pt\n" : "\n" );
+        }
 
         /* metapost figures */
         virtual void mpost_start()

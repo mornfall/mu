@@ -73,7 +73,7 @@ namespace umd::doc
         w.heading( fetch_line(), level );
     }
 
-    void convert::end_list( int count )
+    bool convert::end_list( int count, bool xspace )
     {
         if ( _list.empty() || !count )
             return;
@@ -85,7 +85,7 @@ namespace umd::doc
         }
 
         _list.pop();
-        end_list( count - 1 );
+        end_list( count - 1, xspace );
     }
 
     void convert::start_list( list_type l )

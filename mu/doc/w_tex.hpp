@@ -37,7 +37,7 @@ namespace umd::doc
         virtual void meta_end()
         {
             if ( !format.empty() )
-                out.emit( "\\input{", format, "-prelude.tex}\n" );
+                out.emit( "\\input{prelude-", format, ".tex}\n" );
         }
 
         virtual void text( std::u32string_view t )

@@ -41,25 +41,56 @@ namespace umd::doc
             return false;
     }
 
-    void convert::skip_item_lead()
+    int convert::skip_bullet_lead()
     {
-        if ( todo.empty() )
-            return;
+        int indent = 0;
+        bool saw_leader = false;
 
-        switch ( todo[ 0 ] )
+        while ( !todo.empty() )
         {
-            case U'•': case U'◦': case U'‣':
-                todo.remove_prefix( 1 );
-                skip_white();
-                return;
-            default:
-                if ( std::isalpha( todo[ 0 ] ) )
-                    todo.remove_prefix( 1 );
-                else
-                    while ( !todo.empty() && std::isdigit( todo[ 0 ] ) )
-                        todo.remove_prefix( 1 );
-                skip( U'.' );
-                skip_white();
+            auto ch = todo[ 0 ];
+            if ( ch != U' ' && saw_leader ) return indent;
+
+            ++ indent;
+            todo.remove_prefix( 1 );
+
+            if ( ch == U'•' || ch == U'◦' || ch == U'‣' )
+                saw_leader = true;
+        }
+
+        return indent;
+    }
+
+    int convert::skip_enum_lead()
+    {
+        int indent = 0;
+        int leader = 0;
+
+        while ( !todo.empty() )
+        {
+            auto ch = todo[ 0 ];
+
+            if ( ch != U' ' && leader == 2 ) return indent;
+
+            ++ indent;
+            todo.remove_prefix( 1 ); /* commit to eating the char */
+
+            if ( ch == U' ' ) continue;
+            if ( ch == U'.' && leader == 1 ) leader = 2; /* go on to eat whitespace */
+
+            if ( std::isalnum( ch ) && leader < 2 )
+                leader = 1;
+        }
+
+        return indent;
+    }
+
+    int convert::skip_item_lead( list::type t )
+    {
+        switch ( t )
+        {
+            case list::bullets:  return skip_bullet_lead();
+            case list::numbered: return skip_enum_lead();
         }
     }
 
@@ -76,48 +107,67 @@ namespace umd::doc
     bool convert::end_list( int count, bool xspace )
     {
         if ( _list.empty() || !count )
-            return;
+            return false;
 
-        switch ( _list.top() )
+        auto type = _list.top().t;
+        _list.pop();
+
+        switch ( type )
         {
-            case bullets: w.bullet_stop(); break;
-            case numbered: w.enum_stop(); break;
+            case list::bullets: w.bullet_stop( _list.empty() ? xspace : false ); break;
+            case list::numbered: w.enum_stop( _list.empty() ? xspace : false ); break;
         }
 
-        _list.pop();
         end_list( count - 1, xspace );
+        return true;
     }
 
-    void convert::start_list( list_type l )
+    void convert::start_list( list::type l, int indent )
     {
         switch ( l )
         {
-            case bullets: w.bullet_start( _list.size() ); break;
-            case numbered: w.enum_start( _list.size() ); break;
+            case list::bullets:  w.bullet_start( _list.size() ); break;
+            case list::numbered: w.enum_start( _list.size() ); break;
         }
 
-        _list.push( l );
+        _list.emplace( l, indent );
     }
 
-    void convert::ensure_list( int l, list_type t )
+    void convert::ensure_list( int l, list::type t )
     {
         while ( int( _list.size() ) > l )
             end_list();
 
+        int indent = skip_item_lead( t );
+
         if ( int( _list.size() ) == l - 1 )
-            start_list( t );
+            start_list( t, indent );
+        else
+            indent = _list.top().indent;
 
         assert( int( _list.size() ) == l );
-        skip_white();
-        skip_item_lead();
 
         switch ( t )
         {
-            case bullets: w.bullet_item(); break;
-            case numbered: w.enum_item(); break;
+            case list::bullets:  w.bullet_item(); break;
+            case list::numbered: w.enum_item(); break;
         }
 
-        emit_text( fetch_line() ); w.text( U"\n" );
+        std::u32string buf{ fetch_line() };
+        buf += U'\n';
+
+        while ( !todo.empty() )
+        {
+            if ( white_count() < indent )
+                break;
+
+            auto l = fetch_line();
+            l.remove_prefix( indent );
+            buf += l;
+            buf += U"\n";
+        }
+
+        recurse( buf );
     }
 
     bool convert::try_enum()
@@ -131,16 +181,19 @@ namespace umd::doc
         while ( !l.empty() && std::isdigit( l[ 0 ] ) )
             l.remove_prefix( 1 ), ++ digits;
 
-        if ( !digits && !l.empty() && std::isalpha( l[ 0 ] ) )
+        if ( !digits && !l.empty() && std::islower( l[ 0 ] ) )
             l.remove_prefix( 1 ), alpha = true;
 
         if ( l.empty() || l[ 0 ] != U'.' )
             return false;
 
+        if ( alpha && ( l.size() < 2 || l[ 1 ] != U' ' ) )
+            return false;
+
         if ( digits )
-            ensure_list( 1, numbered );
+            ensure_list( 1, list::numbered );
         if ( alpha )
-            ensure_list( 2, numbered );
+            ensure_list( 2, list::numbered );
 
         return digits || alpha;
     }
@@ -388,10 +441,14 @@ namespace umd::doc
 
     void convert::recurse( const std::u32string &buf )
     {
+        int ldepth = rec_list_depth;
+        rec_list_depth = _list.size();
         auto backup = todo;
         todo = buf;
         body();
+        end_list( _list.size() - rec_list_depth );
         todo = backup;
+        rec_list_depth = ldepth;
     }
 
     void convert::try_nested()
@@ -426,7 +483,7 @@ namespace umd::doc
 
         if ( todo.empty() )
         {
-            end_list( -1 );
+            end_code();
             return;
         }
 
@@ -438,7 +495,7 @@ namespace umd::doc
         else
             end_quote();
 
-        if ( _list.empty() && white_count() >= 4 )
+        if ( white_count() >= 4 )
             return emit_code(), body();
         else
             end_code();
@@ -446,17 +503,18 @@ namespace umd::doc
         switch ( char32_t c = nonwhite() )
         {
             case 0: return;
-            case U'•': ensure_list( 1, bullets ); break;
-            case U'◦': ensure_list( 2, bullets ); break;
-            case U'‣': ensure_list( 3, bullets ); break;
+            case U'•': ensure_list( 1, list::bullets ); break;
+            case U'◦': ensure_list( 2, list::bullets ); break;
+            case U'‣': ensure_list( 3, list::bullets ); break;
             case U'#': heading(); break;
 
             default:
                 if ( !try_enum() )
                 {
-                    if ( white_count() < 3 )
-                        end_list( -1 );
-                    emit_text( fetch_line() );
+                    auto l = fetch_line();
+                    if ( !l.empty() )
+                        end_list( _list.size() - rec_list_depth );
+                    emit_text( l );
                     w.text( U"\n" );
                 }
         }
@@ -485,6 +543,7 @@ namespace umd::doc
     {
         header();
         body();
+        end_list( -1 );
         w.end();
     }
 

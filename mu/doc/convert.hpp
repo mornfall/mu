@@ -13,8 +13,15 @@ namespace umd::doc
         std::u32string_view todo;
         convert( std::u32string_view t, doc::writer &w ) : w( w ), todo( t ) {}
 
-        enum list_type { bullets, numbered };
-        std::stack< list_type > _list;
+        struct list
+        {
+            enum type { bullets, numbered } t;
+            int indent;
+            list( type t, int i ) : t( t ), indent( i ) {}
+        };
+
+        std::stack< list > _list;
+        int rec_list_depth = 0;
 
         bool in_picture = false;
         bool in_code = false;
@@ -32,7 +39,10 @@ namespace umd::doc
 
         void skip_white() { skip_white( todo ); }
         bool skip( char32_t c );
-        void skip_item_lead();
+
+        int skip_item_lead( list::type );
+        int skip_bullet_lead();
+        int skip_enum_lead();
 
         template< typename F >
         std::u32string_view fetch( std::u32string_view &v, F pred )
@@ -54,9 +64,9 @@ namespace umd::doc
         void emit_text( std::u32string_view v );
 
         void heading();
-        void start_list( list_type l );
+        void start_list( list::type l, int indent );
         bool end_list( int count = 1, bool xspace = true );
-        void ensure_list( int l, list_type t );
+        void ensure_list( int l, list::type t );
         bool try_enum();
 
         void emit_quote();

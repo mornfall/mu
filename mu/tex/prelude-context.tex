@@ -51,7 +51,8 @@
 % emphasis and colours
 %
 
-\def\emcolor{\darkred}
+\ifnotes  \def\emcolor{\darkred} \fi
+\ifslides \def\emcolor{\orange} \fi
 \def\bf{\red}
 \def\em{\emcolor}
 \def\code{\midgreen\tt}
@@ -70,7 +71,7 @@
 \definestartstop[SynSnippetBoundary] [\c!color=darkblue,\c!style=boldface]
 \definestartstop[SynSnippet]         [DefaultSnippet]
 \definestartstop[SynSnippetName]     [\c!color=,before={\it}]
-\definestartstop[SynSnippetType]     [\c!color=darkgreen]
+\definestartstop[SynSnippetType]     [\c!color=darkyellow]
 \definestartstop[SynSnippetMagic]    [\c!color=darkmagenta]
 \definestartstop[SynSnippetQuote]    [\c!color=darkgreen]
 \definestartstop[SynSnippetString]   [\c!color=darkgreen]

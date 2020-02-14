@@ -14,13 +14,31 @@ namespace umd::doc
     {
         w_slides( stream &out ) : w_tex( out ) { format = U"slides"; }
 
+        std::stack< int > section_level;
+
         bool table_rules;
         int table_rows;
         int math_negspace = 0;
 
+        void close_sections( int level )
+        {
+            while ( !section_level.empty() && section_level.top() >= level )
+            {
+                out.emit( "\\stop", heading_cmd( section_level.top() ), "\n" );
+                section_level.pop();
+            }
+        }
+
+        void open_section( std::u32string_view t, int level )
+        {
+            out.emit( "\\start", heading_cmd( level ), "[title={", t, "}]" );
+            section_level.push( level );
+        }
+
         virtual void heading( std::u32string_view t, int level )
         {
-            out.emit( heading_cmd( level ), "[title={", t, "}]" );
+            close_sections( level );
+            open_section( t, level );
         }
 
         /* display math */

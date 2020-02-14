@@ -159,7 +159,7 @@ namespace umd::pic
 
     struct object : virtual element
     {
-        virtual port port( dir_t p ) const = 0;
+        virtual pic::port port( dir_t p ) const = 0;
         port_out out( dir_t p ) const { return port( p ); }
         port_in in( dir_t p ) const { return port( p ); }
     };

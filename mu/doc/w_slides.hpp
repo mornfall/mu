@@ -145,6 +145,10 @@ namespace umd::doc
 
         /* paging */
         virtual void pagebreak() { out.emit( "\\stopmakeup\\startmakeup[slide]", "\n" ); }
+        virtual void end()
+        {
+            out.emit( "\\stopmakeup\\stoptext", "\n" );
+        }
     };
 
 }

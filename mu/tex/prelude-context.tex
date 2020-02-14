@@ -107,9 +107,10 @@
 % sectioning
 %
 
-\setuphead[section]    [align=center, sectionnumber=yes, placehead=yes, page=no,
-                        aftersection={}, sectionstarter=Part , sectionstopper=:, number=yes]
-\setuphead[subsection] [before={}, after={}, aftersection={}]
+\setuphead[section]       [align=center, sectionnumber=yes, placehead=yes, page=no,
+                           aftersection={}, sectionstarter=Part , sectionstopper=:, number=yes]
+\setuphead[subsection]    [before={}, after={}, aftersection={}]
+\setuphead[subsubsection] [before={}, after={}, aftersection={}, sectionstarter={}, sectionstopper={}]
 
 \ifslides
   \setuphead[section, subsection] [before={\startmakeup[titleslide]}, after={\stopmakeup}]

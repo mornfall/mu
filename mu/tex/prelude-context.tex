@@ -27,7 +27,7 @@
   \def\stopslide{\stopmakeup}
 \fi
 
-\definemixedcolumns [sectioncolumns] [n=2, balance=no]
+\definemixedcolumns [sectioncolumns] [n=2, balance=yes]
 \setcounter         [userpage] [1]
 \setupfooter        [state=start]
 \setuppagenumbering [state=start]
@@ -106,8 +106,8 @@
 % sectioning
 %
 
-\setuphead[section]    [align=center, sectionnumber=yes, placehead=yes,
-                        aftersection={\page}, sectionstarter=Part , sectionstopper=:, number=yes]
+\setuphead[section]    [align=center, sectionnumber=yes, placehead=yes, page=no,
+                        aftersection={}, sectionstarter=Part , sectionstopper=:, number=yes]
 \setuphead[subsection] [before={}, after={}, aftersection={}]
 
 \ifslides

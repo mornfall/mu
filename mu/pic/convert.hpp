@@ -43,6 +43,8 @@ namespace umd::pic::convert
         pic::group group;
         const reader::grid &grid;
 
+        double xpitch = 4.5, ypitch = 6.5;
+
         state( const reader::grid &g ) : grid( g ) {}
 
         void arrow( int x, int y ) { arrow( reader::point( x, y ) ); }
@@ -77,7 +79,7 @@ namespace umd::pic::convert
                 if ( !cell.attach_all() ) /* continue in the same direction if omni-directional */
                     ndir = cell.attach_dir( opposite( at_dir ) );
                 if ( at_dir != ndir )
-                    points.emplace_back( 5 * next.x(), -8 * next.y() );
+                    points.emplace_back( xpitch * next.x(), -ypitch * next.y() );
                 at_dir = ndir;
             }
 
@@ -143,9 +145,11 @@ namespace umd::pic::convert
                 return; /* not a box */
             }
 
-            int w = ne.x() - nw.x();
-            int h = sw.y() - nw.y();
-            auto obj = &group.add< pic::box >( 5 * p.x() + 2.5 * w, -8 * p.y() - 4 * h, 5 * w, 8 * h );
+            double w = ne.x() - nw.x();
+            double h = sw.y() - nw.y();
+            auto obj = &group.add< pic::box >( xpitch * (   p.x() + w / 2 ),
+                                               ypitch * ( - p.y() - h / 2 ),
+                                               xpitch * w, ypitch * h );
             for ( int i = 0; i < int( c.size() ); ++i )
                 obj->set_rounded( i, grid[ c[ i ] ].rounded() );
             obj->set_dashed( dashed );
@@ -170,7 +174,8 @@ namespace umd::pic::convert
                 }
 
             if ( !txt.empty() )
-                group.add< pic::label >( 5 * p.x() + 2.5 * w, -8 * p.y() - 4 * h, txt );
+                group.add< pic::label >( xpitch * (   p.x() + w / 2 ),
+                                         ypitch * ( - p.y() - 1.08 * h / 2 ), txt );
 
             if ( grid[ sw ].attach( south ) )
                 box( sw );
@@ -186,7 +191,7 @@ namespace umd::pic::convert
             if ( objects.at( p ) ) return; /* already taken up by an object */
 
             if ( c.node() )
-                objects[ p ] = &group.add< pic::node >( 5 * p.x(), -8 * p.y(), 2 );
+                objects[ p ] = &group.add< pic::node >( xpitch * p.x(), -ypitch * p.y(), 2 );
 
             if ( c.attach( south ) && c.attach( east ) )
                 box( p );
@@ -216,7 +221,8 @@ namespace umd::pic::convert
             }
 
             auto w = p.x() - origin.x();
-            auto obj = &group.add< pic::text >( 5 * origin.x() + 2.5 * w, -8 * p.y() + 1, txt );
+            auto obj = &group.add< pic::text >( xpitch * ( origin.x() + w / 2.0 ),
+                                                ypitch * ( - p.y() ), txt );
             while ( p != origin ) /* fixme off by one */
                 objects[ p ] = obj, p = p + reader::point( -1, 0 );
         }

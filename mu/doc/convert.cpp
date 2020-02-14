@@ -92,6 +92,7 @@ namespace umd::doc
             case list::bullets:  return skip_bullet_lead();
             case list::numbered: return skip_enum_lead();
         }
+        __builtin_trap();
     }
 
     void convert::heading()
@@ -501,7 +502,7 @@ namespace umd::doc
         else
             end_code();
 
-        switch ( char32_t c = nonwhite() )
+        switch ( nonwhite() )
         {
             case 0: return;
             case U'•': ensure_list( 1, list::bullets ); break;

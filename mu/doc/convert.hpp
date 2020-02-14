@@ -28,6 +28,8 @@ namespace umd::doc
         bool in_quote = false;
         int in_math = 0;
 
+        std::u32string default_typing;
+
         void emit_mpost( std::string_view s ) { w.mpost_write( s ); }
         void emit_tex( std::u32string_view s ) { emit_text( s ); }
 

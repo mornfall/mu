@@ -122,7 +122,7 @@ namespace umd::doc
         }
 
         /* blocks */
-        virtual void code_start( std::string )
+        virtual void code_start( std::u32string )
         {
             out.emit( "\\begin{verbatim}\n" ); /* TODO syntax */
         }

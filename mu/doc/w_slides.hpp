@@ -133,7 +133,7 @@ namespace umd::doc
         }
 
         /* blocks */
-        virtual void code_start( std::string type )
+        virtual void code_start( std::u32string type )
         {
             out.emit( "\\starttyping[margin=10pt,option=", type, "]\n" );
         }

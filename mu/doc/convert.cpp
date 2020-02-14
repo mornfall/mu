@@ -241,10 +241,11 @@ namespace umd::doc
 
     auto convert::code_types()
     {
-        std::map< std::u32string_view, std::string > rv;
-        rv[ U"/* C++ */" ] = "cxx";
-        rv[ U"# shell" ] = "sh";
-        rv[ U"# python" ] = "python";
+        std::map< std::u32string_view, std::u32string > rv;
+        rv[ U"/* C++ */" ] = U"cxx";
+        rv[ U"/* C */" ]   = U"cxx"; /* TODO make a separate C syntax file */
+        rv[ U"# shell" ]   = U"shell";
+        rv[ U"# python" ]  = U"python";
         return rv;
     }
 
@@ -256,7 +257,7 @@ namespace umd::doc
 
         if ( !in_code )
         {
-            std::string type;
+            std::u32string type;
             for ( auto [ k, v ] : code_types() )
                 if ( auto pos = l.find( k ) ; pos != l.npos )
                 {
@@ -264,7 +265,7 @@ namespace umd::doc
                     if ( l.size() == pos + k.size() )
                         l = l.substr( 0, pos );
                 }
-            w.code_start( type );
+            w.code_start( type.empty() ? default_typing : type );
             in_code = true;
         }
 
@@ -533,7 +534,11 @@ namespace umd::doc
         if ( skip( U':' ) )
         {
             skip_white();
-            w.meta( key, fetch_line() );
+            auto v = fetch_line();
+            w.meta( key, v );
+
+            if ( key == U"typing" )
+                default_typing = v;
         }
 
         header();

@@ -6,8 +6,11 @@
 
 #include <memory>
 #include <vector>
+#include <bitset>
 #include <codecvt>
+#include <locale>
 #include <cmath>
+#include <cassert>
 
 namespace umd::pic
 {

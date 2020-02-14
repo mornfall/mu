@@ -1,59 +1,62 @@
-#include "pic/scene.hpp"
-#include "pic/reader.hpp"
-#include "pic/convert.hpp"
-
+#include "common.hpp"
+#include "doc/convert.hpp"
+#include "doc/w_slides.hpp"
+#include "doc/w_lnotes.hpp"
+#include "doc/w_paper.hpp"
 #include <fstream>
-#include <codecvt>
+#include <iostream>
 
 using namespace umd;
 
-std::u32string read_file( std::ifstream &in )
+std::string to_utf8( std::u32string w )
 {
-    in.seekg( 0, std::ios::end );
-    size_t length = in.tellg();
-    in.seekg( 0, std::ios::beg );
-
-    std::string buffer;
-    buffer.resize( length );
-    in.read( &buffer[ 0 ], length );
-
     std::wstring_convert< std::codecvt_utf8< char32_t >, char32_t > conv;
-    return conv.from_bytes( buffer );
+    return conv.to_bytes( w );
 }
 
-pic::group test_scene()
+struct w_doctype : doc::w_noop
 {
-    pic::point origin( 0, 0 ), p1( 50, 20 ), p2( 40, -30 );
-    pic::group g;
+    std::u32string type;
 
-    auto &n1 = g.add< pic::node >( origin );
-    auto &n2 = g.add< pic::node >( p1 );
-    auto &box = g.add< pic::box >( p2, 30, 15 );
+    virtual void meta( sv k, sv v )
+    {
+        if ( k == U"doctype" )
+            type = v;
+    }
+};
 
-    g.add< pic::arrow >( n1.out( pic::east ), n2.in( pic::west ) );
-    g.add< pic::arrow >( box.out( pic::north ), n2.in( pic::south ) );
+template< typename writer >
+void convert( std::u32string_view buf )
+{
+    doc::stream out( std::cout );
+    writer w( out );
+    doc::convert conv( buf, w );
+    conv.run();
+}
 
-    return g;
+int doctype( std::u32string_view buf )
+{
+    w_doctype dt;
+    doc::convert conv( buf, dt );
+    conv.header();
+    if      ( dt.type == U"slides" ) convert< doc::w_slides >( buf );
+    else if ( dt.type == U"lnotes" ) convert< doc::w_lnotes >( buf );
+    else if ( dt.type == U"paper" )  convert< doc::w_paper >( buf );
+    else
+    {
+        std::cerr << "unknown document type " << to_utf8( dt.type ) << std::endl;
+        return 1;
+    }
+
+    return 0;
 }
 
 int main( int argc, const char **argv )
 {
-    std::cout << "color fg; fg := black;" << std::endl;
-    std::cout << "beginfig(0)" << std::endl;
-    std::cout << "pickup pencircle scaled .3mm;" << std::endl;
+    if ( argc != 2 )
+        return std::cerr << "need one (file) argument" << std::endl, 1;
 
-    if ( argc == 2 )
-    {
-        std::ifstream f( argv[1] );
-        auto buf = read_file( f );
-        auto grid = pic::reader::read_grid( buf );
-
-        auto scene = pic::convert::scene( grid );
-        scene.emit( std::cout );
-    }
-    else
-        test_scene().emit( std::cout );
-
-    std::cout << "endfig" << std::endl;
-    std::cout << "end" << std::endl;
+    std::ifstream f( argv[1] );
+    auto buf = read_file( f );
+    return doctype( buf );
 }

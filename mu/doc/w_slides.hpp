@@ -4,6 +4,7 @@
 #include <vector>
 #include <sstream>
 #include <iostream>
+#include <cassert>
 
 /* Writer for ConTeXt-based PDF slides. */
 

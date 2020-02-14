@@ -3,6 +3,7 @@
 #include <vector>
 #include <sstream>
 #include <iostream>
+#include <cassert>
 
 /* Writer for LaTeX-based scientific papers (LNCS, Elsevier, ACM, IEEE). */
 

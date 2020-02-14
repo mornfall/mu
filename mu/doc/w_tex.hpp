@@ -20,7 +20,6 @@ namespace umd::doc
         std::string heading_cmd( int l )
         {
             std::stringstream s;
-            s << "\\";
             while ( l > 1 )
                 --l, s << "sub";
             s << "section";

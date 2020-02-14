@@ -17,7 +17,7 @@ struct writer : pic::writer, doc::stream
     void emit_tex( std::u32string_view s ) { emit( s ); }
 };
 
-int main( int argc, const char **argv )
+int main( int, const char **argv )
 {
     std::cout << "color fg; fg := black;" << std::endl;
     std::cout << "beginfig(1)" << std::endl;

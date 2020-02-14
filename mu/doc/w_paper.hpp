@@ -69,7 +69,7 @@ namespace umd::doc
         }
 
         virtual void enum_item() { out.emit( "\\item " ); }
-        virtual void enum_stop() { out.emit( "\\stopitemize", "\n" ); }
+        virtual void enum_stop( bool ) { out.emit( "\\stopitemize", "\n" ); }
 
         virtual void bullet_start( int level )
         {
@@ -79,7 +79,7 @@ namespace umd::doc
         }
 
         virtual void bullet_item() { out.emit( "\\item " ); }
-        virtual void bullet_stop() { out.emit( "\\stopitemize", "\n" ); }
+        virtual void bullet_stop( bool ) { out.emit( "\\stopitemize", "\n" ); }
 
         /* metapost figures */
         virtual void mpost_start()

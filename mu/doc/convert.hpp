@@ -69,6 +69,9 @@ namespace umd::doc
         void try_picture();
         void try_table();
         void try_dispmath();
+        void try_nested();
+
+        void recurse( const std::u32string &data );
 
         void header();
         void body();

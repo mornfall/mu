@@ -386,6 +386,14 @@ namespace umd::doc
         w.table_stop();
     }
 
+    void convert::recurse( const std::u32string &buf )
+    {
+        auto backup = todo;
+        todo = buf;
+        body();
+        todo = backup;
+    }
+
     void convert::try_nested()
     {
         std::u32string buf;
@@ -403,12 +411,9 @@ namespace umd::doc
 
         if ( !buf.empty() )
         {
-            auto backup = todo;
-            todo = buf;
             w.nest_start();
-            body();
+            recurse( buf );
             w.nest_end();
-            todo = backup;
         }
     }
 

@@ -380,6 +380,17 @@ namespace brq
         return from_string( s, c.back() );
     }
 
+    template< typename container > /* set-like things */
+    auto from_string( std::string_view s, container &c )
+        -> decltype( c.emplace(), from_string( s, std::declval< typename container::value_type & >() ) )
+    {
+        typename container::value_type val;
+        if ( auto rv = from_string( s, val ); !rv )
+            return rv;
+        c.insert( val );
+        return {};
+    }
+
 }
 
 namespace t_brq

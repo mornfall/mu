@@ -97,6 +97,7 @@ namespace umd::doc
 
     void convert::heading()
     {
+        end_list( -1, false );
         int level = 0;
         skip_white();
         while ( skip( U'#' ) )

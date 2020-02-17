@@ -76,7 +76,7 @@ namespace umd::doc
 
         virtual void enum_stop( bool xspace )
         {
-            out.emit( "\\stopitemize", xspace ? "\\vskip3pt" : "\n" );
+            out.emit( "\\stopitemize", xspace ? "\\vskip3pt\n" : "\n" );
         }
 
         virtual void bullet_start( int level )

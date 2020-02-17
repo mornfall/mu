@@ -205,8 +205,8 @@ namespace umd::doc
         {
             switch ( c )
             {
-                case U'{': if ( !in_math ) flush(), w.tt_start(); break;
-                case U'}': if ( !in_math ) flush(), w.tt_stop(); break;
+                case U'‹': if ( !in_math ) flush(), w.tt_start(); break;
+                case U'›': if ( !in_math ) flush(), w.tt_stop(); break;
                 case U'«': flush(); w.em_start(); break;
                 case U'»': flush(); w.em_stop(); break;
                 case U'⟦':

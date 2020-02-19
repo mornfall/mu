@@ -276,6 +276,7 @@ namespace brq::sql
     static constexpr bool is_value = ( std::is_convertible_v< T, std::string_view > ||
                                        std::is_convertible_v< T, std::u32string_view > ||
                                        std::is_convertible_v< T, timestamp > ||
+                                       std::is_convertible_v< T, interval > ||
                                        is_array< T >::value ||
                                        std::is_convertible_v< T, int > ) && !is_list_v< T >;
 

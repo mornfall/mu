@@ -263,6 +263,9 @@ namespace brq::sql
         return brq::sql::type_map< T >::name();
     }
 
+    template< typename T > struct is_array : std::false_type {};
+    template< typename T, size_t s > struct is_array< std::array< T, s > > : std::true_type {};
+
     template< typename T, typename = void > struct is_expr : std::false_type {};
     template< typename T > struct is_expr< T, std::enable_if_t< T::is_expr > > : std::true_type {};
     template< typename T > struct is_expr< T, std::enable_if_t< T::is_enum > > : std::true_type {};
@@ -273,6 +276,7 @@ namespace brq::sql
     static constexpr bool is_value = ( std::is_convertible_v< T, std::string_view > ||
                                        std::is_convertible_v< T, std::u32string_view > ||
                                        std::is_convertible_v< T, timestamp > ||
+                                       is_array< T >::value ||
                                        std::is_convertible_v< T, int > ) && !is_list_v< T >;
 
     template< bool bind = true, typename stream, typename V >

@@ -1061,12 +1061,17 @@ BRICK_SQL_OP( | )
                                            T::columns::car_t::is_primary,
                                            typename T::columns::car_t::qualifier, T >;
 
-    template< typename select, typename tab >
+    template< typename select, typename tab, typename on_t = brq::nil >
     struct select_join : extend< select >
     {
         join_type _type;
+        on_t _join_on;
+
         using tables = brq::cons< tab, typename select::tables >;
-        select_join( select &s, join_type t = join_type::inner ) : extend< select >( s ), _type( t ) {}
+        select_join( select &s, join_type t = join_type::inner, on_t on = on_t() )
+            : extend< select >( s ), _type( t ), _join_on( on )
+        {}
+
         auto exec() { return this->_exec( this ); }
 
         template< typename stream, typename tabs_left = typename select::tables >
@@ -1116,24 +1121,27 @@ BRICK_SQL_OP( | )
             typename tab_right::columns().each( find_foreign_left );
             typename tab_left::columns().each( find_primary );
 
-            if ( !foreign_column.empty() && !primary_column.empty() )
+            if constexpr ( std::is_same_v< on_t, brq::nil > )
             {
-                cond << get_name( tab_right() ) << "." << foreign_column
-                     << " = " << get_name( tab_left() ) << "." << primary_column;
-            }
-            else
-            {
-                primary_column = foreign_column = "";
-                typename tab_right::columns().each( find_primary );
-                typename tab_left::columns().each( find_foreign_right );
-
                 if ( !foreign_column.empty() && !primary_column.empty() )
-                    cond << get_name( tab_left() ) << "." << foreign_column
-                         << " = " << get_name( tab_right() ) << "." << primary_column;
-                else if constexpr ( !tabs_left::cdr_t::empty )
-                    return print< stream, typename tabs_left::cdr_t >( s, id );
+                {
+                    cond << get_name( tab_right() ) << "." << foreign_column
+                         << " = " << get_name( tab_left() ) << "." << primary_column;
+                }
                 else
-                    brq::raise< error >() << "could not find join key";
+                {
+                    primary_column = foreign_column = "";
+                    typename tab_right::columns().each( find_primary );
+                    typename tab_left::columns().each( find_foreign_right );
+
+                    if ( !foreign_column.empty() && !primary_column.empty() )
+                        cond << get_name( tab_left() ) << "." << foreign_column
+                             << " = " << get_name( tab_right() ) << "." << primary_column;
+                    else if constexpr ( !tabs_left::cdr_t::empty )
+                        return print< stream, typename tabs_left::cdr_t >( s, id );
+                    else
+                        brq::raise< error >() << "could not find join key";
+                }
             }
 
             this->_query.print( s, id );
@@ -1145,9 +1153,15 @@ BRICK_SQL_OP( | )
                 case join_type::right: s << " right"; break;
             }
 
-            s << " join " << get_name( tab_right() ) << " on " << cond.buffer();
-
+            s << " join " << get_name( tab_right() ) << " on ";
+            if constexpr ( std::is_same_v< on_t, brq::nil > )
+                s << cond.buffer();
+            else
+                sql::print( s, _join_on, id );
         }
+
+        template< typename expr_t >
+        select_join< select, tab, expr_t > on( expr_t e ) { return { this->_query, _type, e }; }
 
         template< typename we_t >
         where_clause< select_join, we_t > where( const we_t &we ) { return { *this, we }; }

@@ -417,10 +417,19 @@ namespace brq::sql
         }
     };
 
-    template< typename col > struct count : function< count, col > { using type = int32_t; };
+    template< typename col > struct count : function< count, col >
+    {
+        explicit count( const col &c = col() ) : function< count, col >( c ) {}
+        using type = int32_t;
+    };
+
     template< typename col > struct min   : function< min, col >   { using type = typename col::type; };
     template< typename col > struct max   : function< max, col >   { using type = typename col::type; };
-    template< typename col > struct sum   : function< sum, col >   { using type = typename col::type; };
+    template< typename col > struct sum   : function< sum, col >
+    {
+        explicit sum( const col &c = col() ) : function< sum, col >( c ) {}
+        using type = typename col::type;
+    };
     template< typename col > struct every : function< every, col > { using type = typename col::type; };
     template< typename col, typename T > struct cast : col { using type = T; };
 

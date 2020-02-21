@@ -257,7 +257,7 @@ namespace umd::doc
             skip( ' ' );
         auto l = fetch_line();
 
-        if ( !in_code )
+        if ( !in_code && !l.empty() )
         {
             std::u32string type;
             for ( auto [ k, v ] : code_types() )

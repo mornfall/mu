@@ -60,10 +60,15 @@
 
 \ifnotes  \def\emcolor{\darkred} \fi
 \ifslides \def\emcolor{\orange} \fi
+\ifbw
+\def\code{\tt}
+\def\em{\bf}
+\else
 \def\bf{\red}
 \def\em{\emcolor}
 \ifslides \def\code{\midgreen\tt} \else \def\code{\darkgreen\tt} \fi
 \setuptype[color=midgreen]
+\fi
 
 \ifslides \startcolor[white] \fi % set the foreground (text) colour
 \ifslides \setupbackgrounds[page] [background=color, backgroundcolor=black] \fi
@@ -73,7 +78,18 @@
 %
 
 \unprotect
-\ifslides
+\ifbw
+\definestartstop[SynSnippetKeyword]  [\c!style=boldface]
+\definestartstop[SynSnippetOperator] []
+\definestartstop[SynSnippetBoundary] [\c!style=boldface]
+\definestartstop[SynSnippet]         [DefaultSnippet]
+\definestartstop[SynSnippetName]     [\c!style=slanted] % this is a terrible hack to get sans-serif
+\definestartstop[SynSnippetType]     [\c!style=boldface]
+\definestartstop[SynSnippetMagic]    []
+\definestartstop[SynSnippetQuote]    []
+\definestartstop[SynSnippetString]   []
+\definestartstop[SynSnippetComment]  [\c!style=italic]
+\else\ifslides
 \definestartstop[SynSnippetKeyword]  [\c!color=orange,\c!style=boldface]
 \definestartstop[SynSnippetOperator] [\c!color=yellow]
 \definestartstop[SynSnippetBoundary] [\c!color=cyan,\c!style=boldface]
@@ -95,7 +111,7 @@
 \definestartstop[SynSnippetQuote]    [\c!color=darkgreen]
 \definestartstop[SynSnippetString]   [\c!color=darkgreen]
 \definestartstop[SynSnippetComment]  [\c!color=brownish]
-\fi
+\fi\fi
 \protect
 
 \registerctxluafile{syn-cxx.lua}    {1.001}

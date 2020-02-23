@@ -25,7 +25,7 @@
 \starttypescript [serif] [aleo]
   \definefontsynonym [Serif]            [name:Aleo-Light]   [features=default,fallbacks=cambriamath]
   \definefontsynonym [SerifItalic]      [name:Aleo-LightItalic]  [features=default]
-  \definefontsynonym [SerifBold]        [name:Aleo-Bold]    [features=default]
+  \definefontsynonym [SerifBold]        [name:Aleo-Regular]    [features=default]
   \definefontsynonym [SerifBoldItalic]  [LatoDemiItalic]    [features=default]
   \definefontsynonym [SerifSlanted]     [SerifItalic]       [features=default]
   \definefontsynonym [SerifBoldSlanted] [SerifBoldItalic]   [features=default]
@@ -33,18 +33,18 @@
 \stoptypescript
 
 \starttypescript [mono] [iosev]
-  \definefontsynonym [Mono]        [name:iosevka-slab-light] [features=iosevkacode,fallbacks=dejavumath]
-  \definefontsynonym [MonoItalic]  [name:iosevka-slab-light-italic]  [features=default]
-  \definefontsynonym [MonoBold]        [name:Aleo-Bold]    [features=default]
-  \definefontsynonym [MonoBoldItalic]  [LatoDemiItalic]    [features=default]
-  \definefontsynonym [MonoSlanted]     [MonoItalic]       [features=default]
+  \definefontsynonym [Mono]        [name:iosevka-slab-extralight] [features=iosevkacode,fallbacks=dejavumath]
+  \definefontsynonym [MonoItalic]  [name:iosevka-slab-extralight-italic]  [features=iosevkacode]
+  \definefontsynonym [MonoBold]        [name:iosevka-slab-light]    [features=iosevkacode]
+  \definefontsynonym [MonoBoldItalic]  [name:iosevka-slab-italic]    [features=iosevkacode]
+  \definefontsynonym [MonoSlanted]     [name:iosevka-ss01-extralight]       [features=iosevkacode]
   \definefontsynonym [MonoBoldSlanted] [MonoBoldItalic]   [features=default]
   \definefontsynonym [MonoCaps]        [Mono]             [features=smallcaps]
 \stoptypescript
 
 \starttypescript  [aleo]
   \definetypeface [aleo] [rm] [serif] [aleo]     [default]
-  \definetypeface [aleo] [tt] [mono]  [iosev]    [default] [rscale=0.96]
+  \definetypeface [aleo] [tt] [mono]  [iosev]    [default] [rscale=0.93]
   \definetypeface [aleo] [mm] [math]  [cambria]  [default]
   \definetypeface [aleo] [ss] [sans]  [lato]     [default]
 \stoptypescript

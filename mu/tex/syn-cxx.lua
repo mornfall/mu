@@ -34,7 +34,7 @@ local function initialize()
                  "new", "delete", "true", "false", "while",
                  "for", "continue", "enum", "switch", "case", "protected", "private", "return",
                  "const", "volatile", "template", "typename", "using", "sizeof" }
-    local ty = { "int", "double", "void", "short", "long", "char" }
+    local ty = { "int", "double", "void", "short", "long", "char", "size_t", "ssize_t", "time_t" }
     keywords = table.tohash(kw)
     types    = table.tohash(ty)
 end

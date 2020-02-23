@@ -18,8 +18,12 @@
 \definemakeup [titleslide] [pagestate=start, headerstate=stop, footerstate=start, page=yes]
 
 \ifnotes % embedded slides
-  \def\startslide{\blank[6pt]
-                  \startframed[align=width, width=96mm, frame=off, background=color,
+  \definecounter[slidenum][]
+  \defineoverlay[slideover]
+    [{\framed[width=\overlaywidth,height=\overlayheight,align={top,flushright},frame=no,roffset=2pt]
+            {\footfont\rawcountervalue[slidenum]}}]
+  \def\startslide{\blank[6pt]\incrementcounter[slidenum]
+                  \startframed[align=width, width=96mm, frame=off, background={color,slideover},
                                backgroundcolor=gray, offset=6pt]}
   \def\stopslide{\stopframed\blank[4pt]}
 \else

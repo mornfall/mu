@@ -72,13 +72,12 @@ local handler = visualizers.newhandler {
 
 local name        = (patterns.letter + S("_"))^1
 local magic       = S("#@")
-local boundary    = S('()[]<>;"|$\\{},') + P("::")
+local boundary    = S('()[]<>;"|\\{},') + P("::")
 local operator    = S("!=-+/*`?^&%.:~")
   
 local grammar = visualizers.newgrammar("default", { "visualizer",
 
-    comment     = ((P("#") * (P(1) - P("\n"))^0) +
-                   (P("/*") * (P(1) - P("*/"))^0 * P("*/"))) / comment,
+    comment     = (P("#") * (P(1) - P("\n"))^0) / comment,
     string      = makepattern(handler,"quote",patterns.dquote)
                 * makepattern(handler,"string",patterns.nodquote)
                 * makepattern(handler,"quote",patterns.dquote)

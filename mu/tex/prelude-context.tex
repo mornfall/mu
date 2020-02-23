@@ -103,6 +103,7 @@
 \def\listsize{9.6pt}
 \def\codesize{9.4pt}
 \def\notesize{8.6pt}
+\def\footsize{6.4pt}
 
 %
 % sectioning
@@ -152,10 +153,11 @@ fg := black;
 
 \starttext
 
+\def\footfont{\switchtobodyfont[sans, \footsize]}
+\def\foottext{\rlap{\mmtitle}\hfill\pagenumber/\lastpagenumber\hfill\llap{\currentdate}}
+
 \ifslides
-  \def\footfont{\switchtobodyfont[sans, \notesize]}
-  \def\foottext{\tfxx\rlap{\mmtitle}\hfill\pagenumber/\lastpagenumber\hfill\llap{\currentdate}}
-  \setupfootertexts [{\footfont\color[white]{\hfill\tfxx\currentdate}}]
+  \setupfootertexts [{\footfont\color[white]{\hfill\currentdate}}]
   \startmakeup[titleslide]
   \blank[24pt, force]
 \fi
@@ -168,6 +170,8 @@ fg := black;
 \ifslides
   \stopmakeup
   \setupfootertexts [{\footfont\color[white]{\foottext}}]
+\else
+  \setupfootertexts [{\footfont{\foottext}}]
 \fi
 
 \switchtobodyfont[\notesize]

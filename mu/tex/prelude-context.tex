@@ -10,7 +10,7 @@
 \ifslides \setuppapersize[A7w,landscape][A7w,landscape] \fi
 
 \setuplayout [width=middle, height=middle, grid=no, header=0cm]
-\ifnotes  \setuplayout [backspace=.60cm, topspace=.9cm, bottomspace=.30cm, footer=.8cm] \fi
+\ifnotes  \setuplayout [backspace=.75cm, topspace=.9cm, bottomspace=.30cm, footer=.8cm] \fi
 \ifslides \setuplayout [backspace=.35cm, topspace=.0cm, bottomspace=.10cm, footer=.2cm] \fi
 
 \definemakeup [slide] [pagestate=start, top=\vfill, bottom=\vfill,
@@ -31,7 +31,8 @@
   \def\stopslide{\stopmakeup}
 \fi
 
-\definemixedcolumns [sectioncolumns] [n=2, balance=yes]
+\definemixedcolumns [sectioncolumns] [n=2, balance=yes, distance=24pt, separator=rule,
+                                      rulethickness=.5pt, rulecolor=gray]
 \setcounter         [userpage] [1]
 \setupfooter        [state=start]
 \setuppagenumbering [state=start]

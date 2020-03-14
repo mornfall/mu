@@ -232,10 +232,16 @@ namespace brq
         return generator( [=]( auto s ) { return split( s, d, reverse ); }, s );
     }
 
-    static std::string tabulate( std::string_view s )
+    static auto splitter( std::u32string_view s, char32_t d, bool reverse = false )
+    {
+        return generator( [=]( auto s ) { return split( s, d, reverse ); }, s );
+    }
+
+    template< typename char_t >
+    std::basic_string< char_t > tabulate( std::basic_string_view< char_t > s )
     {
         std::vector< int > cols;
-        std::string out;
+        std::basic_string< char_t > out;
 
         auto stop = [&]( int t, int c )
         {
@@ -271,6 +277,9 @@ namespace brq
 
         return out;
     }
+
+    static inline std::string tabulate( std::string_view s ) { return tabulate< char >( s ); }
+    static inline std::u32string tabulate( std::u32string_view s ) { return tabulate< char32_t >( s ); }
 
     struct quote
     {

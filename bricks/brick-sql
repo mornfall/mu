@@ -1253,6 +1253,14 @@ BRICK_SQL_OP( | )
         sql::raw_sql< select_tab > raw_sql( std::string_view sv ) { return { *this, sv }; }
     };
 
+    template< typename head > auto sql_join( const head &q ) { return q; }
+
+    template< typename join, typename... joins, typename head >
+    auto sql_join( const head &q )
+    {
+        return sql_join< joins... >( q.template join< join >() );
+    }
+
     template< typename select, typename... cols >
     struct select_distinct : extend< select >
     {
@@ -1269,8 +1277,8 @@ BRICK_SQL_OP( | )
             this->_query.print( s, id );
         }
 
-        template< typename table >
-        select_tab< select_distinct, table > from() { return { *this }; }
+        template< typename table, typename... joins >
+        auto from() { return sql_join< joins... >( select_tab< select_distinct, table >( *this ) ); }
     };
 
     template< typename... cols >
@@ -1296,8 +1304,8 @@ BRICK_SQL_OP( | )
         template< typename... et >
         select_cols( sql::txn &t, et... e ) : query_head< cols... >( t ), _cols( e... ) {}
 
-        template< typename table >
-        select_tab< select_cols, table > from() { return { *this }; }
+        template< typename table, typename... joins >
+        auto from() { return sql_join< joins... >( select_tab< select_cols, table >( *this ) ); }
 
         template< typename... distinct_cols >
         select_distinct< select_cols, distinct_cols... > distinct()

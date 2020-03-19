@@ -219,8 +219,11 @@ namespace brq
             }
         }
 
-        template< typename T >
-        std::enable_if_t< std::is_integral_v< T > && sizeof( T ) <= 8 > update_aligned( T v )
+        void update_aligned() {}
+        void update() {}
+
+        template< typename T, typename... Ts >
+        std::enable_if_t< std::is_integral_v< T > && sizeof( T ) <= 8 > update_aligned( T v, Ts... vs )
         {
             ASSERT_EQ( counter % sizeof( T ), 0 );
             mix_if_needed();
@@ -228,10 +231,11 @@ namespace brq
             unsigned byte = 8 * ( counter % 8 );
             state[ word ] ^= uint64_t( v ) << byte;
             counter += sizeof( T );
+            update_aligned( vs... );
         }
 
-        template< typename T >
-        std::enable_if_t< std::is_integral_v< T > && sizeof( T ) <= 8 > update( T v )
+        template< typename T, typename... Ts >
+        std::enable_if_t< std::is_integral_v< T > && sizeof( T ) <= 8 > update( T v, Ts... vs )
         {
             auto bytes = reinterpret_cast< const uint8_t * >( &v );
             auto end = bytes + sizeof( T );
@@ -241,6 +245,7 @@ namespace brq
                 update_aligned( *reinterpret_cast< const uint32_t * >( bytes ) ), bytes += 4;
             while ( bytes < end )
                 update_aligned( *bytes++ );
+            update( vs... );
         }
 
         hash_state( uint64_t seed = 0 )
@@ -262,14 +267,14 @@ namespace brq
         return s.hash();
     }
 
-    template< typename T >
-    std::enable_if_t< std::is_integral_v< T > && sizeof( T ) <= 8, hash64_t > hash( T v )
+    template< typename... Ts >
+    auto hash( Ts... vs )
+        -> std::enable_if_t< ( ( std::is_integral_v< Ts > && sizeof( Ts ) <= 8 ) && ... ), hash64_t >
     {
         hash_state s;
-        s.update_aligned( v );
+        s.update_aligned( vs... );
         return s.hash();
     }
-
 }
 
 namespace t_brq

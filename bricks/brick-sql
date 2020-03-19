@@ -1069,7 +1069,7 @@ BRICK_SQL_OP( | )
         on_t _join_on;
 
         using tables = brq::cons< tab, typename select::tables >;
-        select_join( select &s, join_type t = join_type::inner, on_t on = on_t() )
+        select_join( const select &s, join_type t = join_type::inner, on_t on = on_t() )
             : extend< select >( s ), _type( t ), _join_on( on )
         {}
 
@@ -1168,13 +1168,13 @@ BRICK_SQL_OP( | )
         where_clause< select_join, we_t > where( const we_t &we ) { return { *this, we }; }
 
         template< typename table >
-        select_join< select_join, table > join() { return { *this }; }
+        select_join< select_join, table > join() const { return { *this }; }
 
         template< typename table >
-        select_join< select_join, table > left_join() { return { *this, join_type::left }; }
+        select_join< select_join, table > left_join() const { return { *this, join_type::left }; }
 
         template< typename table >
-        select_join< select_join, table > right_join() { return { *this, join_type::right }; }
+        select_join< select_join, table > right_join() const { return { *this, join_type::right }; }
 
         template< typename... group_cols >
         group_by< select_join, group_cols... > group_by() { return { *this }; }
@@ -1200,13 +1200,13 @@ BRICK_SQL_OP( | )
         }
 
         template< typename table >
-        select_join< raw_sql, table > join() { return { *this }; }
+        select_join< raw_sql, table > join() const { return { *this }; }
 
         template< typename table >
-        select_join< raw_sql, table > left_join() { return { *this, join_type::left }; }
+        select_join< raw_sql, table > left_join() const { return { *this, join_type::left }; }
 
         template< typename table >
-        select_join< raw_sql, table > right_join() { return { *this, join_type::right }; }
+        select_join< raw_sql, table > right_join() const { return { *this, join_type::right }; }
 
         template< typename... group_cols >
         group_by< raw_sql, group_cols... > group_by() { return { *this }; }
@@ -1233,13 +1233,13 @@ BRICK_SQL_OP( | )
         }
 
         template< typename table >
-        select_join< select_tab, table > join() { return { *this }; }
+        select_join< select_tab, table > join() const { return { *this }; }
 
         template< typename table >
-        select_join< select_tab, table > left_join() { return { *this, join_type::left }; }
+        select_join< select_tab, table > left_join() const { return { *this, join_type::left }; }
 
         template< typename table >
-        select_join< select_tab, table > right_join() { return { *this, join_type::right }; }
+        select_join< select_tab, table > right_join() const { return { *this, join_type::right }; }
 
         template< typename... group_cols >
         sql::group_by< select_tab, group_cols... > group_by() { return { *this }; }

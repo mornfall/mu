@@ -146,7 +146,7 @@ namespace umd::pic
         std::u32string _text;
 
         label( point pos, std::u32string s ) : _position( pos ), _text( s ) {}
-        label( int x, int y, std::u32string s ) : _position( x, y ), _text( s ) {}
+        label( double x, double y, std::u32string s ) : _position( x, y ), _text( s ) {}
 
         void emit( writer &o ) const override
         {
@@ -170,7 +170,7 @@ namespace umd::pic
         int _radius = 5;
 
         node( point p, int r = 5 ) : _position( p ), _radius( r ) {}
-        node( int x, int y, int r = 5 ) : _position( x, y ), _radius( r ) {}
+        node( double x, double y, int r = 5 ) : _position( x, y ), _radius( r ) {}
 
         pic::port port( dir_t p ) const override
         {

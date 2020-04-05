@@ -30,7 +30,7 @@ local SynSnippetQuote               = verbatim.SynSnippetQuote
 local keywords, plain, metafun
 
 local function initialize()
-    local kw = { "auto", "struct", "try", "catch", "if", "else", "break", "goto",
+    local kw = { "auto", "struct", "class", "try", "catch", "if", "else", "break", "goto",
                  "new", "delete", "true", "false", "while",
                  "for", "continue", "enum", "switch", "case", "protected", "private", "return",
                  "const", "volatile", "template", "typename", "using", "sizeof" }

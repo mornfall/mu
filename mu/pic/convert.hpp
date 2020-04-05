@@ -76,7 +76,7 @@ namespace umd::pic::convert
 
                 auto cell = grid[ next ];
                 auto ndir = at_dir;
-                if ( !cell.attach_all() ) /* continue in the same direction if omni-directional */
+                if ( !cell.attach_all() && !cell.arrow() )
                     ndir = cell.attach_dir( opposite( at_dir ) );
                 if ( at_dir != ndir )
                     points.emplace_back( xpitch * next.x(), -ypitch * next.y() );

@@ -61,16 +61,17 @@ namespace umd::doc
         return indent;
     }
 
-    int convert::skip_enum_lead()
+    std::pair< int, bool > convert::skip_enum_lead()
     {
         int indent = 0;
         int leader = 0;
+        bool cont = false;
 
         while ( !todo.empty() )
         {
             auto ch = todo[ 0 ];
 
-            if ( ch != U' ' && leader == 2 ) return indent;
+            if ( ch != U' ' && leader == 2 ) return { indent, cont };
 
             ++ indent;
             todo.remove_prefix( 1 ); /* commit to eating the char */
@@ -79,17 +80,20 @@ namespace umd::doc
             if ( ch == U'.' && leader == 1 ) leader = 2; /* go on to eat whitespace */
 
             if ( std::isalnum( ch ) && leader < 2 )
+            {
+                if ( ch != U'1' && ch != U'a' && ch != U'α' ) cont = true;
                 leader = 1;
+            }
         }
 
-        return indent;
+        return { indent, cont };
     }
 
-    int convert::skip_item_lead( list::type t )
+    std::pair< int, bool > convert::skip_item_lead( list::type t )
     {
         switch ( t )
         {
-            case list::bullets:  return skip_bullet_lead();
+            case list::bullets:  return { skip_bullet_lead(), false };
             case list::numbered: return skip_enum_lead();
         }
         __builtin_trap();
@@ -124,12 +128,12 @@ namespace umd::doc
         return true;
     }
 
-    void convert::start_list( list::type l, int indent )
+    void convert::start_list( list::type l, int indent, bool cont )
     {
         switch ( l )
         {
             case list::bullets:  w.bullet_start( _list.size() ); break;
-            case list::numbered: w.enum_start( _list.size() ); break;
+            case list::numbered: w.enum_start( _list.size(), cont ); break;
         }
 
         _list.emplace( l, indent );
@@ -140,10 +144,10 @@ namespace umd::doc
         while ( int( _list.size() ) > l )
             end_list();
 
-        int indent = skip_item_lead( t );
+        auto [ indent, cont ] = skip_item_lead( t );
 
         if ( int( _list.size() ) == l - 1 )
-            start_list( t, indent );
+            start_list( t, indent, cont );
         else
             indent = _list.top().indent;
 

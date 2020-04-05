@@ -42,9 +42,9 @@ namespace umd::doc
         void skip_white() { skip_white( todo ); }
         bool skip( char32_t c );
 
-        int skip_item_lead( list::type );
+        std::pair< int, bool > skip_item_lead( list::type );
         int skip_bullet_lead();
-        int skip_enum_lead();
+        std::pair< int, bool > skip_enum_lead();
 
         template< typename F >
         std::u32string_view fetch( std::u32string_view &v, F pred )
@@ -66,7 +66,7 @@ namespace umd::doc
         void emit_text( std::u32string_view v );
 
         void heading();
-        void start_list( list::type l, int indent );
+        void start_list( list::type l, int indent, bool cont );
         bool end_list( int count = 1, bool xspace = true );
         void ensure_list( int l, list::type t );
         bool try_enum();

@@ -109,7 +109,7 @@ namespace umd::doc
             out.emit( "@{}}", rules ? "\\toprule" : "", "\n" );
         }
 
-        virtual void table_new_cell() { out.emit( " & " ); }
+        virtual void table_new_cell( int ) { out.emit( " & " ); }
         virtual void table_new_row()
         {
             out.emit( "\\tabularnewline", "\n" );

@@ -402,47 +402,71 @@ namespace umd::doc
         auto hdr = fetch_line();
         auto sep = fetch_line(); skip_white( sep );
 
+        std::deque< int > colw;
         std::u32string txt;
+
         auto emit_line = [&]( auto l )
         {
+            auto remains = colw;
+            int span = 1;
             for ( int i = 1; i < int( l.size() ); ++i )
+            {
                 if ( l[ i ] == U'│' )
-                    w.table_new_cell(), emit_text( txt ), txt.clear();
+                {
+                    w.table_new_cell( span );
+                    emit_text( txt );
+                    txt.clear();
+                    span = 1;
+                    remains.pop_front();
+                }
                 else
+                {
                     txt += l[ i ];
+                    if ( --remains.front() == 0 )
+                        remains.pop_front(), ++ span;
+                }
+            }
         };
 
         std::vector< char > cols;
         int finished = 0;
+        int width = 0;
         bool rules = false;
+        bool next_rule = false;
 
         for ( int i = 1; i < int( sep.size() ); ++i )
+        {
+            ++ width;
+
             switch ( sep[ i ] )
             {
-                case U'◀': cols.push_back( 'l' ); break;
-                case U'▶':
+                case U'◀': case U'◅': cols.push_back( 'l' ); break;
+                case U'▶': case U'▻':
                     if ( finished != int( cols.size() ) && cols.back() == 'l' )
-                        cols.back() = 'c';
+                        cols.back() = next_rule ? '|' : 'c';
                     else
-                        cols.push_back( 'r' );
+                        cols.push_back( next_rule ? ']' : 'r' );
                     break;
                 case U'─': rules = true; break;
                 case U'┄': break;
-                case U'┼': case U'┤':
+                case U'│': case U'┼': case U'┤':
                     if ( finished == int( cols.size() ) )
-                        cols.push_back( 'l' );
+                        cols.push_back( next_rule ? '[' : 'l' );
+                    next_rule = sep[ i ] == U'│';
+                    colw.push_back( width );
+                    width = 0;
                     ++ finished;
                     break;
                 default:
                     throw std::runtime_error( "unexpected char in table header" );
             }
+        }
 
         w.table_start( cols, rules );
         emit_line( hdr );
-        w.table_new_row();
 
         while ( !todo.empty() && nonwhite() == U'│' )
-            emit_line( fetch_line() ), w.table_new_row();
+            w.table_new_row(), emit_line( fetch_line() );
         w.table_stop();
     }
 

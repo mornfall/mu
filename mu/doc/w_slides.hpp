@@ -18,7 +18,7 @@ namespace umd::doc
         std::stack< int > section_level;
 
         bool table_rules;
-        int table_rows;
+        int table_rows, table_cells;
         int math_negspace = 0;
 
         void close_sections( int level )
@@ -112,25 +112,48 @@ namespace umd::doc
         virtual void table_start( columns ci, bool rules )
         {
             table_rules = rules;
-            table_rows = 0;
-            out.emit( "\\placetable[force,none]{}{\\blank[-1ex]",
-                      "\\starttabulate[" );
+            table_rows = table_cells = 0;
+            out.emit( "\\placetable[force,none]{}{\\blank[-1ex]\n" );
+            int i = 0;
+            auto setup = []( char c )
+            {
+                switch ( c )
+                {
+                    case 'c': return "align={center}";
+                    case 'r': return "align={flushright}";
+                    case '|': return "leftframe=on,align={center}";
+                    case ']': return "leftframe=on,align={flushright}";
+                    case '[': return "leftframe=on,align={flushleft}";
+                    default: return "";
+                }
+            };
+
+            out.emit( "\\setupTABLE[frame=off]\n" );
+
             for ( auto c : ci )
-                out.emit( "|", c );
-            out.emit( "|]", rules ? "\\HL" : "", "\n" );
+                out.emit( "\\setupTABLE[c][", std::to_string( ++i ), "][", setup( c ), "]\n" );
+
+            out.emit( "\\bTABLE[toffset=-1pt,boffset=-1pt,loffset=2pt,roffset=2pt]\\bTR\n" );
+            out.emit( rules ? "\\HL" : "", "\n" );
         }
 
-        virtual void table_new_cell() { out.emit( "\\NC " ); }
+        virtual void table_new_cell( int span )
+        {
+            if ( ++table_cells > 1 )
+                out.emit( "\\eTD " );
+            out.emit( "\\bTD[nc=", std::to_string( span ), span > 1 ? ",align={center}" : "", "]" );
+        }
+
         virtual void table_new_row()
         {
-            out.emit( "\\NR", "\n" );
-            if ( ++table_rows == 1 && table_rules )
-                out.emit( "\\HL", "\n" );
+            out.emit( "\\eTD\\eTR\\bTR", "\n" );
+            table_cells = 0;
         }
 
         virtual void table_stop()
         {
-            out.emit( table_rules ? "\\HL\n" : "", "\\stoptabulate\\blank[-1ex]}", "\n" );
+            out.emit( "\\eTD\\eTR" );
+            out.emit( "\\eTABLE\\blank[-1ex]}", "\n" );
         }
 
         /* blocks */

@@ -226,8 +226,9 @@ namespace umd::pic::convert
                     txt += grid.at( p ).character();
             }
 
-            auto w = p.x() - origin.x();
-            auto obj = &group.add< pic::text >( xpitch * ( origin.x() + w / 2.0 ),
+            txt.pop_back();
+            auto w = p.x() - origin.x() - 1;
+            auto obj = &group.add< pic::text >( xpitch * ( origin.x() + w / 2.0 - 0.5 ),
                                                 ypitch * ( - p.y() ), txt );
             while ( p != origin ) /* fixme off by one */
                 objects[ p ] = obj, p = p + reader::point( -1, 0 );

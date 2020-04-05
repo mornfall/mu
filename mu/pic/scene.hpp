@@ -95,7 +95,7 @@ namespace umd::pic
     {
         port_out _from;
         port_in _to;
-        bool _dashed = false, _curved = false;
+        bool _dashed = false, _curved = false, _head = true;
         std::vector< point > _controls;
 
         arrow( port_out f, port_in t ) : _from( f ), _to( t ) {}
@@ -131,7 +131,7 @@ namespace umd::pic
 
         void emit( writer &o ) const override
         {
-            o << "drawarrow ";
+            o << ( _head ? "drawarrow " : "draw " );
             if ( _curved )
                 emit_curved( o );
             else

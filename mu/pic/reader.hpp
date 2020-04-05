@@ -29,15 +29,18 @@ namespace umd::pic::reader
         std::bitset< 4 > _arrow;
         bool _rounded = false;
         bool _dashed = false;
+        bool _head = false;
         int _shade = 0; /* 0 = empty, 4 = full */
 
-        bool text() const { return ( _char < 0x2500 || _char > 0x2580 ) && !attach() && !arrow() && !empty(); }
+        bool text() const { return ( _char < 0x2500 || _char > 0x2580 ) &&
+                                   !attach() && !arrow() && !empty(); }
         bool empty() const { return _char == U' '; }
         bool node() const { return _char == U'●'; }
         bool rounded() const { return _rounded; }
         bool dashed() const { return _dashed; }
         bool attach( dir_t dir ) const { return _attach[ dir ]; }
         bool attach() const { return _attach.any(); }
+        bool head() const { return _head; }
         int shade() const { return _shade; }
 
         char32_t character() const { return _char; }
@@ -73,10 +76,10 @@ namespace umd::pic::reader
         {
             switch ( c )
             {
-                case U'◀': set_attach( east ); set_arrow( west ); break;
-                case U'▶': set_attach( west ); set_arrow( east ); break;
-                case U'▲': set_attach( south ); set_arrow( north ); break;
-                case U'▼': set_attach( north ); set_arrow( south ); break;
+                case U'◀': _head = true; case U'╶': set_attach( east );  set_arrow( west );  break;
+                case U'▶': _head = true; case U'╴': set_attach( west );  set_arrow( east );  break;
+                case U'▲': _head = true; case U'╷': set_attach( south ); set_arrow( north ); break;
+                case U'▼': _head = true; case U'╵': set_attach( north ); set_arrow( south ); break;
 
                 case U'│': set_attach( north ); set_attach( south ); break;
                 case U'┄': _dashed = true; case U'─': set_attach( east ); set_attach( west ); break;

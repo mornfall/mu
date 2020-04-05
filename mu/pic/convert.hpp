@@ -50,6 +50,7 @@ namespace umd::pic::convert
         void arrow( int x, int y ) { arrow( reader::point( x, y ) ); }
         void arrow( reader::point p )
         {
+            auto head   = grid[ p ].head();
             auto to_dir = grid[ p ].arrow_dir();
             auto at_dir = grid[ p ].attach_dir();
             auto to_obj = objects.at( p + diff( to_dir ) );
@@ -87,6 +88,7 @@ namespace umd::pic::convert
             auto &arrow = group.add< pic::arrow >( from_port, to_port );
             arrow._dashed = dashed;
             arrow._curved = curved;
+            arrow._head   = head;
             std::copy( points.rbegin(), points.rend(), std::back_inserter( arrow._controls ) );
         }
 

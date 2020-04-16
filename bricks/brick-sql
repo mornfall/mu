@@ -434,7 +434,28 @@ namespace brq::sql
         using type = typename col::type;
     };
     template< typename col > struct every : function< every, col > { using type = typename col::type; };
-    template< typename col, typename T > struct cast : col { using type = T; };
+
+    template< typename col, typename type > struct cast_to : function< cast_to, col >
+    {
+        using function< cast_to, col >::function;
+
+        template< typename stream >
+        void print( stream &s, int &id ) const
+        {
+            s << "(";
+            sql::print( s, this->_args, id );
+            s << ")::" << sql_type< type >();
+        }
+    };
+
+    template< typename col > struct cast
+    {
+        col _col;
+        cast( const col &c ) : _col( c ) {}
+
+        template< typename T >
+        cast_to< col, T > to() { return { _col }; }
+    };
 
     template< typename col, typename... vals >
     struct coalesce : function< coalesce, col, vals... >

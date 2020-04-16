@@ -224,6 +224,8 @@ namespace brq::sql
         enum_type() = default;
     };
 
+    struct decimal {};
+
     template< typename T, typename = void > struct type_map {};
     template<> struct type_map< bool >           { static auto name() { return "bool"; } };
     template<> struct type_map< short >          { static auto name() { return "smallint"; } };
@@ -238,6 +240,7 @@ namespace brq::sql
     template<> struct type_map< time >           { static auto name() { return "time"; } };
     template<> struct type_map< timestamp >      { static auto name() { return "timestamp"; }; };
     template<> struct type_map< interval >       { static auto name() { return "interval"; }; };
+    template<> struct type_map< decimal >        { static auto name() { return "decimal"; }; };
 
     template< typename T > struct type_map< std::optional< T > > : type_map< T > {};
 

@@ -196,6 +196,7 @@ namespace brq::sql
         }
 
         friend fixnum abs( fixnum n ) { return fixnum( abs( n.value ), scale ); }
+        fixnum operator+( fixnum n ) const { return fixnum( value + n.value, scale ); }
         fixnum operator*( int n ) const { return fixnum( value * n, scale ); }
         fixnum operator/( int n ) const { return fixnum( value / n, scale ); }
     };

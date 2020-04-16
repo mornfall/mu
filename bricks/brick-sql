@@ -467,6 +467,23 @@ namespace brq::sql
         using type = typename col::type;
     };
 
+    template< typename col >
+    struct substring : function< substring, col >
+    {
+        std::string _pat;
+
+        substring( const col &c, std::string_view p ) : function< substring, col >( c ), _pat( p ) {}
+        using type = typename col::type;
+
+        template< typename stream >
+        void print( stream &s, int &id ) const
+        {
+            s << "substring( ";
+            sql::print( s, this->_args, id );
+            s << " from '" << _pat << "' )::" << sql_type< type >();
+        }
+    };
+
     template< typename tab, typename col, bool _nullable = false >
     struct foreign_key : col
     {

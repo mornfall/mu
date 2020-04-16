@@ -310,7 +310,7 @@ namespace brq::sql
         else if constexpr ( V::is_function )
             v.print( s, id );
         else if constexpr ( V::is_column )
-            s << v.column_name( v );
+            s << v.column_name( v ) << "::" << sql_type< typename V::type >();
         else if constexpr ( V::is_query )
             s << "( ", v.print( s, id ), s << " )";
         else if constexpr ( V::is_enum )

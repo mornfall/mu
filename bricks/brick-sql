@@ -534,6 +534,13 @@ namespace brq::sql
         using columns = cons_list_t< cols... >;
         static constexpr bool is_table = false;
         static constexpr bool is_view  = true;
+        static constexpr bool is_updatable = false;
+    };
+
+    template< typename... cols >
+    struct updatable_view : view< cols... >
+    {
+        static constexpr bool is_updatable = true;
     };
 
     template< typename... tables_ >
@@ -1723,6 +1730,8 @@ BRICK_SQL_OP( | )
         print_columns( s, typename view::columns::template map_t< get_bare >(), "( ", " )" );
         s << ( as_temp ? " on commit drop as " : " with ( security_barrier ) as " );
         view::construct( txn.select( typename view::columns() ) ).print( s, id );
+        if ( view::is_updatable )
+            s << " with check option";
         txn.exec( s.buffer() );
     }
 

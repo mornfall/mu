@@ -24,6 +24,7 @@
 
 #include <memory>
 #include <vector>
+#include <set>
 #include <cxxabi.h>
 #include <codecvt>
 #include <endian.h> /* beNNtoh / htobeNN */
@@ -551,8 +552,31 @@ namespace brq::sql
 
     struct txn;
 
+    struct notification
+    {
+        std::string channel, payload;
+        bool valid;
+        explicit operator bool() { return valid; }
+
+        notification( std::string ch, std::string p )
+            : channel( ch ), payload( p ), valid( true )
+        {}
+
+        notification() : valid( false ) {}
+
+        bool operator<( const notification &o ) const
+        {
+            ASSERT( valid && o.valid );
+            if ( channel == o.channel )
+                return payload < o.payload;
+            else
+                return channel < o.channel;
+        }
+    };
+
     struct conn
     {
+        std::set< notification > _pending;
         PGconn *_handle = nullptr;
         PGconn *handle() { return _handle; }
 
@@ -571,6 +595,49 @@ namespace brq::sql
             auto result = PQexec( handle(), sql.c_str() );
             if ( PQresultStatus( result ) != PGRES_COMMAND_OK )
                 raise< error >() << "executing " << sql << ": " << errmsg();
+        }
+
+        notification check_notify()
+        {
+            PQconsumeInput( handle() );
+
+            while ( auto notify = PQnotifies( handle() ) )
+            {
+                _pending.emplace( notify->relname, notify->extra );
+                PQfreemem( notify );
+            }
+
+            if ( _pending.empty() )
+                return {};
+
+            auto rv = *_pending.begin();
+            _pending.erase( _pending.begin() );
+            return rv;
+        }
+
+        notification wait( std::optional< time_t > deadline = std::nullopt )
+        {
+            if ( auto n = check_notify() )
+                return n;
+
+            int sock = PQsocket( handle() );
+            fd_set fds;
+            FD_ZERO( &fds );
+            FD_SET( sock, &fds );
+
+            auto now = ::time( nullptr );
+            struct timeval tv = { !deadline || now >= *deadline ? 0 : *deadline - now, 0 };
+            DEBUG( "awaiting notifications, timeout =", tv.tv_sec );
+
+            if ( ::select( sock + 1, &fds, nullptr, nullptr, deadline ? &tv : nullptr ) < 0 )
+                brq::raise< system_error >() << "select on postgres socket";
+
+            auto n = check_notify();
+
+            if ( !n )
+                DEBUG( "check_notify: timeout" );
+
+            return n;
         }
 
         ~conn()
@@ -1576,45 +1643,10 @@ BRICK_SQL_OP( | )
 
         void listen( std::string_view sv ) { exec() << "listen " << sv; }
 
-        struct notification
-        {
-            std::string channel, payload;
-            bool valid;
-            explicit operator bool() { return valid; }
-        };
-
-        notification check_notify()
-        {
-            PQconsumeInput( _conn.handle() );
-            if ( auto notify = PQnotifies( _conn.handle() ) )
-            {
-                notification rv{ notify->relname, notify->extra, true };
-                PQfreemem( notify );
-                return rv;
-            }
-            else
-                return { "", "", false };
-        }
-
         notification wait( std::optional< time_t > deadline = std::nullopt )
         {
             ASSERT( _closed ); /* waiting with an open transaction causes a deadlock */
-            if ( auto n = check_notify() )
-                return n;
-
-            int sock = PQsocket( _conn.handle() );
-            fd_set fds;
-            FD_ZERO( &fds );
-            FD_SET( sock, &fds );
-
-            auto now = ::time( nullptr );
-            struct timeval tv = { !deadline || now >= *deadline ? 0 : *deadline - now, 0 };
-            TRACE( "awaiting notifications, timeout =", tv.tv_sec );
-
-            if ( ::select( sock + 1, &fds, nullptr, nullptr, deadline ? &tv : nullptr ) < 0 )
-                brq::raise< system_error >() << "select on postgres socket";
-
-            return check_notify();
+            return _conn.wait( deadline );
         }
 
         template< typename schema >

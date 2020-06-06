@@ -45,6 +45,7 @@ namespace brq
 
         template< template< typename > class P >
         constexpr nil filter() const { return {}; }
+        constexpr nil reverse() const { return {}; }
 
         template< typename F, typename... args_t >
         auto apply( const F &f, args_t && ... args ) const

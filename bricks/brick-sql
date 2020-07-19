@@ -1632,9 +1632,11 @@ BRICK_SQL_OP( | )
 
         txn &rollback() noexcept
         {
-            ASSERT( !_closed );
-            exec( "rollback transaction" );
-            _closed = true;
+            if( !_closed )
+            {
+                exec( "rollback transaction" );
+                _closed = true;
+            }
             return *this;
         }
 

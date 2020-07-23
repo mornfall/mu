@@ -78,6 +78,18 @@ namespace brq
 
         enum overflow { none = 0, plus = 1, minus = 2 };
 
+        constexpr void increment()
+        {
+            static_assert( std::is_integral_v< value_t > );
+            ++_value;
+        }
+
+        constexpr void decrement()
+        {
+            static_assert( std::is_integral_v< value_t > );
+            --_value;
+        }
+
         constexpr bound operator-() const
         {
             if ( _value == minus_infinity() )
@@ -241,6 +253,10 @@ namespace brq
 
         constexpr interval() = default;
 
+        constexpr bool constant() const { return low == high; }
+
+        constexpr bool empty() const { return high < low; }
+
         constexpr bool includes( const bound_t &b ) const
         {
             return low <= b && b <= high;
@@ -270,15 +286,19 @@ namespace brq
             return tristate( true );
         }
 
-        friend constexpr interval meet( const interval &l, const interval &r ) // union
+        constexpr void intersect( const interval &i )
         {
-            return { std::min( l.low, r.low ), std::max( l.high, r.high ) };
+            *this = meet( *this, i );
         }
 
-        friend constexpr interval join( const interval &l, const interval &r ) // intersection
+        friend constexpr interval meet( const interval &l, const interval &r ) // intersection
         {
-            assert( std::max( l.low, r.low ) < std::min( l.high, r.high ) );
             return { std::max( l.low, r.low ), std::min( l.high, r.high ) };
+        }
+
+        friend constexpr interval join( const interval &l, const interval &r ) // union
+        {
+            return { std::min( l.low, r.low ), std::max( l.high, r.high ) };
         }
 
         friend constexpr interval operator+( const interval &l, const interval &r )
@@ -345,12 +365,24 @@ namespace brq
             } );
         }
 
-        friend constexpr bool operator==( const interval &l , const interval &r )
+        friend constexpr tristate operator==( const interval &l , const interval &r )
         {
-            return l.low == r.low && l.high == r.high;
+            if ( l.low == r.low && l.high == r.high )
+                return tristate( true );
+            return l.includes( r ) ? maybe :tristate( false );
         }
 
-        friend constexpr bool operator!=( const interval &l , const interval &r )
+        friend constexpr tristate operator==( const interval &l , tristate r )
+        {
+            return l == interval( r );
+        }
+
+        friend constexpr tristate operator==( tristate l , const interval &r )
+        {
+            return interval( l ) == r;
+        }
+
+        friend constexpr tristate operator!=( const interval &l , const interval &r )
         {
             return !( l == r );
         }
@@ -414,6 +446,8 @@ namespace t_brq
     using bound = brq::bound< int >;
 
     static_assert( bound( 10 ) + bound( 5 ) == 15 );
+    static_assert( bound( 7 ) - bound( 3 ) == 4 );
+    static_assert( bound( 3 ) - bound( 3 ) == 0 );
 
     static_assert( bound::plus_infinity() + 1  == bound::plus_infinity() );
     static_assert( bound::plus_infinity() - 1  == bound::plus_infinity() );

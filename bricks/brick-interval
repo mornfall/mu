@@ -92,7 +92,9 @@ namespace brq
             auto overflows = [] ( auto a, auto b ) {
                 if ( b > 0 )
                     return b >= max() - a ? overflow::plus : overflow::none;
-                return b <= min() - a ? overflow::minus : overflow::none;
+                if ( a < 0 )
+                    return b <= min() - a ? overflow::minus : overflow::none;
+                return overflow::none;
             };
 
             if ( is_finite() && o.is_finite() ) {

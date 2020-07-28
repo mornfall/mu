@@ -1051,10 +1051,11 @@ BRICK_SQL_OP( | )
     struct extend : query_base
     {
         using stmt = typename query::stmt;
-        using order_columns = typename query::order_columns;
         query _query;
         sql::conn &conn() { return _query.conn(); }
         extend( query q ) : _query( q ) {}
+
+        auto order_columns() const { return _query.order_columns(); }
 
         template< typename stmt >
         void bind( stmt &s ) const { _query.bind( s ); }
@@ -1104,7 +1105,7 @@ BRICK_SQL_OP( | )
         {
             this->_query.print( s, id );
             s << " order by ";
-            auto l = typename query::order_columns().cat( _cols );
+            auto l = this->order_columns().cat( _cols );
             int count = 0;
             auto print_one = [&]( auto &c )
             {
@@ -1403,16 +1404,20 @@ BRICK_SQL_OP( | )
     template< typename select, typename... cols >
     struct select_distinct : extend< select >
     {
-        using order_columns = brq::cons_list_t< cols... >;
+        brq::cons_list_t< cols... > _cols;
+        auto order_columns() const { return _cols; }
         using extend< select >::extend;
         auto exec() { return this->_exec( this ); }
+
+        template< typename... et >
+        select_distinct( const select &q, et... e ) : extend< select >( q ), _cols( e... ) {}
 
         template< typename stream >
         void print( stream &s, int &id ) const
         {
             s << "select distinct ";
-            if ( sizeof...( cols ) > 0 )
-                s << " on ", print_columns( s, cons_list( cols()... ), "( ", " )" );
+            if constexpr ( sizeof...( cols ) > 0 )
+                s << " on ( ", sql::print( s, _cols, id ), s << " ) ";
             this->_query.print( s, id );
         }
 
@@ -1423,12 +1428,12 @@ BRICK_SQL_OP( | )
     template< typename... cols >
     struct query_head : query_base
     {
-        using order_columns = brq::nil;
         using stmt = sql::stmt< cols... >;
         sql::txn &_txn;
         sql::txn &txn() { return _txn; }
         sql::conn &conn();
         query_head( sql::txn &t ) : _txn( t ) {}
+        brq::nil order_columns() const { return {}; }
 
         template< typename stmt >
         void bind( stmt & ) const {}
@@ -1452,12 +1457,12 @@ BRICK_SQL_OP( | )
         template< typename table, typename... joins >
         auto from() { return sql_join< joins... >( select_tab< select_cols, table >( *this ) ); }
 
-        template< typename... distinct_cols >
-        select_distinct< select_cols, distinct_cols... > distinct()
+        template< typename... ct, typename... et >
+        select_distinct< select_cols, ct..., et... > distinct( et... e )
         {
             auto s = *this;
             s._distinct = true;
-            return { s };
+            return { s, e... };
         }
 
         template< typename stream >
@@ -1788,7 +1793,7 @@ BRICK_SQL_OP( | )
         string_builder s;
         int id = -1;
         s << ( as_temp ? "create temp table " : "create view " )
-          << get_name( view() );
+          << get_name( view() ) << " ";
         print_columns( s, typename view::columns::template map_t< get_bare >(), "( ", " )" );
         s << ( as_temp ? " on commit drop as " : " with ( security_barrier ) as " );
         view::construct( txn.select( typename view::columns() ) ).print( s, id );

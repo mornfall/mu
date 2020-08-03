@@ -44,7 +44,7 @@ namespace brq
 
     enum class smt_op : uint8_t
     {
-        invalid, eq, neq,
+        invalid, eq, neq, join, meet,
         var_i1, var_i8, var_i16, var_i32, var_i64, var_f32, var_f64,
         const_i1, const_i8, const_i16, const_i32, const_i64, const_f32, const_f64,
         bv_not, bv_neg,
@@ -73,6 +73,9 @@ namespace brq
 
             case op::eq:         return { "=",  2, 0, 1, smt_op_compare };
             case op::neq:        return { "!=", 2, 0, 1, smt_op_compare };
+
+            case op::join:       return { "join", 2, 0, 1, smt_op_other };
+            case op::meet:       return { "join", 2, 0, 1, smt_op_other };
 
             case op::var_i1:     return { "var_i1",    0, 2,  1, smt_op_var };
             case op::var_i8:     return { "var_i8",    0, 2,  8, smt_op_var };

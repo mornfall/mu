@@ -389,6 +389,8 @@ namespace brq
 
         friend constexpr tristate operator<( const interval &l, const interval &r )
         {
+            if ( l.constant() && r.constant() )
+                return tristate( l.low < r.low );
             if ( l.high < r.low )
                 return tristate( true );
             if ( l.low > r.high )
@@ -398,6 +400,8 @@ namespace brq
 
         friend constexpr tristate operator>( const interval &l, const interval &r )
         {
+            if ( l.constant() && r.constant() )
+                return tristate( l.low > r.low );
             if ( l.low > r.high )
                 return tristate( true );
             if ( l.high > r.low )

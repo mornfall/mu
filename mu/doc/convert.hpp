@@ -7,6 +7,12 @@
 namespace umd::doc
 {
 
+    static inline int stoi( std::u32string_view n )
+    {
+        std::wstring_convert< std::codecvt_utf8< char32_t >, char32_t > conv;
+        return std::stoi( conv.to_bytes( n.begin(), n.end() ) );
+    }
+
     struct convert : pic::writer
     {
         doc::writer &w;

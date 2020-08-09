@@ -3,6 +3,7 @@
 #include "doc/w_slides.hpp"
 #include "doc/w_lnotes.hpp"
 #include "doc/w_paper.hpp"
+#include "doc/w_html.hpp"
 #include <fstream>
 #include <iostream>
 
@@ -34,17 +35,24 @@ void convert( std::u32string_view buf )
     conv.run();
 }
 
-int doctype( std::u32string_view buf )
+int doctype( std::u32string_view buf, std::u32string dt )
 {
-    w_doctype dt;
-    doc::convert conv( buf, dt );
-    conv.header();
-    if      ( dt.type == U"slides" ) convert< doc::w_slides >( buf );
-    else if ( dt.type == U"lnotes" ) convert< doc::w_lnotes >( buf );
-    else if ( dt.type == U"paper" )  convert< doc::w_paper >( buf );
+    w_doctype wdt;
+
+    if ( dt.empty() )
+    {
+        doc::convert conv( buf, wdt );
+        conv.header();
+        dt = wdt.type;
+    }
+
+    if      ( dt == U"slides" ) convert< doc::w_slides >( buf );
+    else if ( dt == U"lnotes" ) convert< doc::w_lnotes >( buf );
+    else if ( dt == U"html" )   convert< doc::w_html >( buf );
+    else if ( dt == U"paper" )  convert< doc::w_paper >( buf );
     else
     {
-        std::cerr << "unknown document type " << to_utf8( dt.type ) << std::endl;
+        std::cerr << "unknown document type " << to_utf8( dt ) << std::endl;
         return 1;
     }
 
@@ -53,10 +61,16 @@ int doctype( std::u32string_view buf )
 
 int main( int argc, const char **argv )
 {
-    if ( argc != 2 )
-        return std::cerr << "need one (file) argument" << std::endl, 1;
+    if ( argc < 2 )
+        return std::cerr << "need at least one (file) argument" << std::endl, 1;
 
-    std::ifstream f( argv[1] );
+    std::u32string dt;
+    const char *fn = argv[ 1 ];
+
+    if ( argv[ 1 ] == std::string( "--html" ) )
+        dt = U"html", fn = argv[ 2 ];
+
+    std::ifstream f( fn );
     auto buf = read_file( f );
-    return doctype( buf );
+    return doctype( buf, dt );
 }

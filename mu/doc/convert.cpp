@@ -527,7 +527,7 @@ namespace umd::doc
         }
 
         if ( todo[ 0 ] == U'' )
-            return w.pagebreak(), fetch_line(), body();
+            return end_list( -1 ), w.pagebreak(), fetch_line(), body();
 
         if ( todo[ 0 ] == U'>' )
             return emit_quote(), body();
@@ -551,8 +551,7 @@ namespace umd::doc
                 if ( !try_enum() )
                 {
                     auto l = fetch_line();
-                    if ( !l.empty() )
-                        end_list( _list.size() - rec_list_depth );
+                    end_list( _list.size() - rec_list_depth );
                     emit_text( l );
                     w.text( U"\n" );
                 }

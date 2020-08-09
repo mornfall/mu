@@ -21,7 +21,7 @@
   \definecounter[slidenum][]
   \defineoverlay[slideover]
     [{\framed[width=\overlaywidth,height=\overlayheight,align={top,flushright},frame=no,roffset=2pt]
-            {\footfont\rawcountervalue[slidenum]}}]
+            {\hfill\footfont\rawcountervalue[slidenum]}}]
   \def\startslide{\blank[6pt]\incrementcounter[slidenum]
                   \startframed[align=width, width=96mm, frame=off, background={color,slideover},
                                backgroundcolor=gray, offset=6pt]}

@@ -1,15 +1,12 @@
 \enabletrackers [fonts.missing]
-\definefontfallback[cambriamath] [name:cambriamath]
-                   [ arrows, greekandcoptic, mathematicaloperators, superscriptsandsubscripts ]
 \definefontfallback[dejavumath] [name:dejavusansmono]
+                   [ arrows, greekandcoptic, mathematicaloperators, superscriptsandsubscripts ]
+\definefontfallback[xcclmath] [name:xccl]
                    [ arrows, greekandcoptic, mathematicaloperators, superscriptsandsubscripts ]
 \definefontfeature[iosevkacode] [ language=DFLT, script=latn, cv19=yes, cv31=yes, cv36=yes, cv38=yes ]
 
-\starttypescript  [cambria]
-  \definetypeface [cambria] [rm] [serif] [\typescriptone] [default,fallbacks=cambriamath]
-  \definetypeface [cambria] [tt] [mono]  [dejavu]         [default] [rscale=0.88]
-  \definetypeface [cambria] [mm] [math]  [\typescriptone] [default]
-  \definetypeface [cambria] [ss] [sans]  [calibri]        [default]
+\starttypescript  [math] [xccl]
+  \definefontsynonym [MathRoman] [name:xccl] [features={math\mathsizesuffix,mathextra}]
 \stoptypescript
 
 \starttypescript [sans] [lato]
@@ -23,7 +20,7 @@
 \stoptypescript
 
 \starttypescript [serif] [aleo]
-  \definefontsynonym [Serif]            [name:Aleo-Light]   [features=default,fallbacks=cambriamath]
+  \definefontsynonym [Serif]            [name:Aleo-Light]   [features=default,fallbacks=xcclmath]
   \definefontsynonym [SerifItalic]      [name:Aleo-LightItalic]  [features=default]
   \definefontsynonym [SerifBold]        [name:Aleo-Regular]    [features=default]
   \definefontsynonym [SerifBoldItalic]  [LatoDemiItalic]    [features=default]
@@ -33,21 +30,26 @@
 \stoptypescript
 
 \starttypescript [mono] [iosev]
-  \definefontsynonym [Mono]        [name:iosevka-slab-extralight] [features=iosevkacode,fallbacks=dejavumath]
-  \definefontsynonym [MonoItalic]  [name:iosevka-slab-extralight-italic]  [features=iosevkacode]
-  \definefontsynonym [MonoBold]        [name:iosevka-slab-light]    [features=iosevkacode]
-  \definefontsynonym [MonoBoldItalic]  [name:iosevka-slab-italic]    [features=iosevkacode]
-  \definefontsynonym [MonoSlanted]     [name:iosevka-ss01-extralight]       [features=iosevkacode]
-  \definefontsynonym [MonoBoldSlanted] [MonoBoldItalic]   [features=default]
-  \definefontsynonym [MonoCaps]        [Mono]             [features=smallcaps]
+  \definefontsynonym [Mono] [name:iosevka-slab-extralight] [features=iosevkacode,fallbacks=dejavumath]
+  \definefontsynonym [MonoItalic]     [name:iosevka-slab-extralight-italic]  [features=iosevkacode]
+  \definefontsynonym [MonoBold]       [name:iosevka-slab-light]  [features=iosevkacode]
+  \definefontsynonym [MonoBoldItalic] [name:iosevka-slab-italic] [features=iosevkacode]
+  \definefontsynonym [MonoSlanted]    [name:iosevka-slab-italic] [features=iosevkacode]
+  \definefontsynonym [MonoBoldSlanted][MonoBoldItalic]   [features=default]
+  \definefontsynonym [MonoCaps]       [Mono]             [features=smallcaps]
 \stoptypescript
 
 \starttypescript  [aleo]
   \definetypeface [aleo] [rm] [serif] [aleo]     [default]
   \definetypeface [aleo] [tt] [mono]  [iosev]    [default] [rscale=0.93]
-  \definetypeface [aleo] [mm] [math]  [cambria]  [default]
+  \definetypeface [aleo] [mm] [math]  [xccl]     [default]
   \definetypeface [aleo] [ss] [sans]  [lato]     [default]
 \stoptypescript
+
+% work around my inability to make \mathrm work correctly with xccl
+% mathtext works, for whatever reason
+\def\mfunctionlabeltext#1{\mathtext{#1}\kern-1.5pt}
+\let\mathrm\mathtext
 
 \definebodyfont[11pt]
 \definebodyfont[24pt]

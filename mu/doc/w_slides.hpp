@@ -67,11 +67,11 @@ namespace umd::doc
         }
 
         /* lists */
-        virtual void enum_start( int level, bool cont )
+        virtual void enum_start( int level, int first )
         {
-            out.emit( "\\startitemize[packed,", cont ? "continue," : "",
+            out.emit( "\\startitemize[packed,",
                       level == 0 ? 'n' : level == 1 ? 'a' : 'r',
-                      "][distance=-2pt]", "\n" );
+                      "][distance=-2pt,start=", first, "]", "\n" );
         }
 
         virtual void enum_stop( bool xspace )

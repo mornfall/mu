@@ -61,17 +61,25 @@ namespace umd::doc
         return indent;
     }
 
-    std::pair< int, bool > convert::skip_enum_lead()
+    std::pair< int, int > convert::skip_enum_lead()
     {
         int indent = 0;
         int leader = 0;
-        bool cont = false;
+        std::u32string lstr;
+
+        auto first = [&]()
+        {
+            if ( lstr.empty() ) return 0;
+            if ( std::isdigit( lstr[ 0 ] ) ) return stoi( lstr );
+            if ( std::isalpha( lstr[ 0 ] ) ) return int( lstr[ 0 ] - U'a' );
+            return int( lstr[ 0 ] - U'α' );
+        };
 
         while ( !todo.empty() )
         {
             auto ch = todo[ 0 ];
 
-            if ( ch != U' ' && leader == 2 ) return { indent, cont };
+            if ( ch != U' ' && leader == 2 ) return { indent, first() };
 
             ++ indent;
             todo.remove_prefix( 1 ); /* commit to eating the char */
@@ -81,19 +89,19 @@ namespace umd::doc
 
             if ( std::isalnum( ch ) && leader < 2 )
             {
-                if ( ch != U'1' && ch != U'a' && ch != U'α' ) cont = true;
+                lstr += ch;
                 leader = 1;
             }
         }
 
-        return { indent, cont };
+        return { indent, first() };
     }
 
-    std::pair< int, bool > convert::skip_item_lead( list::type t )
+    std::pair< int, int > convert::skip_item_lead( list::type t )
     {
         switch ( t )
         {
-            case list::bullets:  return { skip_bullet_lead(), false };
+            case list::bullets:  return { skip_bullet_lead(), 1 };
             case list::numbered: return skip_enum_lead();
         }
         __builtin_trap();
@@ -128,12 +136,12 @@ namespace umd::doc
         return true;
     }
 
-    void convert::start_list( list::type l, int indent, bool cont )
+    void convert::start_list( list::type l, int indent, int first )
     {
         switch ( l )
         {
             case list::bullets:  w.bullet_start( _list.size() ); break;
-            case list::numbered: w.enum_start( _list.size(), cont ); break;
+            case list::numbered: w.enum_start( _list.size(), first ); break;
         }
 
         _list.emplace( l, indent );
@@ -144,10 +152,10 @@ namespace umd::doc
         while ( int( _list.size() ) > l )
             end_list();
 
-        auto [ indent, cont ] = skip_item_lead( t );
+        auto [ indent, first ] = skip_item_lead( t );
 
         if ( int( _list.size() ) == l - 1 )
-            start_list( t, indent, cont );
+            start_list( t, indent, first );
         else
             indent = _list.top().indent;
 

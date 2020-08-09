@@ -62,7 +62,7 @@ namespace umd::doc
         }
 
         /* lists */
-        virtual void enum_start( int level, bool )
+        virtual void enum_start( int level, int )
         {
             out.emit( "\\startitemize[packed,",
                       level == 0 ? 'n' : level == 1 ? 'a' : 'r',

@@ -1,0 +1,14 @@
+index 23edde379..55035a3ce 100644
+--- a/fontforge/fvfonts.c
++++ b/fontforge/fvfonts.c
+@@ -1158,8 +1158,10 @@ static void _MergeFont(SplineFont *into,SplineFont *other,struct sfmergecontext
+     free(mapping);
+     GlyphHashFree(into);
+     MergeFixupRefChars(into);
++    /*
+     if ( other->fv==NULL )
+        SplineFontFree(other);
++    */
+     into->changed = true;
+     FontViewReformatAll(into);
+     GlyphHashFree(into);

@@ -157,12 +157,12 @@ namespace umd::doc
         }
 
         /* blocks */
-        virtual void code_start( std::u32string type )
+        virtual void code_start( sv type )
         {
             out.emit( "\\starttyping[margin=10pt,option=", type, "]\n" );
         }
 
-        virtual void code_line( std::u32string_view l ) { out.emit( l, "\n" ); }
+        virtual void code_line( sv l ) { out.emit( l, "\n" ); }
         virtual void code_stop() { out.emit( "\\stoptyping\n" ); }
         virtual void quote_start() { out.emit( "\\startblockquote\n" ); }
         virtual void quote_stop() { out.emit( "\\stopblockquote\n" );  }

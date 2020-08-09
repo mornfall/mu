@@ -100,8 +100,8 @@ namespace umd::doc
         virtual void table_stop() = 0;
 
         /* blocks */
-        virtual void code_start( std::u32string type ) = 0;
-        virtual void code_line( std::u32string_view ) = 0;
+        virtual void code_start( sv type ) = 0;
+        virtual void code_line( sv ) = 0;
         virtual void code_stop() = 0;
         virtual void quote_start() {}
         virtual void quote_stop() {}
@@ -146,8 +146,8 @@ namespace umd::doc
         virtual void table_new_cell( int ) {}
         virtual void table_new_row() {}
         virtual void table_stop() {}
-        virtual void code_start( std::u32string ) {}
-        virtual void code_line( std::u32string_view ) {}
+        virtual void code_start( sv ) {}
+        virtual void code_line( sv ) {}
         virtual void code_stop() {}
     };
 

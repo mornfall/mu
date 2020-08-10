@@ -36,8 +36,9 @@ namespace umd::doc
             out.emit( "<title>", _meta[ U"title" ], "</title>" );
             out.emit( "<link rel=\"stylesheet\" href=\"", _meta[ U"doctype" ] ,".css\">" );
             out.emit( "<script src=\"highlight.min.js\"></script>" );
+            out.emit( "<script src=\"toc.js\"></script>" );
             out.emit( "<script>hljs.initHighlightingOnLoad();</script>" );
-            out.emit( "</head><body>" );
+            out.emit( "</head><body onload=\"makeTOC()\"><ol id=\"toc\"></ol>" );
         }
 
         void end() override { out.emit( "</body></html>" ); }

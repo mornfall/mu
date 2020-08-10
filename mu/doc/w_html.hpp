@@ -13,11 +13,18 @@ namespace umd::doc
     struct w_html : w_noop // writer
     {
         stream &out;
-        w_html( stream &out ) : out( out ) { _sections.resize( 7, 0 ); }
+        w_html( stream &out ) : out( out )
+        {
+            _sections.resize( 7, 0 );
+            _section_num.resize( 7 );
+        }
 
         bool _in_math = false;
         std::map< sv, sv > _meta;
+
         std::vector< int > _sections;
+        std::vector< sv > _section_num;
+
         int _heading = 0; // currently open <hN> tag (must not be nested)
 
         void meta( sv key, sv value ) override { _meta[ key ] = value; }
@@ -59,16 +66,24 @@ namespace umd::doc
         {
             _heading = level;
             out.emit( "<h", level, ">" );
+
+            for ( int i = 1; i < level; ++i )
+                if ( _section_num[ i ].empty() )
+                    out.emit( _sections[ i ], "." );
+                else
+                    out.emit( _section_num[ i ], "." );
+
             if ( num.empty() )
             {
-                for ( int i = 1; i < level; ++i )
-                    out.emit( _sections[ i ], "." );
                 out.emit( ++ _sections[ level ] );
+                _section_num[ level ] = U"";
             }
             else
-                out.emit( num );
+                out.emit( _section_num[ level ] = num );
+
             for ( int i = level + 1; i < 6; ++i )
-                _sections[ i ] = 0;
+                _sections[ i ] = 0, _section_num[ i ] = U"";
+
             out.emit( " " );
         }
 

@@ -31,7 +31,7 @@ namespace umd::doc
         void meta_end() override
         {
             out.emit( "<!DOCTYPE html>" );
-            out.emit( "<html><head>" );
+            out.emit( "<html lang=\"", _meta[ U"lang" ], "\"><head>" );
             out.emit( "<meta charset=\"UTF-8\">" );
             out.emit( "<title>", _meta[ U"title" ], "</title>" );
             out.emit( "<link rel=\"stylesheet\" href=\"", _meta[ U"doctype" ] ,".css\">" );

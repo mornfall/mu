@@ -210,11 +210,15 @@ namespace brq
 
         friend constexpr bool operator< ( bound l, bound r ) { return l._value < r._value; }
         friend constexpr bool operator==( bound l, bound r ) { return l._value == r._value; }
+
+        explicit operator underlying_t() const { return _value; }
     };
 
     template< typename bound_t >
     struct interval
     {
+        using value_t = typename bound_t::value_t;
+
         bound_t low;
         bound_t high;
 
@@ -252,6 +256,11 @@ namespace brq
         }
 
         constexpr interval() = default;
+
+        constexpr size_t size() const
+        {
+            return static_cast< size_t >( high._value ) - static_cast< size_t >( low._value );
+        }
 
         constexpr bool constant() const { return low == high; }
 

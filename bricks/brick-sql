@@ -397,6 +397,17 @@ namespace brq::sql
         }
     };
 
+    template< typename col >
+    struct excluded : col
+    {
+        template< typename CT >
+        static std::string_view column_name( const CT & )
+        {
+            static auto name = "excluded." + std::string( col().column_name( col() ) );
+            return name;
+        }
+    };
+
     template< typename T >
     using unqualify = std::conditional_t< T::is_qualified, typename T::bare, T >;
 
@@ -1497,42 +1508,139 @@ BRICK_SQL_OP( | )
     template< typename T > using to_u32v = cond_t< is_u32s_v< T >, std::u32string_view, T >;
     template< typename T > using to_view = cond_t< is_str_v< T >, std::string_view, to_u32v< T > >;
 
-    template< typename table >
-    struct insert
+    template< typename insert, bool first, typename col, typename et >
+    struct insert_update_set : extend< insert >
     {
-        conn &_conn;
-        bool _quiet = false;
+        et _expr;
 
-        using primary_l = decltype( typename table::columns().template filter< is_primary >() );
-        using stmt = std::conditional_t< std::is_same_v< primary_l, brq::nil >, sql::stmt<>,
-                                         sql::stmt< typename get_key< primary_l >::type > >;
-        insert( conn &c, bool q ) : _conn( c ), _quiet( q ) {}
+        insert_update_set( insert i, et e ) : extend< insert >( i ), _expr( e ) {}
 
-        template< typename... cols >
-        stmt values( to_view< const typename cols::type & >... v )
+        template< typename stream >
+        void print( stream &s, int &id ) const
         {
-            string_builder bld;
-            bld << "insert into " << get_name( table() );
+            this->_query.print( s, id );
+            if constexpr ( !first )
+                s << ", ";
+            s << col().column_name( col() );
+            s << " = ";
+            sql::print( s, _expr, id );
+        }
+
+        auto exec() { return this->_exec( this ); }
+        template< typename stmt >
+        void bind( stmt &s ) const
+        {
+            this->_query.bind( s );
+            sql::bind( s, _expr );
+        }
+
+        template< typename col2, typename et2 >
+        auto set( et2 e )
+        {
+            return insert_update_set< insert_update_set, false, col2, et2 >( *this, e );
+        }
+    };
+
+    template< typename insert >
+    struct insert_update : extend< insert >
+    {
+        using extend< insert >::extend;
+
+        template< typename stream >
+        void print( stream &s, int &id ) const
+        {
+            this->_query.print( s, id );
+            s << "update set ";
+        }
+
+        template< typename cols, typename et >
+        auto set( et e )
+        {
+            return insert_update_set< insert_update, true, cols, et >( *this, e );
+        }
+    };
+
+    template< typename insert, typename... cols >
+    struct conflict_clause : extend< insert >
+    {
+        using extend< insert >::extend;
+
+        template< typename stream >
+        void print( stream &s, int &id ) const
+        {
+            this->_query.print( s, id );
+            s << " on conflict ( ";
+            print_columns( s, cons_list( cols()... ) );
+            s << " ) do ";
+        }
+        insert_update< conflict_clause > update() { return { *this }; }
+    };
+
+    template< typename insert, typename... cols >
+    struct insert_values : extend< insert >
+    {
+        using vals = brq::cons_list_t< typename cols::type... >;
+        vals _vals;
+
+        insert_values( insert i, typename cols::type... v )
+            : extend< insert >( i ), _vals( std::move( v )... )
+        {}
+
+        auto exec() { return this->_exec( this ); }
+
+        template< typename stream >
+        void print( stream &s, int &id ) const
+        {
+            s << "insert into " << get_name( typename insert::table() );
             cons_list_t< cols... > l;
             bool first = true;
             l.each( [&]( auto &col )
             {
-                bld << ( first ? " ( " : ", " ) << col.column_name( col ); first = false;
+                s << ( first ? " ( " : ", " ) << col.column_name( col ); first = false;
             } );
-            bld << " ) values";
-            int i = 1;
-            l.each( [&]( auto ) { bld << ( i == 1 ? " ( " : ", " ) << "$" << i; i ++; } );
-            bld << " )";
-            if ( _quiet )
-                bld << " on conflict do nothing";
-            if constexpr ( !std::is_same_v< primary_l, brq::nil > )
+            s << " ) values";
+            first = true;
+            l.each( [&]( auto ) { s << ( first ? " ( " : ", " ) << "$" << id; id ++; first = false; } );
+            s << " )";
+
+            if ( this->_query._quiet )
+                s << " on conflict do nothing";
+            if constexpr ( !std::is_same_v< typename insert::primary_l, brq::nil > )
             {
-                using primary = unqualify< typename primary_l::car_t >;
-                bld << " returning " << primary().column_name( primary() );
+                using primary = unqualify< typename insert::primary_l::car_t >;
+                s << " returning " << primary().column_name( primary() );
             }
-            stmt s( _conn, bld.buffer() );
-            s.bind( v... );
-            return s;
+        }
+
+        template< typename... ccols >
+        conflict_clause< insert_values, ccols... > on_conflict() { return { *this }; }
+
+        template< typename stmt >
+        void bind( stmt &s ) const
+        {
+            s.bind_list( _vals );
+        }
+    };
+
+    template< typename tbl >
+    struct insert
+    {
+        sql::conn &_conn;
+        bool _quiet = false;
+
+        using table = tbl;
+        using primary_l = decltype( typename table::columns().template filter< is_primary >() );
+        using stmt = std::conditional_t< std::is_same_v< primary_l, brq::nil >, sql::stmt<>,
+                                         sql::stmt< typename get_key< primary_l >::type > >;
+        using order_columns = brq::nil;
+
+        insert( sql::conn &c, bool q ) : _conn( c ), _quiet( q ) {}
+        sql::conn &conn() { return _conn; }
+
+        template< typename... cols >
+        auto values( to_view< const typename cols::type & >... v )
+        {
+            return insert_values< insert, cols... >( *this, typename cols::type( v )... );
         }
     };
 

@@ -1,4 +1,4 @@
-#include "common.hpp"
+#include "doc/util.hpp"
 #include "doc/convert.hpp"
 #include "doc/w_slides.hpp"
 #include "doc/w_lnotes.hpp"
@@ -8,12 +8,6 @@
 #include <iostream>
 
 using namespace umd;
-
-std::string to_utf8( std::u32string w )
-{
-    std::wstring_convert< std::codecvt_utf8< char32_t >, char32_t > conv;
-    return conv.to_bytes( w );
-}
 
 struct w_doctype : doc::w_noop
 {
@@ -26,16 +20,16 @@ struct w_doctype : doc::w_noop
     }
 };
 
-template< typename writer >
-void convert( std::u32string_view buf )
+template< typename writer, typename... args_t >
+void convert( std::u32string_view buf, args_t... args )
 {
     doc::stream out( std::cout );
-    writer w( out );
+    writer w( out, args... );
     doc::convert conv( buf, w );
     conv.run();
 }
 
-int doctype( std::u32string_view buf, std::u32string dt )
+int doctype( std::u32string_view buf, std::u32string dt, std::string embed )
 {
     w_doctype wdt;
 
@@ -48,7 +42,7 @@ int doctype( std::u32string_view buf, std::u32string dt )
 
     if      ( dt == U"slides" ) convert< doc::w_slides >( buf );
     else if ( dt == U"lnotes" ) convert< doc::w_lnotes >( buf );
-    else if ( dt == U"html" )   convert< doc::w_html >( buf );
+    else if ( dt == U"html" )   convert< doc::w_html >( buf, embed );
     else if ( dt == U"paper" )  convert< doc::w_paper >( buf );
     else
     {
@@ -66,11 +60,17 @@ int main( int argc, const char **argv )
 
     std::u32string dt;
     const char *fn = argv[ 1 ];
+    std::string embed;
 
-    if ( argv[ 1 ] == std::string( "--html" ) )
-        dt = U"html", fn = argv[ 2 ];
+    for ( int i = 1; i < argc; ++i )
+    {
+        if ( argv[ i ] == std::string( "--html" ) )
+            dt = U"html", fn = argv[ i + 1 ];
+        if ( argv[ i ] == std::string( "--embed" ) )
+            embed = argv[ i + 1 ], fn = argv[ i + 2 ];
+    }
 
     std::ifstream f( fn );
     auto buf = read_file( f );
-    return doctype( buf, dt );
+    return doctype( buf, dt, embed );
 }

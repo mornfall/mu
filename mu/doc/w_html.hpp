@@ -1,11 +1,10 @@
 #pragma once
 #include "writer.hpp"
+#include "util.hpp"
 #include <vector>
 #include <sstream>
 #include <iostream>
 #include <map>
-
-/* Base class for TeX-based writers. */
 
 namespace umd::doc
 {
@@ -13,7 +12,9 @@ namespace umd::doc
     struct w_html : w_noop // writer
     {
         stream &out;
-        w_html( stream &out ) : out( out )
+        std::string _embed;
+
+        w_html( stream &out, std::string embed = "" ) : out( out ), _embed( embed )
         {
             _sections.resize( 7, 0 );
             _section_num.resize( 7 );
@@ -34,9 +35,20 @@ namespace umd::doc
             out.emit( "<html lang=\"", _meta[ U"lang" ], "\"><head>" );
             out.emit( "<meta charset=\"UTF-8\">" );
             out.emit( "<title>", _meta[ U"title" ], "</title>" );
-            out.emit( "<link rel=\"stylesheet\" href=\"", _meta[ U"doctype" ] ,".css\">" );
-            out.emit( "<script src=\"highlight.min.js\"></script>" );
-            out.emit( "<script src=\"toc.js\"></script>" );
+            auto css = to_utf8( _meta[ U"doctype" ] ) + ".css";
+
+            if ( _embed.empty() )
+            {
+                out.emit( "<link rel=\"stylesheet\" href=\"", css ,"\">" );
+                out.emit( "<script src=\"highlight.js\"></script>" );
+                out.emit( "<script src=\"toc.js\"></script>" );
+            }
+            else
+            {
+                out.emit( "<style>",  read_file( _embed + "/" + css ), "</style>" );
+                out.emit( "<script>", read_file( _embed + "/highlight.js" ), "</script>" );
+                out.emit( "<script>", read_file( _embed + "/toc.js" ), "</script>" );
+            }
             out.emit( "<script>hljs.initHighlightingOnLoad();</script>" );
             out.emit( "</head><body onload=\"makeTOC()\"><ol id=\"toc\"></ol>" );
         }

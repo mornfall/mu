@@ -38,8 +38,9 @@ namespace umd::doc
         int start = 0, end;
         auto flush = [&]( int n = 0 )
         {
-            seg_cb( string.substr( start, end - start - n ) );
-            start = end + 1 - n;
+            if ( start < end - n )
+                seg_cb( string.substr( start, end - start - n ) );
+            start = std::max( start, end + 1 - n );
         };
 
         for ( end = 0; end < int( string.size() ); ++end )

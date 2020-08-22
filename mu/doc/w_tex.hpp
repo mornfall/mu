@@ -42,8 +42,32 @@ namespace umd::doc
 
         virtual void text( std::u32string_view t )
         {
+            bool in_index = false;
+            sv indices = U"₁₂₃₄₅₆₇₈₉ᵢ₌",
+                 dices = U"123456789i=";
+
             auto char_cb = [&]( auto flush, char32_t c )
             {
+                auto idx = indices.find( c );
+
+                if ( in_math )
+                {
+                    if ( !in_index && idx != indices.npos )
+                        flush(), out.emit( "_{" ), in_index = true;
+
+                    if ( in_index )
+                        flush( 1 );
+
+                    if ( in_index && idx != indices.npos )
+                        out.emit( dices.substr( idx, 1 ) );
+
+                    if ( in_index && idx == indices.npos )
+                        out.emit( "}" );
+
+                    if ( idx == indices.npos )
+                        in_index = false;
+                }
+
                 switch ( c )
                 {
                     case 0x0307:
@@ -66,6 +90,7 @@ namespace umd::doc
             };
 
             process( t, char_cb, [&]( auto s ) { out.emit( s ); } );
+            if ( in_index ) out.emit( "}" );
         }
 
         /* spans ; may be also called within mpost btex/etex */

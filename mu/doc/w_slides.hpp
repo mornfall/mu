@@ -43,9 +43,10 @@ namespace umd::doc
         }
 
         /* display math */
-        virtual void eqn_start()
+        virtual void eqn_start( int n )
         {
-            out.emit( "\\startformula\\startmathalignment\\noalign{\\blank[-1.5ex]}\n" );
+            out.emit( "\\startformula\\startmathalignment[n=", n, "]\n" );
+            out.emit( "\\noalign{\\blank[-1.5ex]}\n" );
             in_math = true;
             math_negspace = 2;
         }
@@ -54,7 +55,7 @@ namespace umd::doc
         virtual void eqn_new_row()
         {
             assert( in_math );
-            out.emit( "\\NR\\noalign{\\blank[-.8ex]}\n" );
+            out.emit( "\\NR\\noalign{\\blank[-.3ex]}\n" );
             if ( math_negspace ) -- math_negspace;
         }
 

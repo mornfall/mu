@@ -317,29 +317,8 @@ namespace umd::doc
         todo = todo.substr( i, todo.npos );
     }
 
-    void convert::try_dispmath()
+    bool convert::try_dispmath()
     {
-        if ( !white_count() )
-            return;
-
-        if ( nonwhite() == U'⟦' ) // may be single-line block
-        {
-            int count = 0, i, white = white_count();
-            for ( i = white; i < int( todo.size() ) && todo[ i ] != '\n'; ++i )
-            {
-                if ( todo[ i ] == U'⟦' ) ++count;
-                else if ( todo[ i ] == U'⟧' ) --count;
-                else if ( !count ) return; /* not continuous */
-            }
-            skip_white(); skip( U'⟦' );
-            w.eqn_start();
-            w.eqn_new_cell();
-            w.text( fetch_line().substr( 0, i - white - 2 ) );
-            w.eqn_new_row();
-            w.eqn_stop();
-            return;
-        }
-
         auto for_index = []( auto l, auto f )
         {
             int idx = 0;
@@ -359,23 +338,38 @@ namespace umd::doc
                 if ( idx == from ) f = i;
                 if ( idx == to ) t = i;
             }
-            return l.substr( f, t );
+            return l.substr( f, t - f );
         };
 
-        if ( white_count() <= 3 && nonwhite() == U'‣' ) // multi-line display math
+        if ( white_count() <= 3 && nonwhite() == U'⟦' )
         {
-            w.eqn_start();
             std::vector< std::u32string_view > lines;
             std::set< int > align;
             int offset = white_count() + 1;
-            while ( white_count() )
-                lines.push_back( fetch_line() ), lines.back().remove_prefix( offset );
+
+            auto backup = todo;
+            do
+            {
+                lines.push_back( fetch_line() );
+                lines.back().remove_prefix( offset );
+            }
+            while ( white_count() >= offset );
+
+            if ( lines.empty() || lines.back().empty() || lines.back().back() != U'⟧' )
+            {
+                todo = backup;
+                return false;
+            }
+
+            lines.back().remove_suffix( 1 );
 
             /* compute alignment on equal signs */
             for_index( lines.front(),
                        [&]( int idx, char32_t c ) { if ( c == U'=' ) align.insert( idx ); } );
             for ( auto l : lines )
                 for_index( l, [&]( int idx, char32_t c ) { if ( c != U'=' ) align.erase( idx ); } );
+
+            w.eqn_start( align.size() + 1 );
 
             for ( auto l : lines )
             {
@@ -391,7 +385,10 @@ namespace umd::doc
                 w.eqn_new_row();
             }
             w.eqn_stop();
+            return true;
         }
+
+        return false;
     }
 
     void convert::try_table()
@@ -516,7 +513,7 @@ namespace umd::doc
     void convert::body()
     {
         try_table();
-        try_dispmath();
+        while ( try_dispmath() );
         try_picture();
         try_nested();
 

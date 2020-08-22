@@ -1,4 +1,4 @@
-#include "common.hpp"
+#include "doc/util.hpp"
 
 #include "pic/scene.hpp"
 #include "pic/reader.hpp"

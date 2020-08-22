@@ -3,6 +3,7 @@
 #include "pic/convert.hpp"
 #include "doc/writer.hpp"
 #include "doc/convert.hpp"
+#include "doc/util.hpp"
 
 #include <set>
 #include <sstream>
@@ -510,8 +511,27 @@ namespace umd::doc
         }
     }
 
+    void convert::try_directive()
+    {
+        if ( starts_with( todo, U"$$raw_mpost" ) )
+        {
+            w.mpost_start();
+            auto l = fetch_line();
+            while ( !todo.empty() )
+            {
+                l = fetch_line();
+                if ( l == U"$$end_mpost" )
+                    break;
+                w.mpost_write( to_utf8( l ) );
+                w.mpost_write( "\n" );
+            }
+            w.mpost_stop();
+        }
+    }
+
     void convert::body()
     {
+        try_directive();
         try_table();
         while ( try_dispmath() );
         try_picture();

@@ -30,3 +30,8 @@ static inline std::string to_utf8( std::u32string_view w )
     return conv.to_bytes( w.begin(), w.end() );
 }
 
+template< typename SV >
+bool starts_with( SV s, decltype( s ) t )
+{
+    return s.size() >= t.size() && s.compare( 0, t.size(), t ) == 0;
+}

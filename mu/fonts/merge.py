@@ -29,6 +29,7 @@ f.mergeFonts( "xccmi10" + suff )
 f.mergeFonts( "xccsy10" + suff )
 f.mergeFonts( "xccam10" + suff )
 f.mergeFonts( "ccr10" + suff )
+f.mergeFonts( "latinmodern-copy.otf" )
 
 print( 'adjusting strokes', file=stderr )
 

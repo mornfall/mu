@@ -3,8 +3,13 @@ from sys import stderr
 
 suff = '.otf'
 f = open( 'latinmodern-math.otf' )
+
+x = open( "xccmi10" + suff )
+x.mergeFonts( "xccsy10" + suff )
+x.mergeFonts( "xccam10" + suff )
+x.mergeFonts( "ccr10" + suff )
+
 big = [ 'integral', 'radical', 'summation', 'product', 'parenleft', 'parenright', 'contourintegral' ]
-retain = [ 'uni22C5', 'minute', 'uni2033', 'minute.st', 'uni2033.st', 'minute.sts', 'uni2033.sts' ]
 
 for bg in big[:]:
     if not bg in f: continue
@@ -15,21 +20,23 @@ for bg in big[:]:
         for g in f[ bg ].verticalComponents:
             big.append( g[ 0 ] )
 
-retain.extend( big )
-
 print( 'cleaning up', file=stderr )
+removed = 0
+
+for g in x:
+    if g in f:
+        f.removeGlyph( g )
+        removed += 1
 
 for g in f:
-    if g not in retain:
+    if g.startswith( 'u1D' ) or g.startswith( 'u1E' ):
         f.removeGlyph( g )
+        removed += 1
+
+print( 'removed', removed, 'glyphs', file=stderr )
 
 print( 'merging', file=stderr )
-
-f.mergeFonts( "xccmi10" + suff )
-f.mergeFonts( "xccsy10" + suff )
-f.mergeFonts( "xccam10" + suff )
-f.mergeFonts( "ccr10" + suff )
-f.mergeFonts( "latinmodern-copy.otf" )
+f.mergeFonts( x )
 
 print( 'adjusting strokes', file=stderr )
 

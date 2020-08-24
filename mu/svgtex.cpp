@@ -1,6 +1,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <set>
 #include <string_view>
 #include <fcntl.h>
 #include <spawn.h>
@@ -36,16 +37,6 @@ namespace brq
     static inline split_view split( std::string_view p, std::string_view d, bool reverse = false )
     {
         return split< char >( p, d, reverse );
-    }
-
-    static inline bool starts_with( std::string_view s, std::string_view t )
-    {
-        return s.size() >= t.size() && s.compare( 0, t.size(), t ) == 0;
-    }
-
-    static inline bool ends_with( std::string_view s, std::string_view t )
-    {
-        return s.size() >= t.size() && s.compare( s.size() - t.size(), s.npos, t ) == 0;
     }
 
     std::string read_file( std::ifstream &in, size_t length = std::numeric_limits< size_t >::max() )
@@ -183,72 +174,74 @@ void convert_page( PopplerPage *page, int docid )
     g_object_unref(page);
 }
 
-template< typename cb_t >
-void process( int fd, cb_t cb )
+std::string read_stdin()
 {
-    bool in_mp = false;
     int count;
-    constexpr int size = 1024;
-    char buf[ size + 1 ];
+    char buf[ 1024 ];
+    std::string doc;
 
-    while ( ( count = read( 0, buf, size ) ) > 0 )
-    {
-        if ( count == size && buf[ size - 1 ] == '\\' )
-            count += read( 0, buf + size, 1 );
+    while ( ( count = read( 0, buf, 1024 ) ) > 0 )
+        doc += std::string_view( buf, count );
 
-        std::string_view w( buf, count );
-
-        while ( !w.empty() )
-        {
-            auto [ pass, examine ] = brq::split( w, "\\M" );
-            auto [ process, tail ] = brq::split( in_mp ? w : examine, "\\Q" );
-            w = tail;
-
-            if ( !in_mp )
-                write( 1, pass.begin(), pass.size() );
-            write( fd, process.begin(), process.size() );
-
-            bool was_in_mp = in_mp || !process.empty();
-            in_mp = !process.empty() && w.empty() && !brq::ends_with( examine, "\\Q" );
-
-            if ( was_in_mp && !in_mp )
-                cb();
-        }
-    }
+    return doc;
 }
 
 void process()
 {
-    int mp = open( "pic.tex", O_WRONLY | O_CREAT, 0666 );
-    int docid = 0;
+    std::string doc = read_stdin();
+    std::string_view w( doc );
+    std::vector< std::string_view > keep;
+    std::set< int > use_yshift;
 
-    auto cb = [&]
+    int mp = open( "tosvg.tex", O_WRONLY | O_CREAT, 0666 );
+    write_sv( mp, "\\starttext" );
+
+    while ( !w.empty() )
     {
-        unlink( "yshift.txt" );
-        run( "context", "pic.tex" );
+        auto [ pass, examine ] = brq::split( w, "<tex>" );
+        auto [ process, tail ] = brq::split( examine, "</tex>" );
 
-        auto yshift = brq::read_file_or( "yshift.txt", "\n" );
-        yshift.pop_back();
+        if ( process.find( "yshift.txt" ) != process.npos )
+            use_yshift.insert( keep.size() );
 
-        if ( !yshift.empty() )
+        w = tail;
+        keep.push_back( pass );
+        write_sv( mp, process );
+    }
+
+    write_sv( mp, "\\stoptext" );
+    close( mp );
+
+    run( "context", "tosvg.tex" );
+    std::ifstream yshift( "yshift.txt" );
+
+    auto pdf_data = brq::read_file( "tosvg.pdf" );
+    auto pdf = poppler_document_new_from_data( pdf_data.data(), pdf_data.size(), nullptr, nullptr );
+
+    if ( int( keep.size() - 1 ) != poppler_document_get_n_pages( pdf ) )
+        throw std::runtime_error( "each <tex> must produce exactly 1 page" );
+
+    for ( unsigned i = 0; i < keep.size() - 1; ++ i )
+    {
+        write_sv( 1, keep[ i ] );
+
+        if ( use_yshift.count( i ) )
         {
+            std::string yshift_amount;
+            yshift >> yshift_amount;
             write_sv( 1, "<span style=\"vertical-align: " );
-            write_sv( 1, yshift );
+            write_sv( 1, yshift_amount );
             write_sv( 1, "pt\">" );
         }
 
-        auto pdf_data = brq::read_file( "pic.pdf" );
-        auto pdf = poppler_document_new_from_data( pdf_data.data(), pdf_data.size(), nullptr, nullptr );
-        convert_page( poppler_document_get_page( pdf, 0 ), docid++ );
-        g_object_unref( pdf );
+        convert_page( poppler_document_get_page( pdf, i ), i );
 
-        write_sv( 1, "</span>" );
-        ftruncate( mp, 0 );
-        lseek( mp, 0, SEEK_SET );
-    };
+        if ( use_yshift.count( i ) )
+            write_sv( 1, "</span>" );
+    }
 
-    process( mp, cb );
-    close( mp );
+    write_sv( 1, keep.back() );
+    g_object_unref( pdf );
 }
 
 int main()

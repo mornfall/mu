@@ -88,7 +88,7 @@ void run( args_t... args )
     posix_spawn_file_actions_init( &fact );
     posix_spawn_file_actions_adddup2( &fact, devnull, 1 );
 
-    int err = posix_spawnp( &pid, argv[ 0 ], &fact, nullptr, argv, nullptr );
+    int err = posix_spawnp( &pid, argv[ 0 ], &fact, nullptr, argv, environ );
 
     posix_spawn_file_actions_destroy( &fact );
     close( devnull );

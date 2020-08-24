@@ -3,19 +3,18 @@
 #include <vector>
 #include <set>
 #include <string_view>
+#include <limits>
+
 #include <fcntl.h>
 #include <spawn.h>
 #include <sys/wait.h>
 
-#include <stdlib.h>
 #include <glib.h>
 #include <poppler.h>
 #include <poppler-document.h>
 #include <poppler-page.h>
 #include <cairo.h>
 #include <cairo-svg.h>
-#include <stdio.h>
-#include <string.h>
 
 namespace brq
 {

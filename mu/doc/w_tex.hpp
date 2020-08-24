@@ -9,7 +9,7 @@
 namespace umd::doc
 {
 
-    struct w_tex : writer
+    struct w_tex : w_noop
     {
         stream &out;
         w_tex( stream &out ) : out( out ) {}

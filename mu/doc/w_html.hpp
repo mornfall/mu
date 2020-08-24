@@ -9,18 +9,16 @@
 namespace umd::doc
 {
 
-    struct w_html : w_noop // writer
+    struct w_html : w_tex /* w_tex for math */
     {
-        stream &out;
         std::string _embed;
 
-        w_html( stream &out, std::string embed = "" ) : out( out ), _embed( embed )
+        w_html( stream &out, std::string embed = "" ) : w_tex( out ), _embed( embed )
         {
             _sections.resize( 7, 0 );
             _section_num.resize( 7 );
         }
 
-        bool _in_math = false;
         std::map< sv, sv > _meta;
 
         std::vector< int > _sections;
@@ -72,7 +70,10 @@ namespace umd::doc
                 }
             };
 
-            process( t, char_cb, [&]( auto s ) { out.emit( s ); } );
+            if ( _in_math )
+                w_tex::text( t );
+            else
+                process( t, char_cb, [&]( auto s ) { out.emit( s ); } );
         }
 
         void heading_start( int level, std::u32string_view num ) override
@@ -110,8 +111,34 @@ namespace umd::doc
         void em_stop()    override { out.emit( "</em>" ); }
         void tt_start()   override { out.emit( "<code>" ); }
         void tt_stop()    override { out.emit( "</code>" ); }
-        void math_start() override { out.emit( "(math)" ); _in_math = true; }
-        void math_stop()  override { out.emit( "(/math)" ); _in_math = false; }
+
+        /* generate svgtex-compatible markup */
+        void eqn_start( int n ) override
+        {
+            _in_math = true;
+            out.emit( "<tex>\\startTEXpage\\startformula[packed]\\startmathalignment[n=", n, "]" );
+        }
+
+        void eqn_new_cell() override { out.emit( "\\NC" ); }
+        void eqn_new_row() override { out.emit( "\\NR" ); }
+        void eqn_stop() override
+        {
+            _in_math = false;
+            out.emit( "\\stopmathalignment\\stopformula\\stopTEXpage</tex>" );
+        }
+
+        void math_start() override
+        {
+            _in_math = true;
+            out.emit( "<tex>\\startMPpage\npicture p; p := btex \\math{" );
+        }
+
+        void math_stop()  override
+        {
+            _in_math = false;
+            out.emit( "} etex; write decimal ypart llcorner p to \"yshift.txt\";",
+                      " draw p;\n\\stopMPpage</tex>" );
+        }
 
         std::stack< bool > _li_close;
         std::stack< int > _li_count;

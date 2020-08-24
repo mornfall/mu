@@ -145,6 +145,19 @@ namespace umd::doc
         void mpost_stop()  override { out.emit( "\\stopMPpage</tex></div>" ); }
         void mpost_write( std::string_view s ) override { out.emit( s ); }
 
+        int _table_cells = 0;
+
+        /* TODO: cell alignment & borders */
+        void table_start( columns, bool ) override { out.emit( "<table><tr>" ); }
+        void table_stop() override { out.emit( "</td></tr></table>" ); }
+        void table_new_row() override { _table_cells = 0; out.emit( "</td></tr><tr>" ); }
+        void table_new_cell( int span ) override
+        {
+            if ( ++_table_cells > 1 )
+                out.emit( "</td>" );
+            out.emit( "<td colspan=\"", span, "\">" );
+        }
+
         std::stack< bool > _li_close;
         std::stack< int > _li_count;
 

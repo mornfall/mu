@@ -42,30 +42,35 @@ namespace umd::doc
 
         virtual void text( std::u32string_view t )
         {
-            bool in_index = false;
-            sv indices = U"₁₂₃₄₅₆₇₈₉ᵢ₌",
-                 dices = U"123456789i=";
+            bool in_sub = false, in_sup = false;
+            sv sub = U"₁₂₃₄₅₆₇₈₉ᵢ₌ₙ",
+               sup = U"¹²³⁴⁵⁶⁷⁸⁹ⁱ⁼ⁿ",
+               nom = U"123456789i=n";
 
             auto char_cb = [&]( auto flush, char32_t c )
             {
-                auto idx = indices.find( c );
+                auto subi = sub.find( c );
+                auto supi = sup.find( c );
 
                 if ( _in_math )
                 {
-                    if ( !in_index && idx != indices.npos )
-                        flush(), out.emit( "_{" ), in_index = true;
+                    if ( ( in_sup && supi == sup.npos ) || ( in_sub && subi == sub.npos ) )
+                        flush( 1 ), out.emit( "}" );
 
-                    if ( in_index )
+                    if ( !in_sub && subi != sub.npos )
+                        flush(), out.emit( "_{" ), in_sub = true;
+
+                    if ( !in_sup && supi != sup.npos )
+                        flush(), out.emit( "^{" ), in_sup = true;
+
+                    if ( in_sub || in_sup )
                         flush( 1 );
 
-                    if ( in_index && idx != indices.npos )
-                        out.emit( dices.substr( idx, 1 ) );
+                    if ( ( in_sub && subi != sub.npos ) || ( in_sup && supi != sup.npos ) )
+                        out.emit( nom.substr( in_sup ? supi : subi, 1 ) );
 
-                    if ( in_index && idx == indices.npos )
-                        out.emit( "}" );
-
-                    if ( idx == indices.npos )
-                        in_index = false;
+                    if ( subi == sub.npos ) in_sub = false;
+                    if ( supi == sup.npos ) in_sup = false;
                 }
 
                 switch ( c )
@@ -90,7 +95,7 @@ namespace umd::doc
             };
 
             process( t, char_cb, [&]( auto s ) { out.emit( s ); } );
-            if ( in_index ) out.emit( "}" );
+            if ( in_sub || in_sup ) out.emit( "}" );
         }
 
         /* spans ; may be also called within mpost btex/etex */

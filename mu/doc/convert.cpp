@@ -543,6 +543,9 @@ namespace umd::doc
             return;
         }
 
+        if ( !in_code && _list.empty() && todo[ 0 ] == U'\n' )
+            return w.paragraph(), fetch_line(), body();
+
         if ( todo[ 0 ] == U'' )
             return end_list( -1 ), w.pagebreak(), fetch_line(), body();
 

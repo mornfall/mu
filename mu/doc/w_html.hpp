@@ -50,10 +50,10 @@ namespace umd::doc
                 out.emit( "<script>", read_file( _embed + "/toc.js" ), "</script>" );
             }
             out.emit( "<script>hljs.initHighlightingOnLoad();</script>" );
-            out.emit( "</head><body onload=\"makeTOC()\"><ol id=\"toc\"></ol>" );
+            out.emit( "</head><body onload=\"makeTOC()\"><ol id=\"toc\"></ol><div>" );
         }
 
-        void end() override { out.emit( "</body></html>" ); }
+        void end() override { out.emit( "</div></body></html>" ); }
 
         void text( std::u32string_view t ) override
         {
@@ -154,6 +154,8 @@ namespace umd::doc
         void code_stop()        override { out.emit( "</code></pre>\n" ); }
         void quote_start()      override { out.emit( "<blockquote>\n" ); }
         void quote_stop()       override { out.emit( "</blockquote>\n" );  }
+
+        void paragraph() override { out.emit( "</div><div>\n" ); }
     };
 
 }

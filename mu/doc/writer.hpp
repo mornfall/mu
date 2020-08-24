@@ -107,7 +107,8 @@ namespace umd::doc
         virtual void quote_start() {}
         virtual void quote_stop() {}
 
-        /* paging */
+        /* paragraphs & paging */
+        virtual void paragraph() {}
         virtual void pagebreak() {}
 
         virtual void nest_start() {}

@@ -110,6 +110,7 @@ namespace umd::doc
         virtual void bullet_item() { out.emit( "\\item " ); }
 
         virtual void code_line( std::u32string_view l ) { out.emit( l, "\n" ); }
+        virtual void paragraph() { out.emit( "\n" ); }
     };
 
 }

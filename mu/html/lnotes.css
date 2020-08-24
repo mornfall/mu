@@ -28,6 +28,9 @@ body
 }
 #toc ol { padding-inline-start: 1em; display: block; }
 
+table { margin: auto; margin-top: 6pt; margin-bottom: 6pt; }
+.center { text-align: center; margin-top: 6pt; margin-bottom: 6pt; }
+
 /* Original highlight.js style (c) Ivan Sagalaev <maniac@softwaremaniacs.org> */
 
 .hljs {

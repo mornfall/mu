@@ -14,7 +14,7 @@ namespace umd::doc
         stream &out;
         w_tex( stream &out ) : out( out ) {}
 
-        bool in_math = false;
+        bool _in_math = false;
         sv format;
 
         std::string heading_cmd( int l )
@@ -50,7 +50,7 @@ namespace umd::doc
             {
                 auto idx = indices.find( c );
 
-                if ( in_math )
+                if ( _in_math )
                 {
                     if ( !in_index && idx != indices.npos )
                         flush(), out.emit( "_{" ), in_index = true;
@@ -71,7 +71,7 @@ namespace umd::doc
                 switch ( c )
                 {
                     case 0x0307:
-                        if ( in_math )
+                        if ( _in_math )
                             flush( 2 ), out.emit( "\\dot " ), flush();
                         break;
                     case U'&': flush(); out.emit( "\\&" ); break;
@@ -79,12 +79,12 @@ namespace umd::doc
                     case U'$': flush(); out.emit( "\\$" ); break;
                     case U'#': flush(); out.emit( "\\#" ); break;
                     case U'|': flush(); out.emit( "\\|" ); break;
-                    case U'_': if ( !in_math ) flush(), out.emit( "\\_" ); break;
-                    case U'{': if ( !in_math ) flush(), out.emit( "\\{" ); break;
-                    case U'}': if ( !in_math ) flush(), out.emit( "\\}" ); break;
+                    case U'_': if ( !_in_math ) flush(), out.emit( "\\_" ); break;
+                    case U'{': if ( !_in_math ) flush(), out.emit( "\\{" ); break;
+                    case U'}': if ( !_in_math ) flush(), out.emit( "\\}" ); break;
                     case U'~': flush(); out.emit( "\\textasciitilde{}" ); break;
-                    case U'^': if ( !in_math ) flush(), out.emit( "\\textasciicircum{}" ); break;
-                    case U'\\': if ( !in_math ) flush(), out.emit( "\\textbackslash{}" ); break;
+                    case U'^': if ( !_in_math ) flush(), out.emit( "\\textasciicircum{}" ); break;
+                    case U'\\': if ( !_in_math ) flush(), out.emit( "\\textbackslash{}" ); break;
                     default: ;
                 }
             };
@@ -98,8 +98,8 @@ namespace umd::doc
         virtual void em_stop()  { out.emit( "}" ); }
         virtual void tt_start() { out.emit( "{\\code{}" ); }
         virtual void tt_stop()  { out.emit( "}" ); }
-        virtual void math_start() { out.emit( "\\math{" ); in_math = true; }
-        virtual void math_stop() { out.emit( "}" ); in_math = false; }
+        virtual void math_start() { out.emit( "\\math{" ); _in_math = true; }
+        virtual void math_stop() { out.emit( "}" ); _in_math = false; }
 
         virtual void enum_item() { out.emit( "\\item " ); }
         virtual void bullet_item() { out.emit( "\\item " ); }

@@ -47,14 +47,14 @@ namespace umd::doc
         {
             out.emit( "\\startformula\\startmathalignment[n=", n, "]\n" );
             out.emit( "\\noalign{\\blank[-1.5ex]}\n" );
-            in_math = true;
+            _in_math = true;
             math_negspace = 2;
         }
 
-        virtual void eqn_new_cell() { assert( in_math ); out.emit( "\\NC " ); }
+        virtual void eqn_new_cell() { assert( _in_math ); out.emit( "\\NC " ); }
         virtual void eqn_new_row()
         {
-            assert( in_math );
+            assert( _in_math );
             out.emit( "\\NR\\noalign{\\blank[-.3ex]}\n" );
             if ( math_negspace ) -- math_negspace;
         }
@@ -64,7 +64,7 @@ namespace umd::doc
             if ( math_negspace )
                 out.emit( "\\noalign{\\blank[-1.5ex]}" );
             out.emit( "\\stopmathalignment\\stopformula\n" );
-            in_math = false;
+            _in_math = false;
         }
 
         /* lists */

@@ -16,6 +16,8 @@
 #include <cairo.h>
 #include <cairo-svg.h>
 
+extern char **environ;
+
 namespace brq
 {
     template< typename char_t >

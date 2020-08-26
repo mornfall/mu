@@ -140,8 +140,12 @@ namespace umd::doc
                       " draw p;\n\\stopMPpage</tex>" );
         }
 
-        /* generate mppage-compatible markup */
-        void mpost_start() override { out.emit( "<div class=\"center\"><tex>\\startMPpage\n" ); }
+        void mpost_start() override
+        {
+            out.emit( "<div class=\"center\"><tex>\\startMPpage\n",
+                      "color fg; fg := black;" );
+        }
+
         void mpost_stop()  override { out.emit( "\\stopMPpage</tex></div>" ); }
         void mpost_write( std::string_view s ) override { out.emit( s ); }
 

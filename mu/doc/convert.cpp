@@ -365,8 +365,8 @@ namespace umd::doc
             lines.back().remove_suffix( 1 );
 
             /* compute alignment on equal signs */
-            for_index( lines.front(),
-                       [&]( int idx, char32_t c ) { if ( c == U'=' ) align.insert( idx ); } );
+            for ( auto l : lines )
+                for_index( l, [&]( int idx, char32_t c ) { if ( c == U'=' ) align.insert( idx ); } );
             for ( auto l : lines )
                 for_index( l, [&]( int idx, char32_t c ) { if ( c != U'=' ) align.erase( idx ); } );
 
@@ -376,11 +376,12 @@ namespace umd::doc
             {
                 int last = 0;
                 for ( int i : align )
-                {
-                    w.eqn_new_cell();
-                    w.text( substr( l, last, i ) );
-                    last = i;
-                }
+                    if ( i < int( l.size() ) )
+                    {
+                        w.eqn_new_cell();
+                        w.text( substr( l, last, i ) );
+                        last = i;
+                    }
                 w.eqn_new_cell();
                 w.text( substr( l, last, l.npos ) );
                 w.eqn_new_row();

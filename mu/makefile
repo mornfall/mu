@@ -24,7 +24,7 @@ mu-pic: pic.o $(LIB)
 	$(CXX) -o $@ $(LIB) pic.o $(LDADD)
 
 clean:
-	rm -f $(OBJ) $(DEP) $(BIN)
+	rm -f $(OBJ) $(DEP) $(BIN) svgtex
 
 .cpp.o:
 	@mkdir -p $$(dirname $@)

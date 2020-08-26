@@ -43,7 +43,7 @@ namespace umd::pic::convert
         pic::group group;
         const reader::grid &grid;
 
-        double xpitch = 4.5, ypitch = 6.5;
+        double xpitch = 4.5, ypitch = 9;
 
         state( const reader::grid &g ) : grid( g ) {}
 

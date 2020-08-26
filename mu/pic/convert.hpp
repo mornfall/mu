@@ -43,23 +43,27 @@ namespace umd::pic::convert
         pic::group group;
         const reader::grid &grid;
 
-        double xpitch = 4.5, ypitch = 9;
+        static constexpr double xpitch = 4.5, ypitch = 9;
 
         state( const reader::grid &g ) : grid( g ) {}
 
         void arrow( int x, int y ) { arrow( reader::point( x, y ) ); }
         void arrow( reader::point p )
         {
+            auto conv = []( reader::point p )
+            {
+                return pic::point( xpitch * p.x(), -ypitch * p.y() );
+            };
             auto head   = grid[ p ].head();
             auto to_dir = grid[ p ].arrow_dir();
             auto at_dir = grid[ p ].attach_dir();
-            auto to_obj = objects.at( p + diff( to_dir ) );
-            assert( to_obj );
-            auto to_port = to_obj->port( opposite( to_dir ) );
+            auto to     = p + diff( to_dir );
+            auto to_obj = objects.at( to );
+            auto to_port = to_obj ? to_obj->port( opposite( to_dir ) ) : port( conv( p ), to_dir );
             std::vector< pic::point > points;
             bool dashed = false, curved = false;
 
-            pic::object *from_obj;
+            pic::object *from_obj = nullptr;
 
             while ( true )
             {
@@ -70,13 +74,14 @@ namespace umd::pic::convert
                     dashed = true;
                 if ( grid[ p ].rounded() )
                     curved = true;
+
                 p = next;
-
-                if ( from_obj )
-                    break;
-
                 auto cell = grid[ next ];
                 auto ndir = at_dir;
+
+                if ( from_obj || cell.arrow() )
+                    break;
+
                 if ( !cell.attach_all() && !cell.arrow() )
                     ndir = cell.attach_dir( opposite( at_dir ) );
                 if ( at_dir != ndir )
@@ -84,7 +89,8 @@ namespace umd::pic::convert
                 at_dir = ndir;
             }
 
-            auto from_port = from_obj->port( opposite( at_dir ) );
+            auto from_port = from_obj ? from_obj->port( opposite( at_dir ) )
+                                      : port( conv( p ), at_dir );
             auto &arrow = group.add< pic::arrow >( from_port, to_port );
             arrow._dashed = dashed;
             arrow._curved = curved;

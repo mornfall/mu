@@ -320,13 +320,13 @@ namespace umd::doc
 
     bool convert::try_dispmath()
     {
-        auto for_index = []( auto l, auto f )
+        auto for_index = []( auto l, int w, auto f )
         {
             int idx = 0;
             for ( int i = 0; i < int( l.size() ); ++i )
             {
                 if ( !u_getCombiningClass( l[ i ] ) ) ++idx;
-                f( idx, l[ i ] );
+                f( idx, l.substr( i, i + w ) );
             }
         };
 
@@ -365,18 +365,23 @@ namespace umd::doc
 
             std::set< int > align;
 
-            auto per_line = [&]( auto f )
-            {
-                for ( auto l : lines )
-                    for_index( l, f );
-            };
-
             auto align_on = [&]( std::u32string_view find )
             {
                 std::set< int > a;
-                auto match = [&]( char32_t c ) { return find.find( c ) != find.npos; };
-                per_line( [&]( int idx, char32_t c ) { if (  match( c ) ) a.insert( idx ); } );
-                per_line( [&]( int idx, char32_t c ) { if ( !match( c ) ) a.erase( idx ); } );
+
+                auto per_line = [&]( auto f )
+                {
+                    for ( auto l : lines )
+                        for_index( l, 3, f );
+                };
+
+                auto match = [&]( auto w )
+                {
+                    return w[ 0 ] == U' ' && w[ 2 ] == U' ' && find.find( w[ 1 ] ) != find.npos;
+                };
+
+                per_line( [&]( int idx, auto w ) { if (  match( w ) ) a.insert( idx + 1 ); } );
+                per_line( [&]( int idx, auto w ) { if ( !match( w ) ) a.erase( idx + 1 ); } );
                 for ( int i : a )
                     align.insert( i );
             };

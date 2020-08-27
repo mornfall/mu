@@ -178,6 +178,13 @@ namespace umd::doc
 
         /* paging */
         virtual void pagebreak() { out.emit( "\\stopmakeup\\startmakeup[slide]", "\n" ); }
+        virtual void hrule( char32_t )
+        {
+            out.emit( "\\vskip-8pt\\startalignment[center]\\startMPcode\n",
+                      "pickup pencircle scaled .2pt;"
+                      " draw (0, 0) -- (\\the\\textwidth, 0) dashed evenly withcolor (.3, .3, .3);"
+                      " \\stopMPcode\\stopalignment");
+        }
         virtual void end()
         {
             out.emit( "\\stopmakeup\\stoptext", "\n" );

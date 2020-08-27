@@ -110,6 +110,7 @@ namespace umd::doc
         /* paragraphs & paging */
         virtual void paragraph() {}
         virtual void pagebreak() {}
+        virtual void hrule( char32_t ) {}
 
         virtual void nest_start() {}
         virtual void nest_end() {}

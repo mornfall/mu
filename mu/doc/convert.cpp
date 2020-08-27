@@ -574,6 +574,18 @@ namespace umd::doc
         if ( !in_code && _list.empty() && todo[ 0 ] == U'\n' )
             return w.paragraph(), fetch_line(), body();
 
+        for ( auto c : U"┄" )
+        {
+            bool hrule = todo.size() >= 40;
+
+            for ( int i = 0; hrule && i < 40; ++ i )
+                if ( todo[ i ] != c )
+                    hrule = false;
+
+            if ( hrule )
+                fetch_line(), w.hrule( c );
+        }
+
         if ( todo[ 0 ] == U'' )
             return end_list( -1 ), w.pagebreak(), fetch_line(), body();
 

@@ -113,7 +113,7 @@ namespace umd::doc
         void tt_stop()    override { out.emit( "</code>" ); }
 
         /* generate svgtex-compatible markup */
-        void eqn_start( int n ) override
+        void eqn_start( int n, std::string ) override
         {
             _in_math = true;
             out.emit( "<tex>\\startTEXpage\\startformula[packed]\\startmathalignment[n=", n, "]" );

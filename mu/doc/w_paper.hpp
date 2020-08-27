@@ -33,7 +33,7 @@ namespace umd::doc
         virtual void math_stop() { out.emit( "}" ); in_math = false; }
 
         /* display math */
-        virtual void eqn_start( int )
+        virtual void eqn_start( int, std::string )
         {
             out.emit( "\\begin{align}\n" );
             in_math = true;

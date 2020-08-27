@@ -43,9 +43,17 @@ namespace umd::doc
         }
 
         /* display math */
-        virtual void eqn_start( int n )
+        virtual void eqn_start( int n, std::string astr )
         {
-            out.emit( "\\startformula\\startmathalignment[n=", n, "]\n" );
+            out.emit( "\\startformula\\startmathalignment[n=", n, ",align={" );
+            for ( char c : astr )
+                switch ( c )
+                {
+                    case 'c': out.emit( "middle," ); break;
+                    case 'l': out.emit( "left," ); break;
+                    case 'r': out.emit( "right," ); break;
+                }
+            out.emit( "}]\n" );
             out.emit( "\\noalign{\\blank[-1.5ex]}\n" );
             _in_math = true;
             math_negspace = 2;

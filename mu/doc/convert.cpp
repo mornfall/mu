@@ -390,7 +390,12 @@ namespace umd::doc
             align_on( U"→←" );
             align_on( U"+-⋅/" );
 
-            w.eqn_start( align.size() + 1 );
+            std::string astr;
+
+            for ( unsigned i = 0; i < align.size(); ++ i )
+                astr += "lc";
+
+            w.eqn_start( 2 * align.size() + 1, astr );
 
             for ( auto l : lines )
             {
@@ -400,7 +405,9 @@ namespace umd::doc
                     {
                         w.eqn_new_cell();
                         w.text( substr( l, last, i ) );
-                        last = i;
+                        w.eqn_new_cell();
+                        w.text( substr( l, i, i + 1 ) );
+                        last = i + 1;
                     }
                 w.eqn_new_cell();
                 w.text( substr( l, last, l.npos ) );

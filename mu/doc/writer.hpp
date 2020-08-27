@@ -76,7 +76,7 @@ namespace umd::doc
         virtual void math_stop() = 0;
 
         /* aligned equations */
-        virtual void eqn_start( int ) = 0;
+        virtual void eqn_start( int, std::string ) = 0;
         virtual void eqn_new_cell() = 0;
         virtual void eqn_new_row() = 0;
         virtual void eqn_stop() = 0;
@@ -125,7 +125,7 @@ namespace umd::doc
         virtual void math_stop() {}
 
         /* aligned equations */
-        virtual void eqn_start( int ) {}
+        virtual void eqn_start( int, std::string ) {}
         virtual void eqn_new_cell() {}
         virtual void eqn_new_row() {}
         virtual void eqn_stop() {}

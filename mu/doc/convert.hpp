@@ -64,7 +64,7 @@ namespace umd::doc
         }
 
         static bool newline( char32_t c ) { return c == U'\n'; }
-        static bool space( char32_t c )   { return std::isspace( c ); }
+        static bool space( char32_t c )   { return c == U' ' || c == U'\n'; }
 
         std::u32string_view fetch_line() { return fetch( todo, newline ); }
         std::u32string_view fetch_word() { return fetch( todo, space ); }

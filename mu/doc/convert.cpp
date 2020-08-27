@@ -345,7 +345,6 @@ namespace umd::doc
         if ( white_count() <= 3 && nonwhite() == U'⟦' )
         {
             std::vector< std::u32string_view > lines;
-            std::set< int > align;
             int offset = white_count() + 1;
 
             auto backup = todo;
@@ -364,11 +363,27 @@ namespace umd::doc
 
             lines.back().remove_suffix( 1 );
 
-            /* compute alignment on equal signs */
-            for ( auto l : lines )
-                for_index( l, [&]( int idx, char32_t c ) { if ( c == U'=' ) align.insert( idx ); } );
-            for ( auto l : lines )
-                for_index( l, [&]( int idx, char32_t c ) { if ( c != U'=' ) align.erase( idx ); } );
+            std::set< int > align;
+
+            auto per_line = [&]( auto f )
+            {
+                for ( auto l : lines )
+                    for_index( l, f );
+            };
+
+            auto align_on = [&]( std::u32string_view find )
+            {
+                std::set< int > a;
+                auto match = [&]( char32_t c ) { return find.find( c ) != find.npos; };
+                per_line( [&]( int idx, char32_t c ) { if (  match( c ) ) a.insert( idx ); } );
+                per_line( [&]( int idx, char32_t c ) { if ( !match( c ) ) a.erase( idx ); } );
+                for ( int i : a )
+                    align.insert( i );
+            };
+
+            align_on( U"=" );
+            align_on( U"→←" );
+            align_on( U"+-" );
 
             w.eqn_start( align.size() + 1 );
 

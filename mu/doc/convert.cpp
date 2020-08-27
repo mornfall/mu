@@ -388,7 +388,7 @@ namespace umd::doc
 
             align_on( U"=" );
             align_on( U"→←" );
-            align_on( U"+-" );
+            align_on( U"+-⋅/" );
 
             w.eqn_start( align.size() + 1 );
 

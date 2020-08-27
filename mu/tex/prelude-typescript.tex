@@ -1,8 +1,9 @@
 \enabletrackers [fonts.missing]
 \definefontfallback[djvumath] [name:dejavusansmono]
                    [ arrows, greekandcoptic, mathematicaloperators, superscriptsandsubscripts ]
-\definefontfallback[xcclmath] [name:xccl]
-                   [ arrows, greekandcoptic, mathematicaloperators, superscriptsandsubscripts ]
+\definefontfallback[aleofb][name:iosevka-slab-extralight][miscellaneoussymbols]
+\definefontfallback[aleofb] [name:xccl]
+                   [arrows,greekandcoptic,mathematicaloperators,superscriptsandsubscripts]
 \definefontfeature[iocode] [ language=DFLT, script=latn, cv19=yes, cv31=yes, cv36=yes, cv38=yes ]
 
 \starttypescript  [math] [xccl]
@@ -17,7 +18,7 @@
 \stoptypescript
 
 \starttypescript [serif] [aleo]
-  \definefontsynonym [Serif]       [name:Aleo-Light]       [features=default,fallbacks=xcclmath]
+  \definefontsynonym [Serif]       [name:Aleo-Light]       [features=default,fallbacks=aleofb]
   \definefontsynonym [SerifItalic] [name:Aleo-LightItalic] [features=default]
   \definefontsynonym [SerifBold]   [name:Aleo-Regular]     [features=default]
   \definefontsynonym [SerifCaps]   [Serif]                 [features=smallcaps]

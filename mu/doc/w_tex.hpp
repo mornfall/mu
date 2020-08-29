@@ -94,8 +94,16 @@ namespace umd::doc
                 }
             };
 
-            process( t, char_cb, [&]( auto s ) { out.emit( s ); } );
-            if ( in_sub || in_sup ) out.emit( "}" );
+            process( t, char_cb, [&]( auto s )
+            {
+                if ( in_sub || in_sup )
+                    assert( s.size() == 1 ), out.emit( "}" ), in_sub = in_sup = false;
+                else
+                    out.emit( s );
+            } );
+
+            if ( in_sub || in_sup )
+                out.emit( "}" );
         }
 
         /* spans ; may be also called within mpost btex/etex */

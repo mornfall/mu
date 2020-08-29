@@ -22,7 +22,7 @@ namespace umd::doc
 
     void convert::skip_white( std::u32string_view &l )
     {
-        while ( !l.empty() && l[0] != U'\n' && std::isspace( l[ 0 ] ) )
+        while ( !l.empty() && l[0] != U'\n' && space( l[ 0 ] ) )
             l.remove_prefix( 1 );
     }
 

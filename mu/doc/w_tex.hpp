@@ -43,9 +43,9 @@ namespace umd::doc
         virtual void text( std::u32string_view t )
         {
             bool in_sub = false, in_sup = false;
-            sv sub = U"₁₂₃₄₅₆₇₈₉ᵢ₌ₙ",
-               sup = U"¹²³⁴⁵⁶⁷⁸⁹ⁱ⁼ⁿ",
-               nom = U"123456789i=n";
+            sv sub = U"₀₁₂₃₄₅₆₇₈₉ᵢ₌ₙ₋ₖₘ₊",
+               sup = U"⁰¹²³⁴⁵⁶⁷⁸⁹ⁱ⁼ⁿ⁻ᵏᵐ⁺",
+               nom = U"0123456789i=n-km+";
 
             auto char_cb = [&]( auto flush, char32_t c )
             {

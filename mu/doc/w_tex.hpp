@@ -2,7 +2,7 @@
 #include "writer.hpp"
 #include <vector>
 #include <sstream>
-#include <iostream>
+#include <cassert>
 
 /* Base class for TeX-based writers. */
 

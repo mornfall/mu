@@ -199,10 +199,7 @@ namespace umd::doc
         if ( !digits && !l.empty() && std::islower( l[ 0 ] ) )
             l.remove_prefix( 1 ), alpha = true;
 
-        if ( l.empty() || l[ 0 ] != U'.' )
-            return false;
-
-        if ( alpha && ( l.size() < 2 || l[ 1 ] != U' ' ) )
+        if ( l.size() < 2 || l[ 0 ] != U'.' || l[ 1 ] != U' ' )
             return false;
 
         if ( digits )

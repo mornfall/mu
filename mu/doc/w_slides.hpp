@@ -159,7 +159,8 @@ namespace umd::doc
 
         virtual void table_new_row()
         {
-            out.emit( "\\eTD\\eTR\\bTR", "\n" );
+            out.emit( "\\eTD\\eTR\\bTR\n" );
+            table_rules = false;
             table_cells = 0;
         }
 

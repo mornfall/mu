@@ -60,7 +60,7 @@ namespace umd::pic::reader
         dir_t dir( std::bitset< 4 > bs ) const
         {
             assert( bs.count() == 1 );
-            for ( dir_t dir = north; dir <= west; dir = dir_t( dir + 1 ) )
+            for ( dir_t dir : all_dirs )
                 if ( bs[ dir ] )
                     return dir;
             assert( 0 );

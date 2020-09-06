@@ -1,5 +1,6 @@
 #pragma once
 #include <initializer_list>
+#include <cassert>
 
 namespace umd::pic
 {
@@ -12,7 +13,18 @@ namespace umd::pic
 
     static inline dir_t opposite( dir_t dir )
     {
-        return dir_t( ( dir + 2 ) % 4 );
+        switch ( dir )
+        {
+            case north: return south;
+            case south: return north;
+            case east: return west;
+            case west: return east;
+            case north_east: return south_west;
+            case north_west: return south_east;
+            case south_east: return north_west;
+            case south_west: return north_east;
+            default: assert( 0 && "bad direction in opposite()" );
+        }
     }
 
     static inline dir_t cw( dir_t dir )

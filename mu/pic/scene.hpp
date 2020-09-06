@@ -174,13 +174,24 @@ namespace umd::pic
 
         pic::port port( dir_t p ) const override
         {
+            auto mk = [&]( int x, int y, int deg )
+            {
+                double rad = _radius + 1, xr = x * rad, yr = y * rad;
+                double len = std::sqrt( xr * xr + yr * yr );
+                return pic::port( _position + point( xr / len, yr / len ), deg );
+            };
+
             switch ( p )
             {
-                case north: return pic::port( _position + point( 0, _radius + 1 ), 90 );
-                case south: return pic::port( _position - point( 0, _radius + 1 ), -90 );
-                case east:  return pic::port( _position + point( _radius + 1, 0 ), 0 );
-                case west:  return pic::port( _position - point( _radius + 1, 0 ), 180 );
-                default: __builtin_trap();
+                case north: return mk(  0,  1,  90 );
+                case south: return mk(  0, -1, -90 );
+                case east:  return mk(  1,  0,   0 );
+                case west:  return mk( -1,  0, 180 );
+                case north_east: return mk(  1,  1,  -45 );
+                case north_west: return mk( -1,  1, -135 );
+                case south_east: return mk(  1, -1,   45 );
+                case south_west: return mk( -1, -1,  135 );
+                default: assert( 0 && "unexpected direction in node::port()" );
             }
         }
 

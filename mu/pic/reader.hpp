@@ -101,7 +101,10 @@ namespace umd::pic::reader
                 case U'╱': set_attach( north_east ); set_attach( south_west ); break;
                 case U'╲': set_attach( north_west ); set_attach( south_east ); break;
 
-                case U'┼': case U'●':
+                case U'●':
+                    set_attach( north_east ); set_attach( north_west );
+                    set_attach( south_east ); set_attach( south_west );
+                case U'┼':
                     set_attach( north ); set_attach( south );
                     set_attach( east ); set_attach( west );
                     break;

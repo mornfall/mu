@@ -52,13 +52,18 @@ namespace umd::pic::convert
         void arrow( int x, int y ) { arrow( reader::point( x, y ) ); }
         void arrow( reader::point p )
         {
+            arrow( p, grid[ p ].arrow_dir() );
+        }
+
+        void arrow( reader::point p, dir_t to_dir )
+        {
             auto conv = []( reader::point p )
             {
                 return pic::point( xpitch * p.x(), -ypitch * p.y() );
             };
+
             auto head   = grid[ p ].head();
-            auto to_dir = grid[ p ].arrow_dir();
-            auto at_dir = grid[ p ].attach_dir();
+            auto at_dir = grid[ p ].attach_dir( to_dir );
             auto to     = p + diff( to_dir );
             auto to_obj = objects.at( to );
             auto to_port = to_obj ? to_obj->port( opposite( to_dir ) ) : port( conv( p ), to_dir );
@@ -101,8 +106,8 @@ namespace umd::pic::convert
             std::copy( points.rbegin(), points.rend(), std::back_inserter( arrow._controls ) );
         }
 
-        std::pair< reader::point, int > line( reader::point p, dir_t dir, int joins = 1,
-                                              bool jcw = true, bool *dashed = nullptr )
+        std::pair< reader::point, int > boundary( reader::point p, dir_t dir, int joins = 1,
+                                                  bool jcw = true, bool *dashed = nullptr )
         {
             int joined = 0;
             bool first = true;
@@ -132,10 +137,10 @@ namespace umd::pic::convert
             bool dashed;
 
             auto nw = p;
-            auto [ ne, jn ] = line( p, east,   mj[ 0 ], false, &dashed );
-            auto [ sw, je ] = line( p, south,  mj[ 1 ], true,  &dashed );
-            auto [ se, jw ] = line( ne, south, mj[ 2 ], false, &dashed );
-            auto [ sx, js ] = line( sw, east,  mj[ 3 ], true,  &dashed );
+            auto [ ne, jn ] = boundary( p, east,   mj[ 0 ], false, &dashed );
+            auto [ sw, je ] = boundary( p, south,  mj[ 1 ], true,  &dashed );
+            auto [ se, jw ] = boundary( ne, south, mj[ 2 ], false, &dashed );
+            auto [ sx, js ] = boundary( sw, east,  mj[ 3 ], true,  &dashed );
 
             c[ corner_ne ] = ne; j[ 0 ] = jn;
             c[ corner_nw ] = nw; j[ 1 ] = je;
@@ -213,6 +218,19 @@ namespace umd::pic::convert
                 box( p );
         }
 
+        void line( int x, int y ) { line( reader::point( x, y ) ); }
+        void line( reader::point p )
+        {
+            auto c = grid.at( p );
+
+            for ( auto dir : all_dirs )
+                if ( c.attach( dir ) && objects.count( p + diff( dir ) ) )
+                {
+                    arrow( p, dir );
+                    break;
+                }
+        }
+
         void label( int x, int y ) { label( reader::point( x, y ) ); }
         void label( reader::point p )
         {
@@ -261,6 +279,10 @@ namespace umd::pic::convert
         for ( auto [ x, y, c ] : grid )
             if ( c.arrow() && !seen( x, y ) )
                 s.arrow( x, y );
+
+        for ( auto [ x, y, c ] : grid )
+            if ( c.attach() && !seen( x, y ) )
+                s.line( x, y );
 
         for ( auto [ x, y, c ] : grid )
             if ( c.text() && !seen( x, y ) )

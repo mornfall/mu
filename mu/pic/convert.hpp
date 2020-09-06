@@ -5,6 +5,7 @@
 #include "util.hpp"
 
 #include <array>
+#include <set>
 
 namespace umd::pic::convert
 {
@@ -42,6 +43,7 @@ namespace umd::pic::convert
         object_map objects;
         pic::group group;
         const reader::grid &grid;
+        std::set< reader::point > processed;
 
         static constexpr double xpitch = 4.5, ypitch = 9;
 
@@ -75,6 +77,7 @@ namespace umd::pic::convert
                 if ( grid[ p ].rounded() )
                     curved = true;
 
+                processed.insert( p );
                 p = next;
                 auto cell = grid[ next ];
                 auto ndir = at_dir;
@@ -183,6 +186,7 @@ namespace umd::pic::convert
                     }
 
                     objects[ reader::point( x, y ) ] = obj;
+                    processed.emplace( x, y );
                 }
 
             if ( !txt.empty() )
@@ -237,24 +241,29 @@ namespace umd::pic::convert
             auto obj = &group.add< pic::text >( xpitch * ( origin.x() + w / 2.0 - 0.5 ),
                                                 ypitch * ( - p.y() ), txt );
             while ( p != origin ) /* fixme off by one */
-                objects[ p ] = obj, p = p + reader::point( -1, 0 );
+            {
+                objects[ p ] = obj;
+                processed.insert( p );
+                p = p + reader::point( -1, 0 );
+            }
         }
     };
 
     static inline group scene( const reader::grid &grid )
     {
         state s( grid );
+        auto seen = [&]( int x, int y ) { return s.processed.count( reader::point( x, y ) ); };
 
         for ( auto [ x, y, c ] : grid )
             if ( c.attach() )
                 s.object( x, y );
 
         for ( auto [ x, y, c ] : grid )
-            if ( c.arrow() )
+            if ( c.arrow() && !seen( x, y ) )
                 s.arrow( x, y );
 
         for ( auto [ x, y, c ] : grid )
-            if ( c.text() )
+            if ( c.text() && !seen( x, y ) )
                 s.label( x, y );
 
         return s.group;

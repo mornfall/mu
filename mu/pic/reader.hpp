@@ -25,8 +25,7 @@ namespace umd::pic::reader
     struct cell
     {
         char32_t _char = U' ';
-        std::bitset< 4 > _attach;
-        std::bitset< 4 > _arrow;
+        std::bitset< 8 > _attach, _arrow;
         bool _rounded = false;
         bool _dashed = false;
         bool _head = false;
@@ -44,7 +43,7 @@ namespace umd::pic::reader
         int shade() const { return _shade; }
 
         char32_t character() const { return _char; }
-        bool attach_all() const { return _attach.count() == 4; }
+        bool attach_all() const { return _attach.count() == 4; } /* FIXME */
         dir_t attach_dir() const { return dir( _attach ); }
         dir_t attach_dir( dir_t except ) const
         {
@@ -57,8 +56,9 @@ namespace umd::pic::reader
         bool arrow() const { return _arrow.any(); }
         dir_t arrow_dir() const { return dir( _arrow ); }
 
-        dir_t dir( std::bitset< 4 > bs ) const
+        dir_t dir( std::bitset< 8 > bs ) const
         {
+            assert( bs.count() > 0 );
             assert( bs.count() == 1 );
             for ( dir_t dir : all_dirs )
                 if ( bs[ dir ] )
@@ -97,6 +97,9 @@ namespace umd::pic::reader
                 case U'├': set_attach( east ); set_attach( north ); set_attach( south ); break;
                 case U'┬': set_attach( east ); set_attach( west );  set_attach( south ); break;
                 case U'┴': set_attach( east ); set_attach( west );  set_attach( north ); break;
+
+                case U'╱': set_attach( north_east ); set_attach( south_west ); break;
+                case U'╲': set_attach( north_west ); set_attach( south_east ); break;
 
                 case U'┼': case U'●':
                     set_attach( north ); set_attach( south );

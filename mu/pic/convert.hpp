@@ -134,7 +134,7 @@ namespace umd::pic::convert
         {
             std::array< reader::point, 4 > c;
             joins j;
-            bool dashed;
+            bool dashed = false;
 
             auto nw = p;
             auto [ ne, jn ] = boundary( p, east,   mj[ 0 ], false, &dashed );

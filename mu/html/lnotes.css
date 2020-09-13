@@ -32,6 +32,7 @@ div ol, div ul { margin-block-start: .7ex; margin-block-end: 1.4ex; }
 
 table { margin: auto; margin-top: 6pt; margin-bottom: 6pt; }
 .center { text-align: center; margin-top: 6pt; margin-bottom: 6pt; }
+h3 { display: inline; font-size: 100%; }
 div { padding-bottom: .7ex; }
 pre { padding-top: 0; padding-bottom: .7ex; margin-top: .7ex; margin-bottom: .7ex; }
 

@@ -81,7 +81,7 @@ namespace umd::pic::reader
                 case U'▲': _head = true; case U'╷': set_attach( south ); set_arrow( north ); break;
                 case U'▼': _head = true; case U'╵': set_attach( north ); set_arrow( south ); break;
 
-                case U'│': set_attach( north ); set_attach( south ); break;
+                case U'┆': _dashed = true; case U'│': set_attach( north ); set_attach( south ); break;
                 case U'┄': _dashed = true; case U'─': set_attach( east ); set_attach( west ); break;
 
                 case U'╭': set_rounded( true );

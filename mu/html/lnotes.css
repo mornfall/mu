@@ -26,10 +26,14 @@ body
     white-space: nowrap;
     text-overflow: ellipsis;
 }
+
 #toc ol { padding-inline-start: 1em; display: block; }
+div ol, div ul { margin-block-start: .7ex; margin-block-end: 1.4ex; }
 
 table { margin: auto; margin-top: 6pt; margin-bottom: 6pt; }
 .center { text-align: center; margin-top: 6pt; margin-bottom: 6pt; }
+div { padding-bottom: .7ex; }
+pre { padding-top: 0; padding-bottom: .7ex; margin-top: .7ex; margin-bottom: .7ex; }
 
 /* Original highlight.js style (c) Ivan Sagalaev <maniac@softwaremaniacs.org> */
 

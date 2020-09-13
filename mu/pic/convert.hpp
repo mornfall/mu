@@ -198,11 +198,13 @@ namespace umd::pic::convert
                 group.add< pic::label >( xpitch * (   p.x() + w / 2 ),
                                          ypitch * ( - p.y() - 1.08 * h / 2 ), txt );
 
-            if ( grid[ sw ].attach( south ) )
-                box( sw );
+            for ( auto p = ne; p != se; p = p + reader::point( 0, 1 ) )
+                if ( grid[ p ].attach( east ) )
+                    box( p );
 
-            if ( grid[ ne ].attach( east ) )
-                box( ne );
+            for ( auto p = sw; p != se; p = p + reader::point( 1, 0 ) )
+                if ( grid[ p ].attach( south ) )
+                    box( p );
         }
 
         void object( int x, int y ) { object( reader::point( x, y ) ); }

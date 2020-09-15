@@ -242,23 +242,18 @@ namespace umd::pic::convert
             auto origin = p;
             std::u32string txt;
 
-            int spaces = 0;
+            /* non-breaking spaces are required within labels */
+
             for ( int i = 0; ; ++i, p = p + reader::point( 1, 0 ) )
             {
-                if ( grid.at( p ).empty() || grid.at( p ).attach() )
-                    ++ spaces;
-                else
-                    spaces = 0;
-
-                if ( spaces == 2 )
+                if ( grid.at( p ).character() == ' ' || grid.at( p ).attach() )
                     break;
                 else
                     txt += grid.at( p ).character();
             }
 
-            txt.pop_back();
             auto w = p.x() - origin.x() - 1;
-            auto obj = &group.add< pic::text >( xpitch * ( origin.x() + w / 2.0 - 0.5 ),
+            auto obj = &group.add< pic::text >( xpitch * ( origin.x() + w / 2.0 ),
                                                 ypitch * ( - p.y() ), txt );
             while ( p != origin ) /* fixme off by one */
             {

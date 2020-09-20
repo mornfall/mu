@@ -1795,8 +1795,16 @@ BRICK_SQL_OP( | )
         struct autoexec : brq::string_builder
         {
             txn &_txn;
+            autoexec( autoexec && ) = default;
             autoexec( txn &t ) : _txn( t ) {}
-            ~autoexec() { _txn.exec( buffer() ); }
+            ~autoexec() { if ( _buffer ) _txn.exec( _buffer ); }
+
+            template< typename T >
+            autoexec &operator<<( const T &x )
+            {
+                *static_cast< brq::string_builder * >( this ) << x;
+                return *this;
+            }
         };
 
         autoexec exec() { return { *this }; }

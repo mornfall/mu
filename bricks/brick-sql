@@ -1650,7 +1650,28 @@ BRICK_SQL_OP( | )
         template< typename... cols >
         auto values( to_view< const typename cols::type & >... v )
         {
-            return insert_values< insert, cols... >( *this, typename cols::type( v )... );
+            string_builder bld;
+            bld << "insert into " << get_name( table() );
+            cons_list_t< cols... > l;
+            bool first = true;
+            l.each( [&]( auto &col )
+            {
+                bld << ( first ? " ( " : ", " ) << col.column_name( col ); first = false;
+            } );
+            bld << " ) values";
+            int i = 1;
+            l.each( [&]( auto ) { bld << ( i == 1 ? " ( " : ", " ) << "$" << i; i ++; } );
+            bld << " )";
+            if ( _quiet )
+                bld << " on conflict do nothing";
+            if constexpr ( !std::is_same_v< primary_l, brq::nil > )
+            {
+                using primary = unqualify< typename primary_l::car_t >;
+                bld << " returning " << primary().column_name( primary() );
+            }
+            stmt s( _conn, bld.buffer() );
+            s.bind( v... );
+            return s;
         }
     };
 

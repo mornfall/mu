@@ -594,6 +594,7 @@ namespace brq::sql
     struct conn
     {
         std::set< notification > _pending;
+        std::string _notices;
         PGconn *_handle = nullptr;
         PGconn *handle() { return _handle; }
 
@@ -605,10 +606,18 @@ namespace brq::sql
                 throw std::bad_alloc();
             if ( PQstatus( _handle ) != CONNECTION_OK )
                 raise< error >() << "connecting to " << s << " " << errmsg();
+
+            auto msg = []( void *_this, const char *msg )
+            {
+                static_cast< conn * >( _this )->_notices += msg;
+            };
+
+            PQsetNoticeProcessor( _handle, msg, this );
         }
 
         void exec( std::string sql )
         {
+            _notices.clear();
             auto result = PQexec( handle(), sql.c_str() );
             if ( PQresultStatus( result ) != PGRES_COMMAND_OK )
                 raise< error >() << "executing " << sql << ": " << errmsg();
@@ -878,6 +887,7 @@ namespace brq::sql
             std::vector< int > formats( _params.size(), 1 );
 
             DEBUG( _query.buffer(), _params.size() ? _debug.buffer() : "" );
+            _conn._notices.clear();
             _result = PQexecParams( _conn.handle(), _query.buffer(), _params.size(), nullptr,
                                     _params.data(), _lengths.data(), formats.data(), 1 );
 

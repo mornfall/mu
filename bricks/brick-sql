@@ -1885,50 +1885,60 @@ BRICK_SQL_OP( | )
     template< typename table >
     std::enable_if_t< table::is_table > create( txn &txn, table )
     {
-        string_builder s;
-        s << "create table " << get_name( table() );
-        bool first = true;
+        auto tabname = get_name( table() );
+        auto tabunq = std::string( tabname.substr( 1, tabname.size() - 2 ) );
+        txn.exec() << "create table if not exists " << tabname << " ();";
+        int c_num = 0;
+        auto alter = [&] { return std::move( txn.exec() << "alter table " << tabname << " " ); };
+        auto constraint = [&]
+        {
+            return std::move( alter() << "add constraint " << tabunq << "_c" << c_num++ << " " );
+        };
+
+        for ( int i = 0; i < 8; ++i )
+            alter() << "drop constraint if exists " << tabunq << "_c" << i << " cascade";
+
         auto print_col = [&]( auto col )
         {
             using col_t = decltype( col );
-            s << ( first ? "\n  ( " : "\n  , " );
+
             if constexpr ( col.is_constraint )
             {
-                s << "unique ";
-                bool first = true;
-                auto print = [&]( auto ucol )
-                {
-                    s << ( first ? "( " : ", " ) << ucol.column_name( ucol );
-                    first = false;
-                };
-                typename col_t::columns().each( print );
-                s << " )";
+                auto ex = std::move( constraint() << "unique " );
+                print_columns( ex, typename col_t::columns(), "( ", " )" );
             }
             else
             {
-                s << col.column_name( col );
                 using type = typename col_t::type;
-                if constexpr ( col.is_primary )
+                bool use_serial = col.is_primary && std::is_same_v< type, int >;
+                auto typestr = sql_type< type >();
+                auto seqname = std::string( tabname.substr( 1, tabname.size() - 2 ) ) + "_pkey_seq";
+                auto colname = col.column_name( col );
+
+                alter() << "add column if not exists " << colname << " " << typestr << "";
+                alter() << "alter column " << colname << " type " << typestr << "";
+
+                if ( col.is_primary )
+                    constraint() << "primary key ( " << colname << " )";
+
+                if ( use_serial )
                 {
-                    if ( std::is_same_v< type, int > )
-                        s << " serial primary key";
-                    else
-                        s << " " << sql_type< type >() << " primary key";
+                    txn.exec() << "create sequence if not exists " << seqname << " owned by "
+                               << tabname << "." << colname;
+                    alter() << "alter column " << colname << " set default nextval('" << seqname << "')";
                 }
-                else
-                    s << " " << sql_type< type >();
+
                 if constexpr ( col.is_foreign )
-                    s << " references " << get_name( typename col_t::table() )
-                    << "( " << typename col_t::column().column_name( typename col_t::column() ) << " )";
-                if constexpr ( !col.is_nullable )
-                    s << " not null";
+                    constraint()
+                        << "foreign key ( " << colname << " )"
+                        << " references " << get_name( typename col_t::table() )
+                        << " ( " << typename col_t::column().column_name( typename col_t::column() ) << " )";
+
+                alter() << "alter column " << colname << " "
+                        << ( col.is_nullable ? "drop" : "set" ) << " not null";
             }
-            first = false;
         };
         typename table::all().each( print_col );
-        s << " )";
-
-        txn.exec( s.buffer() );
     };
 
     template< typename C >

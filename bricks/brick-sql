@@ -1867,9 +1867,9 @@ BRICK_SQL_OP( | )
     };
 
     template< typename view >
-    std::enable_if_t< view::is_view > drop( txn &t, view )
+    std::enable_if_t< view::is_view > drop( txn &t, view, bool cascade = false )
     {
-        t.exec() << "drop view if exists " << get_name( view() ) << " cascade";
+        t.exec() << "drop view if exists " << get_name( view() ) << ( cascade ? " cascade" : "" );
     };
 
     template< typename enum_t >

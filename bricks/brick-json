@@ -125,6 +125,8 @@ namespace brq
             else
                 number( decode_float( v ) );
         }
+
+        virtual ~json_listener() = default;
     };
 
     struct json_parser

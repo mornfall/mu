@@ -25,6 +25,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <limits.h>
 
 #ifdef _WIN32
 #include <direct.h>
@@ -156,6 +157,13 @@ namespace brq
             return 0;
         }
     };
+
+    static inline std::string hostname()
+    {
+        char host[ HOST_NAME_MAX + 1 ];
+        ::gethostname( host, HOST_NAME_MAX );
+        return host;
+    }
 #endif
 
 #if defined( __unix__ ) || defined( __APPLE__ ) || defined( __divine__ )

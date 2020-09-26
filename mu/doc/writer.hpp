@@ -99,7 +99,7 @@ namespace umd::doc
         /* tables */
         virtual void table_start( columns, bool = false ) = 0;
         virtual void table_new_cell( int ) = 0;
-        virtual void table_new_row() = 0;
+        virtual void table_new_row( bool = false ) = 0;
         virtual void table_stop() = 0;
 
         /* blocks */
@@ -149,7 +149,7 @@ namespace umd::doc
         /* tables */
         virtual void table_start( columns, bool = false ) {}
         virtual void table_new_cell( int ) {}
-        virtual void table_new_row() {}
+        virtual void table_new_row( bool = false ) {}
         virtual void table_stop() {}
         virtual void code_start( sv ) {}
         virtual void code_line( sv ) {}

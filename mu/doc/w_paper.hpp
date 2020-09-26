@@ -110,10 +110,10 @@ namespace umd::doc
         }
 
         virtual void table_new_cell( int ) { out.emit( " & " ); }
-        virtual void table_new_row()
+        virtual void table_new_row( bool rule = false )
         {
             out.emit( "\\tabularnewline", "\n" );
-            if ( ++table_rows == 1 && table_rules )
+            if ( rule )
                 out.emit( "\\midrule", "\n" );
         }
 

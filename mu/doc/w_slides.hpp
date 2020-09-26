@@ -157,10 +157,10 @@ namespace umd::doc
                       table_rules ? ",topframe=on" : "", "]" );
         }
 
-        virtual void table_new_row()
+        virtual void table_new_row( bool rule = false )
         {
             out.emit( "\\eTD\\eTR\\bTR\n" );
-            table_rules = false;
+            table_rules = rule;
             table_cells = 0;
         }
 

@@ -154,7 +154,7 @@ namespace umd::doc
         /* TODO: cell alignment & borders */
         void table_start( columns, bool = false ) override { out.emit( "<table><tr>" ); }
         void table_stop() override { out.emit( "</td></tr></table>" ); }
-        void table_new_row() override { _table_cells = 0; out.emit( "</td></tr><tr>" ); }
+        void table_new_row( bool = false ) override { _table_cells = 0; out.emit( "</td></tr><tr>" ); }
         void table_new_cell( int span ) override
         {
             if ( ++_table_cells > 1 )

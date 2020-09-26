@@ -180,6 +180,9 @@ namespace umd::doc
         virtual void quote_start() { out.emit( "\\startblockquote\n" ); }
         virtual void quote_stop() { out.emit( "\\stopblockquote\n" );  }
 
+        virtual void small_start() { out.emit( "\\switchtobodyfont[sans,\\codesize]" ); }
+        virtual void small_stop() { out.emit( "\\switchtobodyfont[\\bodysize]" ); }
+
         /* paging */
         virtual void pagebreak() { out.emit( "\\stopmakeup\\startmakeup[slide]", "\n" ); }
         virtual void hrule( char32_t )

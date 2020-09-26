@@ -74,6 +74,8 @@ namespace umd::doc
         virtual void tt_stop() {}
         virtual void math_start() = 0;
         virtual void math_stop() = 0;
+        virtual void small_start() {}
+        virtual void small_stop() {}
 
         /* aligned equations */
         virtual void eqn_start( int, std::string ) = 0;

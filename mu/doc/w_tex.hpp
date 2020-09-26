@@ -111,6 +111,9 @@ namespace umd::doc
         virtual void em_stop()  { out.emit( "}" ); }
         virtual void tt_start() { out.emit( "{\\code{}" ); }
         virtual void tt_stop()  { out.emit( "}" ); }
+
+        virtual void small_start() { out.emit( "{\\ss{}\\smaller" ); }
+        virtual void small_stop() { out.emit( "}" ); }
         virtual void math_start() { out.emit( "\\math{" ); _in_math = true; }
         virtual void math_stop() { out.emit( "}" ); _in_math = false; }
 

@@ -15,9 +15,11 @@ namespace umd::doc
 
     struct convert : pic::writer
     {
+        using sv = std::u32string_view;
+
         doc::writer &w;
-        std::u32string_view todo;
-        convert( std::u32string_view t, doc::writer &w ) : w( w ), todo( t ) {}
+        sv todo;
+        convert( sv t, doc::writer &w ) : w( w ), todo( t ) {}
 
         struct list
         {

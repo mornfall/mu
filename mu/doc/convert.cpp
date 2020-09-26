@@ -537,7 +537,7 @@ namespace umd::doc
 
         rule = hdr_rule;
 
-        for ( int i = sep_line; i < lines.size(); ++i )
+        for ( int i = sep_line; i < int( lines.size() ); ++i )
             w.table_new_row( rule ), emit_line( lines[ i ] );
 
         if ( small )

@@ -433,6 +433,8 @@ namespace umd::doc
         auto hdr = fetch_line();
         auto sep = fetch_line(); skip_white( sep );
 
+        bool rule = false, hdr_rule = false;
+
         std::deque< int > colw;
         std::u32string txt;
 
@@ -440,6 +442,7 @@ namespace umd::doc
         {
             auto remains = colw;
             int span = 1;
+            rule = true;
             for ( int i = 1; i < int( l.size() ); ++i )
             {
                 if ( l[ i ] == U'│' )
@@ -452,7 +455,8 @@ namespace umd::doc
                 }
                 else
                 {
-                    txt += l[ i ];
+                    if ( l[ i ] != U'┄' )
+                        txt += l[ i ], rule = false;
                     if ( --remains.front() == 0 )
                         remains.pop_front(), ++ span;
                 }
@@ -462,7 +466,6 @@ namespace umd::doc
         std::vector< char > cols;
         int finished = 0;
         int width = 0;
-        bool rules = false;
         bool next_rule = false;
 
         for ( int i = 1; i < int( sep.size() ); ++i )
@@ -478,7 +481,7 @@ namespace umd::doc
                     else
                         cols.push_back( next_rule ? ']' : 'r' );
                     break;
-                case U'─': rules = true; break;
+                case U'─': hdr_rule = true; break;
                 case U'┄': break;
                 case U'│': case U'┼': case U'┤':
                     if ( finished == int( cols.size() ) )
@@ -493,11 +496,11 @@ namespace umd::doc
             }
         }
 
-        w.table_start( cols, rules );
+        w.table_start( cols );
         emit_line( hdr );
 
         while ( !todo.empty() && nonwhite() == U'│' )
-            w.table_new_row(), emit_line( fetch_line() );
+            w.table_new_row( rule ), emit_line( fetch_line() );
         w.table_stop();
     }
 

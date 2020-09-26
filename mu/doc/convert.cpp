@@ -487,6 +487,8 @@ namespace umd::doc
                 case U'│': case U'┼': case U'┤':
                     if ( finished == int( cols.size() ) )
                         cols.push_back( next_rule ? '[' : 'l' );
+                    else if ( cols.back() == 'l' && next_rule )
+                        cols.back() = '[';
                     next_rule = sep[ i ] == U'│';
                     colw.push_back( width );
                     width = 0;

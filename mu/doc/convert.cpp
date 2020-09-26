@@ -419,19 +419,27 @@ namespace umd::doc
 
     void convert::try_table()
     {
-        auto l = todo;
-        int wc = white_count( l );
-        skip_white( l );
-        if ( l.empty() ) return;
-        if ( l[ 0 ] != U'│' ) return; /* does not start with the right character */
-        fetch( l, newline );
-        if ( wc != white_count( l ) ) return; /* misaligned → not a table */
-        skip_white( l );
-        if ( l[ 0 ] != U'├' ) return; /* the separator is wrong */
+        auto backup = todo;
+        auto revert = [&]{ todo = backup; };
 
-        /* we are reasonably sure that this is a table now */
-        auto hdr = fetch_line();
-        auto sep = fetch_line(); skip_white( sep );
+        std::vector< sv > lines;
+        sv sep;
+        int wc = white_count();
+        int sep_line = 0;
+
+        while ( white_count() == wc )
+        {
+            skip_white();
+            if ( todo[ 0 ] == U'├' )
+                sep = fetch_line(), sep_line = lines.size();
+            else if ( todo[ 0 ] == U'│' )
+                lines.push_back( fetch_line() );
+            else
+                break;
+        }
+
+        if ( sep.empty() || lines.empty() )
+            return revert();
 
         bool rule = false, hdr_rule = false, even = false, small = false;
 
@@ -500,11 +508,20 @@ namespace umd::doc
             }
         }
 
-        w.table_start( cols );
-        emit_line( hdr );
+        w.table_start( cols, even );
+        if ( small )
+            w.small_start();
 
-        while ( !todo.empty() && nonwhite() == U'│' )
-            w.table_new_row( rule ), emit_line( fetch_line() );
+        for ( int i = 0; i < sep_line; ++i )
+            w.table_new_row( rule ), emit_line( lines[ i ] );
+
+        rule = hdr_rule;
+
+        for ( int i = sep_line; i < lines.size(); ++i )
+            w.table_new_row( rule ), emit_line( lines[ i ] );
+
+        if ( small )
+            w.small_stop();
         w.table_stop();
     }
 

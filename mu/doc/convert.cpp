@@ -433,7 +433,7 @@ namespace umd::doc
         auto hdr = fetch_line();
         auto sep = fetch_line(); skip_white( sep );
 
-        bool rule = false, hdr_rule = false, even = false;
+        bool rule = false, hdr_rule = false, even = false, small = false;
 
         std::deque< int > colw;
         std::u32string txt;
@@ -481,6 +481,7 @@ namespace umd::doc
                     else
                         cols.push_back( next_rule ? ']' : 'r' );
                     break;
+                case U's': small = true; break;
                 case U'─': hdr_rule = true; break;
                 case U'=': even = true; break;
                 case U'┄': break;

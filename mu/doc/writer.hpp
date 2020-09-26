@@ -95,7 +95,7 @@ namespace umd::doc
         virtual void mpost_stop() = 0;
 
         /* tables */
-        virtual void table_start( columns, bool ) = 0;
+        virtual void table_start( columns, bool = false ) = 0;
         virtual void table_new_cell( int ) = 0;
         virtual void table_new_row() = 0;
         virtual void table_stop() = 0;
@@ -145,7 +145,7 @@ namespace umd::doc
         virtual void mpost_stop() {}
 
         /* tables */
-        virtual void table_start( columns, bool ) {}
+        virtual void table_start( columns, bool = false ) {}
         virtual void table_new_cell( int ) {}
         virtual void table_new_row() {}
         virtual void table_stop() {}

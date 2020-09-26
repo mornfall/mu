@@ -118,9 +118,9 @@ namespace umd::doc
         }
 
         /* tables */
-        virtual void table_start( columns ci, bool rules )
+        virtual void table_start( columns ci, bool even = false )
         {
-            table_rules = rules;
+            table_rules = false;
             table_rows = table_cells = 0;
             out.emit( "\\placetable[force,none]{}{\\blank[-1ex]\n" );
             int i = 0;
@@ -137,20 +137,24 @@ namespace umd::doc
                 }
             };
 
-            out.emit( "\\setupTABLE[frame=off]\n" );
+            out.emit( "\\setupTABLE[frame=off" );
+            if ( even )
+                out.emit( ",width=", 1.0 / ci.size(), "\\textwidth" );
+            out.emit( "]\n" );
 
             for ( auto c : ci )
                 out.emit( "\\setupTABLE[c][", std::to_string( ++i ), "][", setup( c ), "]\n" );
 
-            out.emit( "\\bTABLE[toffset=-1pt,boffset=-1pt,loffset=2pt,roffset=2pt]\\bTR\n" );
-            out.emit( rules ? "\\HL" : "", "\n" );
+            out.emit( "\\bTABLE[toffset=-1pt,boffset=-1pt,loffset=2pt,roffset=2pt]\\bTR",
+                      table_rules ? "[bottomframe=on]" : "" );
         }
 
         virtual void table_new_cell( int span )
         {
             if ( ++table_cells > 1 )
                 out.emit( "\\eTD " );
-            out.emit( "\\bTD[nc=", std::to_string( span ), span > 1 ? ",align={center}" : "", "]" );
+            out.emit( "\\bTD[nc=", std::to_string( span ), span > 1 ? ",align={center}" : "",
+                      table_rules ? ",topframe=on" : "", "]" );
         }
 
         virtual void table_new_row()

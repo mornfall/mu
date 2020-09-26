@@ -99,14 +99,14 @@ namespace umd::doc
         }
 
         /* tables */
-        virtual void table_start( columns ci, bool rules )
+        virtual void table_start( columns ci, bool )
         {
-            table_rules = rules;
+            table_rules = false;
             table_rows = 0;
             out.emit( "\\begin{longtable}[]{@{}" );
             for ( auto c : ci )
                 out.emit( c );
-            out.emit( "@{}}", rules ? "\\toprule" : "", "\n" );
+            out.emit( "@{}}", table_rules ? "\\toprule" : "", "\n" );
         }
 
         virtual void table_new_cell( int ) { out.emit( " & " ); }

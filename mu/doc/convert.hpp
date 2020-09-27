@@ -74,6 +74,7 @@ namespace umd::doc
         std::u32string_view fetch_par()  { return fetch( todo, parbreak ); }
 
         void emit_text( std::u32string_view v );
+        void emit_footnote( char32_t head );
 
         void heading();
         void start_list( list::type l, int indent, int first );

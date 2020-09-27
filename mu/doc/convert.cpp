@@ -212,6 +212,7 @@ namespace umd::doc
 
     void convert::emit_text( std::u32string_view v )
     {
+        sv sup = U"¹²³⁴⁵⁶⁷⁸⁹";
         auto char_cb = [&]( auto flush, char32_t c )
         {
             switch ( c )
@@ -230,7 +231,9 @@ namespace umd::doc
                         flush(), w.math_stop();
                     -- in_math;
                     break;
-                default: ;
+                default:
+                    if ( !in_math && sup.find( c ) != sup.npos )
+                        flush(), emit_footnote( c );
             }
         };
 
@@ -288,6 +291,23 @@ namespace umd::doc
     {
         if ( in_code )
             w.code_stop(), in_code = false;
+    }
+
+    /* scan ahead: quadratic in the number of footnotes, not a
+     * bottleneck for now */
+    void convert::emit_footnote( char32_t head )
+    {
+        auto backup = todo;
+        while ( !todo.empty() )
+        {
+            auto par = fetch_par();
+            if ( par[ 0 ] == head )
+            {
+                w.footnote( par.substr( 1 ) );
+                break;
+            }
+        }
+        todo = backup;
     }
 
     void convert::try_picture()
@@ -606,6 +626,9 @@ namespace umd::doc
             if ( hrule )
                 fetch_line(), w.hrule( c );
         }
+
+        if ( sv( U"¹²³⁴⁵⁶⁷⁸⁹" ).find( todo[ 0 ] ) != sv::npos )
+            return fetch_par(), body();
 
         if ( todo[ 0 ] == U'' )
             return end_list( -1 ), w.pagebreak(), fetch_line(), body();

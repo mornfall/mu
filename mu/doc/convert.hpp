@@ -58,18 +58,20 @@ namespace umd::doc
         std::u32string_view fetch( std::u32string_view &v, F pred )
         {
             auto l = v;
-            while ( !v.empty() && !pred( v[ 0 ] ) )
+            while ( !v.empty() && !pred( v ) )
                 v.remove_prefix( 1 );
             if ( !v.empty() )
-                v.remove_prefix( 1 );
+                v.remove_prefix( pred( v ) );
             return l.substr( 0, l.size() - v.size() - 1 );
         }
 
-        static bool newline( char32_t c ) { return c == U'\n'; }
-        static bool space( char32_t c )   { return c == U' ' || c == U'\n'; }
+        static int newline( sv s )  { return s[ 0 ] == U'\n'; }
+        static int space( sv s )    { return s[ 0 ] == U' ' || s[ 0 ] == U'\n'; }
+        static int parbreak( sv s ) { return s[ 0 ] == U'\n' && s.size() >= 2 && s[ 1 ] == U'\n' ? 2 : 0; }
 
         std::u32string_view fetch_line() { return fetch( todo, newline ); }
         std::u32string_view fetch_word() { return fetch( todo, space ); }
+        std::u32string_view fetch_par()  { return fetch( todo, parbreak ); }
 
         void emit_text( std::u32string_view v );
 

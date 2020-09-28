@@ -30,11 +30,11 @@ local SynSnippetQuote               = verbatim.SynSnippetQuote
 local keywords, plain, metafun
 
 local function initialize()
-    local kw = { "auto", "struct", "try", "except", "if", "new", "delete", "true", "false", "while",
-                 "for", "in", "continue", "enum", "switch", "case", "protected", "private", "return",
-                 "const", "volatile", "template", "typename", "using", "from", "import", "def",
-                 "class", "yield", "await", "raise", "lambda", "finally", "with", "as" }
-    local ty = { "int", "double", "void", "short", "long", "char" }
+    local kw = { "try", "except", "if", "else", "elif", "while",
+                 "for", "in", "continue", "return", "assert",
+                 "from", "import", "def", "pass",
+                 "yield", "await", "raise", "lambda", "finally", "with", "as", "is" }
+    local ty = { "int", "float", "str", "list", "dict", "set", "range", "len", "chr", "ord" }
     keywords = table.tohash(kw)
     types    = table.tohash(ty)
 end
@@ -47,6 +47,8 @@ local function visualizename(s)
         SynSnippetKeyword(s)
     elseif types[s] then
         SynSnippetType(s)
+    elseif s == "and" or s == "or" then
+        SynSnippetOperator(s)
     else
         SynSnippetName(s)
     end
@@ -78,8 +80,7 @@ local operator    = S("!=-+/*`?^&%.:~")
   
 local grammar = visualizers.newgrammar("default", { "visualizer",
 
-    comment     = ((P("#") * (P(1) - P("\n"))^0) +
-                   (P("/*") * (P(1) - P("*/"))^0 * P("*/"))) / comment,
+    comment     = ((P("#") * (P(1) - P("\n"))^0)) / comment,
     string      = makepattern(handler,"quote",patterns.dquote)
                 * makepattern(handler,"string",patterns.nodquote)
                 * makepattern(handler,"quote",patterns.dquote)

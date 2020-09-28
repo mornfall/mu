@@ -5,6 +5,8 @@ body
     max-width: 40em; 
     text-align: justify;
     hyphens: auto;
+    font-family: "Aleo", serif;
+    font-weight: 200;
 }
 
 #toc
@@ -15,7 +17,11 @@ body
     padding: .3em;
     height: 100%;
     position: fixed;
+    font-family: "Lato", sans-serif;
+    font-weight: normal;
 }
+
+code, tt { font-family: "Iosevka Slab", monospace; }
 
 #toc .h2, #toc .h3 { display: none; }
 #toc .expanded .h2 { display: block; }

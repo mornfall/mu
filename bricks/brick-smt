@@ -59,8 +59,8 @@ namespace brq
         bv_shl, bv_lshr, bv_ashr,
         bv_ule, bv_ult, bv_uge, bv_ugt, bv_sle, bv_slt, bv_sge, bv_sgt,
         fp_add, fp_sub, fp_mul, fp_div, fp_rem,
-        fp_false, fp_oeq, fp_ogt, fp_oge, fp_olt, fp_ole, /* fp_one, */ fp_ord,
-        fp_true,  fp_ueq, fp_ugt, fp_uge, fp_ult, fp_ule, /* fp_une, */ fp_uno,
+        fp_false, fp_oeq, fp_ogt, fp_oge, fp_olt, fp_ole, fp_one, fp_ord,
+        fp_true,  fp_ueq, fp_ugt, fp_uge, fp_ult, fp_ule, fp_une, fp_uno,
         bv_extract, bv_concat
     };
 

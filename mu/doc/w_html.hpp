@@ -24,6 +24,10 @@ namespace umd::doc
         std::vector< int > _sections;
         std::vector< sv > _section_num;
 
+        bool _table_rule = false;
+        int _table_rows, _table_cells;
+        std::vector< std::string > _table_class;
+
         bool _in_mpost = false;
         int _heading = 0; // currently open <hN> tag (must not be nested)
 
@@ -151,17 +155,50 @@ namespace umd::doc
         void mpost_stop()  override { out.emit( "\\stopMPpage</tex></div>" ); _in_mpost = false; }
         void mpost_write( std::string_view s ) override { out.emit( s ); }
 
-        int _table_cells = 0;
+        void table_start( columns ci, bool even = false ) override
+        {
+            _table_rule = false;
+            _table_rows = _table_cells = 0;
+            out.emit( "<table class=\"", even ? "even" : "", "\">\n" );
+            auto setup = []( char c )
+            {
+                switch ( c )
+                {
+                    case 'l': return "left";
+                    case 'c': return "center";
+                    case 'r': return "right";
+                    case '|': return "vrule center";
+                    case ']': return "vrule right";
+                    case '[': return "vrule left";
+                    default: return "";
+                }
+            };
 
-        /* TODO: cell alignment & borders */
-        void table_start( columns, bool = false ) override { out.emit( "<table><tr>" ); }
-        void table_stop() override { out.emit( "</td></tr></table>" ); }
-        void table_new_row( bool = false ) override { _table_cells = 0; out.emit( "</td></tr><tr>" ); }
+            _table_class.clear();
+            for ( auto c : ci )
+                _table_class.push_back( setup( c ) );
+        }
+
         void table_new_cell( int span ) override
         {
-            if ( ++_table_cells > 1 )
-                out.emit( "</td>" );
-            out.emit( "<td colspan=\"", span, "\">" );
+            if ( ++ _table_cells > 1 )
+                out.emit( "</td> " );
+            out.emit( "<td colspan=\"", span, "\" class=\"", _table_class[ _table_cells - 1 ],
+                      _table_rule ? " hrule" : "", "\">" );
+        }
+
+        void table_new_row( bool rule = false ) override
+        {
+            if ( ++ _table_rows > 1 )
+                out.emit( "</td></tr>\n" );
+            out.emit( "<tr>" );
+            _table_rule = rule;
+            _table_cells = 0;
+        }
+
+        void table_stop() override
+        {
+            out.emit( "</td></tr></table>\n" );
         }
 
         std::stack< bool > _li_close;

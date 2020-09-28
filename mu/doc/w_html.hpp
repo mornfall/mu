@@ -24,6 +24,7 @@ namespace umd::doc
         std::vector< int > _sections;
         std::vector< sv > _section_num;
 
+        bool _in_mpost = false;
         int _heading = 0; // currently open <hN> tag (must not be nested)
 
         void meta( sv key, sv value ) override { _meta[ key ] = value; }
@@ -109,8 +110,8 @@ namespace umd::doc
         /* spans ; may be also called within mpost btex/etex */
         void em_start()   override { out.emit( "<em>" ); }
         void em_stop()    override { out.emit( "</em>" ); }
-        void tt_start()   override { out.emit( "<code>" ); }
-        void tt_stop()    override { out.emit( "</code>" ); }
+        void tt_start()   override { out.emit( _in_mpost ? "{\\tt{}" : "<code>" ); }
+        void tt_stop()    override { out.emit( _in_mpost ? "}" : "</code>" ); }
 
         /* generate svgtex-compatible markup */
         void eqn_start( int n, std::string ) override
@@ -144,9 +145,10 @@ namespace umd::doc
         {
             out.emit( "<div class=\"center\"><tex>\\startMPpage\n",
                       "color fg; fg := black;" );
+            _in_mpost = true;
         }
 
-        void mpost_stop()  override { out.emit( "\\stopMPpage</tex></div>" ); }
+        void mpost_stop()  override { out.emit( "\\stopMPpage</tex></div>" ); _in_mpost = false; }
         void mpost_write( std::string_view s ) override { out.emit( s ); }
 
         int _table_cells = 0;

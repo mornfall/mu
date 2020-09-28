@@ -23,6 +23,8 @@ body
 
 code, tt { font-family: "Iosevka Slab", monospace; }
 
+a:link, a:visited { color: navy; text-decoration: none; }
+
 #toc .h2, #toc .h3 { display: none; }
 #toc .expanded .h2 { display: block; }
 #toc li {

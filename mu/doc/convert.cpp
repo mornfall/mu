@@ -470,7 +470,18 @@ namespace umd::doc
         {
             auto remains = colw;
             int span = 1;
+
+            bool draw_rule = rule;
+
             rule = true;
+            for ( auto c : l )
+                if ( c != U'│' && c != U'┄' )
+                    rule = false;
+
+            if ( rule ) return;
+
+            w.table_new_row( draw_rule );
+
             for ( int i = 1; i < int( l.size() ); ++i )
             {
                 if ( l[ i ] == U'│' )
@@ -483,8 +494,7 @@ namespace umd::doc
                 }
                 else
                 {
-                    if ( l[ i ] != U'┄' )
-                        txt += l[ i ], rule = false;
+                    txt += l[ i ];
                     if ( --remains.front() == 0 )
                         remains.pop_front(), ++ span;
                 }
@@ -533,12 +543,12 @@ namespace umd::doc
             w.small_start();
 
         for ( int i = 0; i < sep_line; ++i )
-            w.table_new_row( rule ), emit_line( lines[ i ] );
+            emit_line( lines[ i ] );
 
         rule = hdr_rule;
 
         for ( int i = sep_line; i < int( lines.size() ); ++i )
-            w.table_new_row( rule ), emit_line( lines[ i ] );
+            emit_line( lines[ i ] );
 
         if ( small )
             w.small_stop();

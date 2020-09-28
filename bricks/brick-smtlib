@@ -334,6 +334,50 @@ namespace brq
             return node( t.bw, t.type, fmt );
         }
 
+        static constexpr auto rounding_mode = smtlib_rounding::RNE;
+
+        inline std::string to_fp_bitwidth( size_t bw )
+        {
+            switch ( bw )
+            {
+                case 16: return "5 11";
+                case 32: return "8 24";
+                case 64: return "11 53";
+                default: UNREACHABLE( "Unsupported bitwidth." );
+            }
+        }
+
+        template < bool _unsigned >
+        inline std::string fp_to_bv_pref()
+        {
+            std::string pref = "(_ fp.to_";
+            if constexpr ( _unsigned )
+                return pref + "ubv ";
+            return pref + "sbv ";
+        }
+
+        template< bool _unsigned >
+        inline node fp_to_bv_cast( int bw, const node & arg )
+        {
+            auto fmt = [=]( brq::string_builder &o )
+            {
+                o << fp_to_bv_pref< _unsigned >() << bw << ") " << to_string( rounding_mode )
+                  << " " << arg << "(_ BitVec " << bw << ") )";
+            };
+            return node( bw, node::t_bv, fmt );
+        }
+
+        template< bool _unsigned >
+        inline node bv_to_fp_cast( int bw, const node & arg )
+        {
+            auto fmt = [=]( brq::string_builder &o )
+            {
+                o << "(" << to_fp( bw ) << " " << to_string( rounding_mode )
+                  << " " << arg << "(_ FloatingPoint " << to_fp_bitwidth( bw ) << "))";
+            };
+            return node( bw, node::t_float, fmt );
+        }
+
         node cast( smt_op op, int bw, const node & arg )
         {
             if ( op == smt_op::fp_ext || op == smt_op::fp_trunc )
@@ -344,6 +388,26 @@ namespace brq
                     o << "(" << to_fp( bw ) << " " << to_string( mode ) << " " << arg << " )";
                 };
                 return node( bw, node::t_float, fmt );
+            }
+
+            if ( op == smt_op::fp_toubv )
+            {
+                return fp_to_bv_cast< true /* unsigned */ >( bw, arg );
+            }
+
+            if ( op == smt_op::fp_tosbv )
+            {
+                return fp_to_bv_cast< false /* signed */ >( bw, arg );
+            }
+
+            if ( op == smt_op::bv_utofp )
+            {
+                return bv_to_fp_cast< true /* unsigned */ >( bw, arg );
+            }
+
+            if ( op == smt_op::bv_stofp )
+            {
+                return bv_to_fp_cast< false /* signed */ >( bw, arg );
             }
 
             NOT_IMPLEMENTED();

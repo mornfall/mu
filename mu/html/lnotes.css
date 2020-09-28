@@ -38,11 +38,15 @@ a:link, a:visited { color: navy; text-decoration: none; }
 #toc ol { padding-inline-start: 1em; display: block; }
 div ol, div ul { margin-block-start: .7ex; margin-block-end: 1.4ex; }
 
-table { margin: auto; margin-top: 6pt; margin-bottom: 6pt; }
+table { margin: auto; margin-top: 6pt; margin-bottom: 6pt; border-collapse: collapse; }
 .center { text-align: center; margin-top: 6pt; margin-bottom: 6pt; }
 h3 { display: inline; font-size: 100%; }
 div { padding-bottom: .7ex; }
 pre { padding-top: 0; padding-bottom: .7ex; margin-top: .7ex; margin-bottom: .7ex; }
+
+.hrule { border-top: 1px solid black; }
+.vrule { border-left: 1px solid black; }
+.even { table-layout: fixed; width: 90%; }
 
 /* Original highlight.js style (c) Ivan Sagalaev <maniac@softwaremaniacs.org> */
 

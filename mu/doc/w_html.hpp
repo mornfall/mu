@@ -43,12 +43,14 @@ namespace umd::doc
             if ( _embed.empty() )
             {
                 out.emit( "<link rel=\"stylesheet\" href=\"", css ,"\">" );
+                out.emit( "<link rel=\"stylesheet\" href=\"fonts.css\">" );
                 out.emit( "<script src=\"highlight.js\"></script>" );
                 out.emit( "<script src=\"toc.js\"></script>" );
             }
             else
             {
                 out.emit( "<style>",  read_file( _embed + "/" + css ), "</style>" );
+                out.emit( "<style>",  read_file( _embed + "/fonts.css" ), "</style>" );
                 out.emit( "<script>", read_file( _embed + "/highlight.js" ), "</script>" );
                 out.emit( "<script>", read_file( _embed + "/toc.js" ), "</script>" );
             }

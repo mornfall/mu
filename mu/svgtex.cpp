@@ -195,6 +195,7 @@ void process()
     std::set< int > use_yshift;
 
     int mp = open( "tosvg.tex", O_WRONLY | O_CREAT, 0666 );
+    write_sv( mp, "\\input{prelude-typescript.tex}\n" );
     write_sv( mp, "\\starttext" );
 
     while ( !w.empty() )

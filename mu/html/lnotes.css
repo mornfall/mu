@@ -5,8 +5,7 @@ body
     max-width: 40em; 
     text-align: justify;
     hyphens: auto;
-    font-family: "Aleo", serif;
-    font-weight: 200;
+    font-family: "Aleo Light", serif;
 }
 
 #toc
@@ -17,11 +16,10 @@ body
     padding: .3em;
     height: 100%;
     position: fixed;
-    font-family: "Lato", sans-serif;
-    font-weight: normal;
+    font-family: "Lato Light", sans-serif;
 }
 
-code, tt { font-family: "Iosevka Slab", monospace; }
+code, tt { font-family: "Iosevka Slab Extralight", monospace; font-size: 90%; }
 
 a:link, a:visited { color: navy; text-decoration: none; }
 
@@ -40,6 +38,7 @@ div ol, div ul { margin-block-start: .7ex; margin-block-end: 1.4ex; }
 
 table { margin: auto; margin-top: 6pt; margin-bottom: 6pt; border-collapse: collapse; }
 .center { text-align: center; margin-top: 6pt; margin-bottom: 6pt; }
+h1, h2, h3 { font-family: "Aleo Regular"; font-weight: normal; }
 h3 { display: inline; font-size: 100%; }
 div { padding-bottom: .7ex; }
 pre { padding-top: 0; padding-bottom: .7ex; margin-top: .7ex; margin-bottom: .7ex; }
@@ -72,7 +71,7 @@ pre { padding-top: 0; padding-bottom: .7ex; margin-top: .7ex; margin-bottom: .7e
 .hljs-meta-keyword,
 .hljs-doctag,
 .hljs-name {
-  font-weight: bold;
+  font-family: "Iosevka Slab Light";
 }
 
 
@@ -92,7 +91,7 @@ pre { padding-top: 0; padding-bottom: .7ex; margin-top: .7ex; margin-bottom: .7e
 .hljs-title,
 .hljs-section {
   color: #880000;
-  font-weight: bold;
+  font-family: "Iosevka Slab Light";
 }
 
 .hljs-regexp,
@@ -138,5 +137,5 @@ pre { padding-top: 0; padding-bottom: .7ex; margin-top: .7ex; margin-bottom: .7e
 }
 
 .hljs-strong {
-  font-weight: bold;
+  font-family: "Iosevka Slab Light";
 }

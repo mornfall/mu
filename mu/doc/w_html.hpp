@@ -137,7 +137,7 @@ namespace umd::doc
         void math_start() override
         {
             _in_math = true;
-            out.emit( "<tex>\\startMPpage\npicture p; p := btex \\math{" );
+            out.emit( "<tex>\\startMPpage[instance=mathfun]\npicture p; p := btex \\math{" );
         }
 
         void math_stop()  override

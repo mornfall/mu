@@ -64,6 +64,7 @@ namespace umd::doc
 
         virtual void meta( sv, sv ) {}
         virtual void meta_end() {}
+        virtual void html( sv ) {}
         virtual void text( std::u32string_view ) = 0;
         virtual void heading( std::u32string_view txt, int level ) = 0;
 

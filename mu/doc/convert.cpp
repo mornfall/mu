@@ -606,6 +606,13 @@ namespace umd::doc
             }
             w.mpost_stop();
         }
+
+        if ( starts_with( todo, U"$$html" ) )
+        {
+            auto l = fetch_line();
+            l.remove_prefix( 7 );
+            w.html( l );
+        }
     }
 
     void convert::body()

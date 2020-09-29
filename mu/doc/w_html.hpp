@@ -58,6 +58,7 @@ namespace umd::doc
             out.emit( "</head><body onload=\"makeTOC()\"><ol id=\"toc\"></ol><div>" );
         }
 
+        void html( sv raw ) override { out.emit( raw ); }
         void end() override { out.emit( "</div></body></html>" ); }
 
         void text( std::u32string_view t ) override

@@ -44,6 +44,7 @@ h1, h2, h3 { font-family: "Aleo Regular"; font-weight: normal; }
 h3 { display: inline; font-size: 100%; }
 div { padding-bottom: .7ex; }
 pre { padding-top: 0; padding-bottom: .7ex; margin-top: .7ex; margin-bottom: .7ex; }
+img { display: block; max-width: 97%; margin: 1.5ex auto 1.5ex auto; }
 
 .hrule { border-top: 1px solid black; }
 .vrule { border-left: 1px solid black; }

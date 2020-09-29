@@ -70,7 +70,12 @@ int main( int argc, const char **argv )
             embed = argv[ i + 1 ], fn = argv[ i + 2 ];
     }
 
-    std::ifstream f( fn );
-    auto buf = read_file( f );
+    std::u32string buf;
+
+    if ( fn )
+        buf = read_file( fn );
+    else
+        buf = read_file( std::cin );
+
     return doctype( buf, dt, embed );
 }

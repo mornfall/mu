@@ -23,6 +23,8 @@
 #include <functional>
 #include <iomanip>
 #include <vector>
+#include <charconv>
+#include <codecvt>
 
 namespace brq
 {
@@ -379,6 +381,13 @@ namespace brq
     static parse_result from_string( std::string_view s, std::string &v )
     {
         v = s;
+        return {};
+    }
+
+    static parse_result from_string( std::string_view s, std::u32string &v )
+    {
+        std::wstring_convert< std::codecvt_utf8< char32_t >, char32_t > conv;
+        v = conv.from_bytes( &*s.begin(), &*s.end() );
         return {};
     }
 

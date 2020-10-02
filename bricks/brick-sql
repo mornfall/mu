@@ -282,6 +282,9 @@ namespace brq::sql
     template< typename T > struct is_array : std::false_type {};
     template< typename T, size_t s > struct is_array< std::array< T, s > > : std::true_type {};
 
+    template< typename T > struct is_set : std::false_type {};
+    template< typename T > struct is_set< std::set< T > > : std::true_type {};
+
     template< typename T, typename = void > struct is_expr : std::false_type {};
     template< typename T > struct is_expr< T, std::enable_if_t< T::is_expr > > : std::true_type {};
     template< typename T > struct is_expr< T, std::enable_if_t< T::is_enum > > : std::true_type {};
@@ -299,7 +302,14 @@ namespace brq::sql
     template< bool bind = true, typename stream, typename V >
     static void print( stream &s, const V &v, int &id )
     {
-        if constexpr ( is_value< V > )
+        if constexpr ( is_set< V >::value )
+        {
+            int i = 0;
+            for ( const auto &e : v )
+                s << ( i ++ ? ", " : "( " ), print( s, e, id );
+            s << " )";
+        }
+        else if constexpr ( is_value< V > )
         {
             if ( id >= 0 )
                 s << "$" << id++ << "::" << sql_type< V >();
@@ -335,7 +345,10 @@ namespace brq::sql
     template< typename stmt, typename V >
     static auto bind( stmt &s, const V &v )
     {
-        if      constexpr ( is_value< V > ) s.bind( v ) ;
+        if constexpr ( is_set< V >::value )
+            for ( const auto &e : v )
+                bind( s, e );
+        else if constexpr ( is_value< V > ) s.bind( v ) ;
         else if constexpr ( std::is_same_v< V, where_operator > ) /* nothing */ ;
         else if constexpr ( is_list_v< V > ) /* nothing */ ;
         else if constexpr ( V::is_function ) v.bind( s ) ;

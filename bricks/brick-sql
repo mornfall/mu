@@ -65,7 +65,7 @@ namespace brq::sql
     {
         unsigned julian;
 
-        date( int y, int m, int d )
+        explicit date( int y = 1970, int m = 1, int d = 1 )
         {
             if ( m > 2 )
                 m += 1, y += 4800;

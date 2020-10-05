@@ -1,4 +1,6 @@
+*~
 *.d
 *.o
 svgtex
 mu
+html/fonts.css

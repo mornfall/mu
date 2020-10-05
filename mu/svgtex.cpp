@@ -214,6 +214,9 @@ void process()
     write_sv( mp, "\\stoptext" );
     close( mp );
 
+    if ( keep.size() == 1 )
+        return write_sv( 1, keep[ 0 ] ), void();
+
     run( "context", "tosvg.tex" );
     std::ifstream yshift( "yshift.txt" );
 

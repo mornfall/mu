@@ -246,6 +246,9 @@ namespace umd::doc
         void quote_start()      override { out.emit( "<blockquote>\n" ); }
         void quote_stop()       override { out.emit( "</blockquote>\n" );  }
 
+        void small_start() override {}
+        void small_stop()  override {}
+
         void paragraph() override { out.emit( "</div><div>\n" ); }
     };
 

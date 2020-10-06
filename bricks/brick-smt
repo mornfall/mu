@@ -298,7 +298,18 @@ namespace brq
                 return imm_get< uint32_t >();
             if ( bw() <= 64 )
                 return imm_get< uint64_t >();
-            UNREACHABLE( "constant", *this, "too wide" );
+            UNREACHABLE( "integral constant", *this, "too wide" );
+        }
+
+        template< typename T >
+        T fpa_value() const
+        {
+            if constexpr ( std::is_same_v< T, float >  )
+                return imm_get< float >();
+            if constexpr ( std::is_same_v< T, double >  )
+                return imm_get< double >();
+
+            UNREACHABLE( "float constant", *this, "too wide" );
         }
 
         template< typename T > void imm_get( T &i ) const { bitcast_mem( _imm, i ); }

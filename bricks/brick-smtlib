@@ -469,8 +469,24 @@ namespace brq
     inline smtlib_node smtlib_context::floatv( int bitwidth, double val, smtlib_rounding mode )
     {
         static_assert( sizeof( double ) == sizeof( uint64_t ) );
-        return node( bitwidth, node::t_float, format( "(", to_fp( bitwidth ), " ", to_string( mode ),
-                                                      " ", val, " )" ).buffer() );
+
+        auto sign = [] ( auto v ) { return std::signbit( v ) ? "-" : "+"; };
+
+        switch( std::fpclassify( val ) )
+        {
+            case FP_INFINITE:
+                return node( bitwidth, node::t_float
+                    , format( "(_", sign( val ), "oo ", to_fp_bitwidth( bitwidth ), ")" ).buffer() );
+            case FP_NAN:
+                return node( bitwidth, node::t_float
+                    , format( "(_ NaN ", to_fp_bitwidth( bitwidth ), ")" ).buffer() );
+            case FP_ZERO:
+                return node( bitwidth, node::t_float
+                    , format( "(_", sign( val ), "zero ", to_fp_bitwidth( bitwidth ), ")" ).buffer() );
+            default:
+                return node( bitwidth, node::t_float
+                    , format( "(", to_fp( bitwidth ), " ", to_string( mode ), " ", val, " )" ).buffer() );
+        }
     }
 
     inline smtlib_node smtlib_context::bitvec( int bitwidth, brick::data::SmallVector< uint64_t > data )

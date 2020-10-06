@@ -152,6 +152,7 @@ namespace brq
             case op::fp_false:   return { "fp.false", 2, 0, 1, true, smt_op_other };
             case op::fp_ord:     return { "fp.ord",   2, 0, 1, true, smt_op_other };
             case op::fp_une:     return { "fp.une",   2, 0, 1, true, smt_op_other };
+            case op::fp_one:     return { "fp.one",   2, 0, 1, true, smt_op_other };
             case op::fp_uno:     return { "fp.uno",   2, 0, 1, true, smt_op_other };
             case op::fp_oeq:     return { "fp.oeq",   2, 0, 1, true, smt_op_other };
             case op::fp_ueq:     return { "fp.ueq",   2, 0, 1, true, smt_op_other };

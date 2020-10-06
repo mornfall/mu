@@ -62,7 +62,8 @@ namespace brq
         fp_add, fp_sub, fp_mul, fp_div, fp_rem,
         fp_false, fp_oeq, fp_ogt, fp_oge, fp_olt, fp_ole, fp_one, fp_ord,
         fp_true,  fp_ueq, fp_ugt, fp_uge, fp_ult, fp_ule, fp_une, fp_uno,
-        bv_extract, bv_concat
+        bv_extract, bv_concat,
+        load, store
     };
 
     using smt_varid_t = uint16_t;
@@ -166,6 +167,9 @@ namespace brq
 
             case op::bv_extract: return { "extract", 1, 2, 0, false, smt_op_other };
             case op::bv_concat:  return { "concat",  2, 0, 0, false, smt_op_other };
+
+            case op::store:      return { "store", 3, 1, 0, false, smt_op_other };
+            case op::load:       return { "select" , 2, 1, 0, false, smt_op_other };
         }
 
         return { "invalid",  0, 0, 0, false, smt_op_other };

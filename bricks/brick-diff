@@ -21,6 +21,7 @@
 #include <vector>
 #include <deque>
 #include <unordered_map>
+#include <algorithm>
 #include "brick-assert"
 
 namespace brq::diff_impl

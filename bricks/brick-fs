@@ -806,7 +806,7 @@ namespace brq
 
     struct change_dir
     {
-        change_dir( std::string newcwd ) : _oldcwd( getcwd() )
+        change_dir( std::string newcwd ) : _oldcwd( getcwd() ), _newcwd( newcwd )
         {
             if ( !newcwd.empty() )
                 chdir( newcwd );
@@ -817,13 +817,18 @@ namespace brq
             chdir( _oldcwd );
         }
 
-        const std::string _oldcwd;
+        const std::string _oldcwd, _newcwd;
     };
 
     struct with_dir
     {
         change_dir _ch;
         with_dir( std::string dir, int mode = 0777 ) : _ch( ( create_dir( dir, mode ), dir ) ) {}
+        void rmdir()
+        {
+            chdir( _ch._oldcwd );
+            brq::rmdir( _ch._newcwd );
+        }
     };
 
 #if defined( __unix__ ) || defined( __divine__ )

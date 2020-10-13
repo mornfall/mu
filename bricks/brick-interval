@@ -286,6 +286,15 @@ namespace brq
             return high >= i.high && low <= i.low;
         }
 
+        constexpr bool intersects( const interval &i ) const
+        {
+            if ( i.low < low && i.high < low )
+                return false;
+            if ( low < i.low && high < i.low )
+                return false;
+            return true;
+        }
+
         constexpr bool excludes( const bound_t &b ) const
         {
             return b < low || b > high;
@@ -388,7 +397,7 @@ namespace brq
         {
             if ( l.low == r.low && l.high == r.high )
                 return tristate( true );
-            return l.includes( r ) ? maybe :tristate( false );
+            return l.intersects( r ) ? maybe : tristate( false );
         }
 
         friend constexpr tristate operator==( const interval &l , tristate r )

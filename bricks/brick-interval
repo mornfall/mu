@@ -212,6 +212,16 @@ namespace brq
         friend constexpr bool operator==( bound l, bound r ) { return l._value == r._value; }
 
         explicit operator underlying_t() const { return _value; }
+
+        template< typename stream >
+        friend stream& operator<<( stream &os, const bound &b )
+        {
+            if ( b == plus_infinity() )
+                return os << "∞";
+            if ( b == minus_infinity() )
+                return os << "-∞";
+            return os << b._value;
+        }
     };
 
     template< typename bound_t >
@@ -431,7 +441,7 @@ namespace brq
         template< typename stream >
         friend stream& operator<<( stream &os, const interval &t )
         {
-            return os << '[' << t.low << ", " << t.high << ']';
+            return os << "[" << t.low << ", " << t.high << "]";
         }
     };
 

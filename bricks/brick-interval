@@ -437,7 +437,7 @@ namespace brq
                 return tristate( l.low > r.low );
             if ( l.low > r.high )
                 return tristate( true );
-            if ( l.high > r.low )
+            if ( l.high < r.low )
                 return tristate( false );
             return maybe;
         }

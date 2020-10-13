@@ -351,8 +351,13 @@ namespace brq
 
         friend constexpr interval operator/( const interval &l, const interval &r )
         {
-            if ( r.includes( 0 ) )
+            if ( r.includes( 0 ) ) {
                 integer_fault( "division by zero" );
+                interval int_neg = { r.low, ( bound_t ) -1 };
+                interval int_pos = { ( bound_t ) 1, r.high };
+                return join( l / int_neg, l / int_pos );
+            }
+
             return std::minmax( std::initializer_list< bound_t >{
                 l.low  / r.low,
                 l.low  / r.high,

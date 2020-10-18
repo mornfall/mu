@@ -1906,8 +1906,10 @@ BRICK_SQL_OP( | )
                 auto seqname = std::string( tabname.substr( 1, tabname.size() - 2 ) ) + "_pkey_seq";
                 auto colname = col.column_name( col );
 
-                alter() << "add column if not exists " << colname << " " << typestr << "";
-                alter() << "alter column " << colname << " type " << typestr << "";
+                alter() << "add column if not exists " << colname << " " << typestr
+                        << " default '" << type() << "'"; /* TODO make configurable! */
+                alter() << "alter column " << colname << " drop default";
+                alter() << "alter column " << colname << " type " << typestr;
 
                 if ( col.is_primary )
                     constraint() << "primary key ( " << colname << " )";

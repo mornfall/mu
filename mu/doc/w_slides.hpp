@@ -122,7 +122,7 @@ namespace umd::doc
         {
             table_rules = false;
             table_rows = table_cells = 0;
-            out.emit( "\\placetable[force,none]{}{\\blank[-1ex]\n" );
+            out.emit( "\\placetable[force,none]{}{\\blank[\\pretabskip]\n" );
             int i = 0;
             auto setup = []( char c )
             {
@@ -167,7 +167,7 @@ namespace umd::doc
         virtual void table_stop()
         {
             out.emit( "\\eTD\\eTR" );
-            out.emit( "\\eTABLE\\blank[-1ex]}", "\n" );
+            out.emit( "\\eTABLE\\blank[\\posttabskip]}", "\n" );
         }
 
         /* blocks */

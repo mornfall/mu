@@ -305,6 +305,8 @@ namespace brq::sql
         if constexpr ( is_set< V >::value )
         {
             int i = 0;
+            if ( v.empty() )
+                s << "( select null::" << sql_type< typename V::value_type >() << " where false";
             for ( const auto &e : v )
                 s << ( i ++ ? ", " : "( " ), print( s, e, id );
             s << " )";

@@ -126,8 +126,7 @@ namespace brq::sql
             return buf;
         }
 
-        template< typename stream >
-        friend auto operator<<( stream &s, timestamp ts ) -> decltype ( s << std::string() )
+        friend auto &operator<<( brq::string_builder &s, timestamp ts )
         {
             return s << ts.to_string();
         }
@@ -148,8 +147,7 @@ namespace brq::sql
             return time_t( days ) * 3600 * 24 + seconds / 1000000;
         }
 
-        template< typename stream >
-        friend auto operator<<( stream &s, interval i ) -> decltype ( s << std::string() )
+        friend auto &operator<<( brq::string_builder &s, interval i )
         {
             return s << i.as_seconds();
         }

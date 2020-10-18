@@ -364,6 +364,7 @@ namespace brq::sql
         static std::string_view column_name( const CT &ct ) { return get_name( ct ); }
 
         using type = std::conditional_t< _nullable, std::optional< T >, T >;
+        using base_type = T;
         using bare = void;
         using table = void;
         using qualifier = void;
@@ -1898,7 +1899,7 @@ BRICK_SQL_OP( | )
             }
             else
             {
-                using type = typename col_t::type;
+                using type = typename col_t::base_type;
                 bool use_serial = col.is_primary && std::is_same_v< type, int >;
                 auto typestr = sql_type< type >();
                 auto seqname = std::string( tabname.substr( 1, tabname.size() - 2 ) ) + "_pkey_seq";

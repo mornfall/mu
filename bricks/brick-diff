@@ -240,10 +240,10 @@ namespace brq
                     ++ a_begin;
                     ++ b_begin;
                 }
-                else if ( *b_begin != lcs.front() )
-                    *out++ = hunk( hunk::w_add, *b_begin++ );
                 else if ( *a_begin != lcs.front() )
                     *out++ = hunk( hunk::w_del, *a_begin++ );
+                else if ( *b_begin != lcs.front() )
+                    *out++ = hunk( hunk::w_add, *b_begin++ );
                 else
                     UNREACHABLE( "impossible case" );
             }

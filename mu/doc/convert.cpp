@@ -403,9 +403,12 @@ namespace umd::doc
                     align.insert( i );
             };
 
-            align_on( U"=" );
-            align_on( U"→←" );
-            align_on( U"+-⋅/" );
+            if ( lines.size() > 1 )
+            {
+                align_on( U"=" );
+                align_on( U"→←" );
+                align_on( U"+-⋅/" );
+            }
 
             std::string astr;
 

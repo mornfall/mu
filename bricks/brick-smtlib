@@ -59,7 +59,7 @@ namespace brq
     {
         smtlib_format _fmt;
         int bw = 0;
-        enum type_t { t_bool, t_bv, t_float } type;
+        enum type_t { t_bool, t_bv, t_float, t_array } type;
 
         smtlib_node( int bw, type_t type, smtlib_format &&fmt )
             : _fmt( std::move( fmt ) ), bw( bw ), type( type )
@@ -72,6 +72,7 @@ namespace brq
         constexpr inline bool is_bool() const noexcept { return type == t_bool; }
         constexpr inline bool is_bv() const noexcept { return type == t_bv; }
         constexpr inline bool is_float() const noexcept { return type == t_float; }
+        constexpr inline bool is_array() const noexcept { return type == t_array; }
     };
 
     using smtlib_type = smtlib_node::type_t;
@@ -99,6 +100,7 @@ namespace brq
             case smtlib_node::t_bool: return "bool";
             case smtlib_node::t_bv: return "bv";
             case smtlib_node::t_float: return "float";
+            case smtlib_node::t_array: return "array";
         }
     }
 
@@ -179,6 +181,16 @@ namespace brq
 
         node bitvec( int, brick::data::SmallVector< uint64_t > data );
         node boolT() { return node( 1, node::t_bool, "Bool" ); }
+
+        node typeT( type_t type, int bitwidth )
+        {
+            if ( type == node::t_bv )
+                return bitvecT( bitwidth );
+            if ( type == node::t_float )
+                return floatT( bitwidth );
+            UNREACHABLE( "unsupported type" );
+        }
+
         node bitvecT( int bitwidth )
         {
             ASSERT_LEQ( 0, bitwidth );
@@ -189,6 +201,22 @@ namespace brq
         {
             ASSERT_LEQ( 0, bitwidth );
             return node( bitwidth, node::t_float, "(Float" + std::to_string( bitwidth ) + ")" );
+        }
+
+        node arrayT( type_t type, int value_bw, int index_bw )
+        {
+            ASSERT_LEQ( 0, value_bw );
+            ASSERT_LEQ( 0, index_bw );
+
+            auto values = typeT( type, value_bw );
+            auto indices = bitvecT( index_bw );
+
+            auto fmt = [=]( brq::string_builder &o )
+            {
+                o << "(Array " << values << " " << indices << ")";
+            };
+
+            return node( value_bw, type, fmt );
         }
 
         node bitvec( int bw, uint64_t val )
@@ -332,6 +360,24 @@ namespace brq
                 o << "(ite " << cond << " " << t << " " << f << ")";
             };
             return node( t.bw, t.type, fmt );
+        }
+
+        node select( node array, node offset, int bw )
+        {
+            auto fmt = [=]( brq::string_builder &o )
+            {
+                o << "(select " << array << " " << offset << ")";
+            };
+            return node( bw, array.type, fmt ); // FIXME loaded type
+        }
+
+        node store( node array, node offset, node value, int bw )
+        {
+            auto fmt = [=]( brq::string_builder &o )
+            {
+                o << "(store " << array << " " << offset << " " << value << ")";
+            };
+            return node( bw, array.type, fmt );
         }
 
         static constexpr auto rounding_mode = smtlib_rounding::RNE;

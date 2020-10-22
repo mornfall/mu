@@ -48,7 +48,7 @@ namespace brq
 
     enum class smt_op : uint8_t
     {
-        invalid, eq, neq, join, meet,
+        invalid, eq, neq, join, meet, array,
         var_i1, var_i8, var_i16, var_i32, var_i64, var_f32, var_f64,
         const_i1, const_i8, const_i16, const_i32, const_i64, const_f32, const_f64,
         bv_not, bv_neg,
@@ -68,6 +68,16 @@ namespace brq
 
     using smt_varid_t = uint16_t;
 
+    struct smt_array_type
+    {
+        smt_varid_t id;
+
+        uint8_t bitwidth;
+        enum class type_t : uint8_t { bitvector, floating, array } type;
+    } __attribute__((packed));
+
+    static_assert( sizeof( smt_array_type ) == 4 );
+
     __inline_opt constexpr smt_traits_t smt_traits( smt_op v )
     {
         using op = smt_op;
@@ -81,6 +91,8 @@ namespace brq
 
             case op::join:       return { "join", 2, 0, 1, false, smt_op_other };
             case op::meet:       return { "join", 2, 0, 1, false, smt_op_other };
+
+            case op::array:      return { "array", 0, 4,  0, false, smt_op_other };
 
             case op::var_i1:     return { "var_i1",    0, 2,  1, false, smt_op_var };
             case op::var_i8:     return { "var_i8",    0, 2,  8, false, smt_op_var };
@@ -249,6 +261,9 @@ namespace brq
         bool is_cast()    const { return smt_traits( op ).is_cast(); }
         bool is_integral()    const { return smt_traits( op ).is_integral(); }
         bool is_float()    const { return smt_traits( op ).is_float(); }
+
+        bool is_array()   const { return op == smt_op::array; }
+
         bool is_extract() const { return op == smt_op::bv_extract; }
         int  arity()      const { return smt_traits( op ).arity; }
 
@@ -266,7 +281,7 @@ namespace brq
             if ( auto w = smt_bw( op ) ) /* fixed-width cases */
                 return w;
 
-            if ( op == smt_op::bv_concat )
+                if ( op == smt_op::bv_concat )
             {
                 ASSERT_EQ( sizeof...( args ), 2 );
                 return ( 0 + ... + args );
@@ -278,6 +293,9 @@ namespace brq
             if ( is_resize() )
                 return imm_get< uint8_t >();
 
+            // TODO store and load bw
+            if ( is_array() )
+                return imm_get< smt_array_type >().bitwidth;
             auto val = first_( args... );
             ASSERT( ( ( val == args ) && ... ) );
             return val;
@@ -287,6 +305,7 @@ namespace brq
         size_t imm_size() const { return smt_imm( op ); }
         smt_varid_t varid() const { return smt_traits( op ).is_var() ? imm_get< smt_varid_t >() : 0; }
         auto bounds() const { return imm_get< std::pair< uint8_t, uint8_t > >(); }
+        auto array_type() const { return imm_get< smt_array_type >(); }
 
         uint64_t value() const
         {
@@ -340,6 +359,9 @@ namespace brq
             return o;
         }
     };
+
+    template< typename init_t >
+    smt_atom_t( smt_op op, init_t init ) -> smt_atom_t< init_t >;
 
     using smt_atom = smt_atom_t< void >;
     static_assert( sizeof( smt_atom ) == 1 );

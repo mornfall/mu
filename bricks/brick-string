@@ -183,9 +183,9 @@ namespace brq
 
         string_window( const std::string &s ) : string_window( std::string_view( s ) ) {}
 
-        std::string_view flush()
+        std::string_view flush( int drop = 0 )
         {
-            std::string_view rv( _start, _split );
+            std::string_view rv( _start, _split - drop );
             _start += _split; _end -= _split; _split = 0;
             return rv;
         }

@@ -66,6 +66,8 @@ namespace brq
             f.name = s;
             return {};
         }
+
+        explicit operator bool() const { return !name.empty(); }
     };
 
     /* A file or directory path which may or may not exist. */
@@ -78,6 +80,8 @@ namespace brq
             f.name = s;
             return {};
         }
+
+        explicit operator bool() const { return !name.empty(); }
     };
 
     static parse_result from_string( std::string_view s, cmd_flag &f )

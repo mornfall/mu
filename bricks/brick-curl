@@ -101,6 +101,14 @@ namespace brq
             return *this;
         }
 
+        curl &set_auth( std::string_view user, std::string_view pass )
+        {
+            TRACE( "set_auth", user, pass );
+            curl_easy_setopt( _curl, CURLOPT_USERNAME, std::string( user ).c_str() );
+            curl_easy_setopt( _curl, CURLOPT_PASSWORD, std::string( pass ).c_str() );
+            return *this;
+        }
+
         using string = std::string;
 
         template< typename T > T info( CURLINFO i )

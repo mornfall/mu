@@ -1088,6 +1088,7 @@ BRICK_SQL_OP( | )
         using stmt = typename query::stmt;
         query _query;
         sql::conn &conn() { return _query.conn(); }
+        sql::txn &txn() { return _query.txn(); }
         extend( query q ) : _query( q ) {}
 
         auto order_columns() const { return _query.order_columns(); }
@@ -1460,6 +1461,36 @@ BRICK_SQL_OP( | )
         auto from() { return sql_join< joins... >( select_tab< select_distinct, table >( *this ) ); }
     };
 
+    template< typename select, typename... views >
+    struct select_with : extend< select >
+    {
+        brq::cons_list_t< views... > _views;
+        using extend< select >::extend;
+        auto exec() { return this->_exec( this ); }
+
+        template< typename stream >
+        void print( stream &s, int &id ) const
+        {
+            int i = 0;
+            auto fmt = [&]( auto v )
+            {
+                using view = decltype( v );
+                s << ( i++ ? ", " : "with " );
+                s << get_name( v ) << " ";
+                print_columns( s, typename view::columns::template map_t< unqualify >(), "( ", " )" );
+                s << " as ( ";
+                auto &txn = const_cast< select_with * >( this )->txn();
+                view::construct( txn.select( typename view::columns() ) ).print( s, id );
+                s << " )";
+            };
+            _views.each( fmt );
+            this->_query.print( s, id );
+        }
+
+        template< typename table, typename... joins >
+        auto from() { return sql_join< joins... >( select_tab< select_with, table >( *this ) ); }
+    };
+
     template< typename... cols >
     struct query_head : query_base
     {
@@ -1498,6 +1529,12 @@ BRICK_SQL_OP( | )
             auto s = *this;
             s._distinct = true;
             return { s, e... };
+        }
+
+        template< typename... ct, typename... et >
+        select_with< select_cols, ct..., et... > with( et... e )
+        {
+            return { *this, e... };
         }
 
         template< typename stream >
@@ -1933,18 +1970,15 @@ BRICK_SQL_OP( | )
         typename table::all().each( print_col );
     };
 
-    template< typename C >
-    using get_bare = std::conditional_t< C::is_qualified, typename C::bare, C >;
-
     template< typename view, typename query >
     std::enable_if_t< view::is_view && query::is_query >
-    create( txn &txn, view, query q, bool as_temp = false )
+    create( txn &txn, view v, query q, bool as_temp = false )
     {
         string_builder s;
         int id = -1;
         s << ( as_temp ? "create temp table " : "create view " )
-          << get_name( view() ) << " ";
-        print_columns( s, typename view::columns::template map_t< get_bare >(), "( ", " )" );
+          << get_name( v ) << " ";
+        print_columns( s, typename view::columns::template map_t< unqualify >(), "( ", " )" );
         s << ( as_temp ? " on commit drop as " : " with ( security_barrier ) as " );
 
         q.print( s, id );
@@ -1955,9 +1989,9 @@ BRICK_SQL_OP( | )
     }
 
     template< typename view >
-    std::enable_if_t< view::is_view > create( txn &txn, view, bool as_temp = false )
+    std::enable_if_t< view::is_view > create( txn &txn, view v, bool as_temp = false )
     {
-        create( txn, view(), view::construct( txn.select( typename view::columns() ) ), as_temp );
+        create( txn, v, view::construct( txn.select( typename view::columns() ) ), as_temp );
     }
 
     template< typename schema >

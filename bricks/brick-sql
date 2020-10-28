@@ -1903,6 +1903,16 @@ BRICK_SQL_OP( | )
             return *this;
         }
 
+        template< typename... v >
+        txn &exec( std::string q, v... vals )
+        {
+            open();
+            stmt<> s( _conn, q );
+            s.bind( vals... );
+            s.exec();
+            return *this;
+        }
+
         struct autoexec : brq::string_builder
         {
             txn &_txn;

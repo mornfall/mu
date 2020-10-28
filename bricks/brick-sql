@@ -2013,11 +2013,11 @@ BRICK_SQL_OP( | )
     }
 
     template< typename table >
-    std::enable_if_t< table::is_table > create( txn &txn, table )
+    std::enable_if_t< table::is_table > create( txn &txn, table, bool temp = false )
     {
         auto tabname = get_name( table() );
         auto tabunq = std::string( tabname.substr( 1, tabname.size() - 2 ) );
-        txn.exec() << "create table if not exists " << tabname << " ();";
+        txn.exec() << "create " << ( temp ? "temp " : "" ) << "table if not exists " << tabname << " ();";
         int c_num = 0;
         auto alter = [&] { return std::move( txn.exec() << "alter table " << tabname << " " ); };
         auto constraint = [&]
@@ -2061,10 +2061,11 @@ BRICK_SQL_OP( | )
                 }
 
                 if constexpr ( col.is_foreign )
-                    constraint()
-                        << "foreign key ( " << colname << " )"
-                        << " references " << get_name( typename col_t::table() )
-                        << " ( " << typename col_t::column().column_name( typename col_t::column() ) << " )";
+                    if ( !temp )
+                        constraint()
+                            << "foreign key ( " << colname << " )"
+                            << " references " << get_name( typename col_t::table() )
+                            << " ( " << typename col_t::column().column_name( typename col_t::column() ) << " )";
 
                 alter() << "alter column " << colname << " "
                         << ( col.is_nullable ? "drop" : "set" ) << " not null";

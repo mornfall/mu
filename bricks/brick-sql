@@ -444,6 +444,13 @@ namespace brq::sql
         }
     };
 
+    template< typename col >
+    struct nullable : col
+    {
+        using type = std::optional< typename col::type >;
+        static constexpr bool is_nullable = true;
+    };
+
     template< typename T >
     using unqualify = std::conditional_t< T::is_qualified, typename T::bare, T >;
 

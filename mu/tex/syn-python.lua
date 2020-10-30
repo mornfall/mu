@@ -31,12 +31,18 @@ local keywords, plain, metafun
 
 local function initialize()
     local kw = { "try", "except", "if", "else", "elif", "while",
-                 "for", "in", "continue", "return", "assert",
-                 "from", "import", "def", "pass",
-                 "yield", "await", "raise", "lambda", "finally", "with", "as", "is" }
-    local ty = { "int", "float", "str", "list", "dict", "set", "range", "len", "chr", "ord" }
-    keywords = table.tohash(kw)
-    types    = table.tohash(ty)
+                 "for", "in", "continue", "break", "return", "assert",
+                 "from", "import", "def", "class", "pass",
+                 "yield", "await", "raise", "lambda", "finally",
+                 "with", "as" }
+    local ty = { "int", "float", "str", "bool", "None", "list", "dict", "set", "range",
+                 "Optional", "List", "Tuple", "Set", "Dict", "True", "False" }
+    local mg = { "len", "chr", "ord", "self", "sorted" }
+    local op = { "and", "or", "not", "is" }
+    keywords  = table.tohash(kw)
+    types     = table.tohash(ty)
+    operators = table.tohash(op)
+    magic     = table.tohash(mg)
 end
 
 local function visualizename(s)
@@ -47,8 +53,10 @@ local function visualizename(s)
         SynSnippetKeyword(s)
     elseif types[s] then
         SynSnippetType(s)
-    elseif s == "and" or s == "or" then
+    elseif operators[s] then
         SynSnippetOperator(s)
+    elseif magic[s] then
+        SynSnippetMagic(s)
     else
         SynSnippetName(s)
     end
@@ -73,8 +81,8 @@ local handler = visualizers.newhandler {
     name         = visualizename,
 }
 
-local name        = (patterns.letter + S("_"))^1
-local magic       = S("#@")
+local magic       = P("__") * patterns.letter^1 * P("__")
+local name        = (patterns.letter + S("_"))^1 - magic
 local boundary    = S('()[]<>;"|$\\{},') + P("::")
 local operator    = S("!=-+/*`?^&%.:~")
   

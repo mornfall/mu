@@ -230,7 +230,7 @@ namespace umd::pic
         point _position;
         float _w, _h;
         std::bitset< 4 > _rounded;
-        bool _dashed = false;
+        std::bitset< 4 > _dashed, _hidden;
         int _shaded = 0;
 
         box( point p, float w, float h ) : _position( p ), _w( w ), _h( h ) {}
@@ -238,7 +238,8 @@ namespace umd::pic
 
         void set_shaded( int s ) { _shaded = s; }
         void set_rounded( int c, bool r ) { _rounded[ c ] = r; }
-        void set_dashed( bool d ) { _dashed = d; }
+        void set_dashed( int s, bool d ) { _dashed[ s ] = d; }
+        void set_visible( int s, bool d ) { _hidden[ s ] = !d; }
 
         pic::port port( dir_t p ) const override
         {
@@ -252,7 +253,7 @@ namespace umd::pic
             }
         }
 
-        writer &path( writer &o ) const
+        writer &path( writer &o, bool outline ) const
         {
             auto round_x = [&]( int p ) { return point( _rounded[ p ] ? 8 : 0, 0 ); };
             auto round_y = [&]( int p ) { return point( 0, _rounded[ p ] ? 8 : 0 ); };
@@ -262,23 +263,49 @@ namespace umd::pic
                   se = _position + point(  _w/2, -_h/2 ),
                   sw = _position + point( -_w/2, -_h/2 );
 
-            o <<            nw + round_x( 0 ) << " -- "
-              << "     " << ne - round_x( 1 ) << " .. controls " << ne << " .. " << ne - round_y( 1 ) << " -- \n"
-              << "     " << se + round_y( 2 ) << " .. controls " << se << " .. " << se - round_x( 2 ) << " -- \n"
-              << "     " << sw + round_x( 3 ) << " .. controls " << sw << " .. " << sw + round_y( 3 ) << " -- \n"
-              << "     " << nw - round_y( 0 ) << " .. controls " << nw << " .. " << " cycle ";
+            auto corner = []( auto t ) -> std::string
+            {
+                auto [ a, b, c ] = t;
+                return brq::format( a, ".. controls", b, "..", c ).buffer();
+            };
+
+            auto line = [&]( int i, auto f, auto t )
+            {
+                if ( !_hidden[ i ] )
+                {
+                    o << "draw " << corner( f ) << " -- " << std::get< 0 >( t );
+                    if ( _dashed[ i ] )
+                        o << " dashed dotted";
+                    o << " withcolor fg;";
+                }
+            };
+
+            std::tuple c_nw{ nw - round_y( 0 ), nw, nw + round_x( 0 ) },
+                       c_ne{ ne - round_x( 1 ), ne, ne - round_y( 1 ) },
+                       c_se{ se + round_y( 2 ), se, se - round_x( 2 ) },
+                       c_sw{ sw + round_x( 3 ), sw, sw + round_y( 3 ) };
+
+            if ( outline )
+            {
+                line( 0, c_nw, c_ne );
+                line( 1, c_ne, c_se );
+                line( 2, c_se, c_sw );
+                line( 3, c_sw, c_nw );
+            }
+            else
+                o << corner( c_nw ) << " -- " << corner( c_ne ) << " -- "
+                  << corner( c_se ) << " -- " << corner( c_sw ) << " -- cycle";
 
             return o;
         }
 
         void emit( writer &o ) const override
         {
+            path( o, true );
             auto col = 1 - _shaded * 1.0 / 4;
-
             if ( _shaded )
-                o << "fill ", path( o ) << " withcolor (" << col << ", " << col << ", " << col << ");\n";
-
-            o << "draw ", path( o ) << ( _dashed ? " dashed evenly" : "" ) << " withcolor fg;\n";
+                o << "fill ", path( o, false )
+                  << " withcolor (" << col << ", " << col << ", " << col << ");\n";
         }
     };
 

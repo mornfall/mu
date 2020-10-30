@@ -134,13 +134,13 @@ namespace umd::pic::convert
         {
             std::array< reader::point, 4 > c;
             joins j;
-            bool dashed = false;
+            bool dashed[ 4 ] = { false };
 
             auto nw = p;
-            auto [ ne, jn ] = boundary( p, east,   mj[ 0 ], false, &dashed );
-            auto [ sw, je ] = boundary( p, south,  mj[ 1 ], true,  &dashed );
-            auto [ se, jw ] = boundary( ne, south, mj[ 2 ], false, &dashed );
-            auto [ sx, js ] = boundary( sw, east,  mj[ 3 ], true,  &dashed );
+            auto [ ne, jn ] = boundary( p, east,   mj[ 0 ], false, dashed + 0 );
+            auto [ sw, je ] = boundary( p, south,  mj[ 1 ], true,  dashed + 3 );
+            auto [ se, jw ] = boundary( ne, south, mj[ 2 ], false, dashed + 1 );
+            auto [ sx, js ] = boundary( sw, east,  mj[ 3 ], true,  dashed + 2 );
 
             c[ corner_ne ] = ne; j[ 0 ] = jn;
             c[ corner_nw ] = nw; j[ 1 ] = je;
@@ -168,7 +168,8 @@ namespace umd::pic::convert
                                               xpitch * w, ypitch * h );
             for ( int i = 0; i < int( c.size() ); ++i )
                 obj->set_rounded( i, grid[ c[ i ] ].rounded() );
-            obj->set_dashed( dashed );
+            for ( int i = 0; i < int( c.size() ); ++i )
+                obj->set_dashed( i, dashed[ i ] );
 
             std::u32string txt;
             int last_x = p.x(), last_y = 0;

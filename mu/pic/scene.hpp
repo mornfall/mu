@@ -153,7 +153,7 @@ namespace umd::pic
                 emit_curved( o );
             else
                 emit_angled( o );
-            o << ( _dashed ? " dashed evenly" : "" ) << " withcolor fg;\n";
+            o << ( _dashed ? " dashed dotted" : "" ) << " withcolor fg;\n";
         }
     };
 

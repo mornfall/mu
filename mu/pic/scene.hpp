@@ -317,11 +317,11 @@ namespace umd::pic
         std::vector< element_ptr > _objects;
 
         template< typename T, typename... Args >
-        T &add( Args && ... args )
+        auto add( Args && ... args )
         {
             auto ptr = std::make_shared< T >( std::forward< Args >( args )... );
             _objects.push_back( ptr );
-            return *ptr;
+            return ptr;
         }
 
         void emit( writer &o ) const override

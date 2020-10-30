@@ -25,11 +25,11 @@ namespace umd::pic::convert
         }
     }
 
-    struct object_map : std::map< reader::point, pic::object * >
+    struct object_map : std::map< reader::point, std::shared_ptr< pic::object > >
     {
         // object_ptr at( int x, int y ) const { return at( point( x, y ) ); }
 
-        pic::object *at( reader::point p ) const
+        std::shared_ptr< pic::object > at( reader::point p ) const
         {
             if ( auto i = find( p ) ; i != end() )
                 return i->second;
@@ -70,7 +70,7 @@ namespace umd::pic::convert
             std::vector< pic::point > points;
             bool dashed = false, curved = false;
 
-            pic::object *from_obj = nullptr;
+            std::shared_ptr< pic::object > from_obj = nullptr;
 
             while ( true )
             {
@@ -99,7 +99,7 @@ namespace umd::pic::convert
 
             auto from_port = from_obj ? from_obj->port( opposite( at_dir ) )
                                       : port( conv( p ), at_dir );
-            auto &arrow = group.add< pic::arrow >( from_port, to_port );
+            auto &arrow = *group.add< pic::arrow >( from_port, to_port );
             arrow._dashed = dashed;
             arrow._curved = curved;
             arrow._head   = head;
@@ -130,7 +130,7 @@ namespace umd::pic::convert
 
         using joins = std::array< int, 4 >;
 
-        void box( reader::point p, joins mj = { 1, 1, 1, 1 } )
+        std::shared_ptr< pic::box > box( reader::point p, joins mj = { 1, 1, 1, 1 } )
         {
             std::array< reader::point, 4 > c;
             joins j;
@@ -158,14 +158,14 @@ namespace umd::pic::convert
                         mj[ i ] --;
                     }
 
-                return; /* not a box */
+                return nullptr; /* not a box */
             }
 
             double w = ne.x() - nw.x();
             double h = sw.y() - nw.y();
-            auto obj = &group.add< pic::box >( xpitch * (   p.x() + w / 2 ),
-                                               ypitch * ( - p.y() - h / 2 ),
-                                               xpitch * w, ypitch * h );
+            auto obj = group.add< pic::box >( xpitch * (   p.x() + w / 2 ),
+                                              ypitch * ( - p.y() - h / 2 ),
+                                              xpitch * w, ypitch * h );
             for ( int i = 0; i < int( c.size() ); ++i )
                 obj->set_rounded( i, grid[ c[ i ] ].rounded() );
             obj->set_dashed( dashed );
@@ -205,6 +205,8 @@ namespace umd::pic::convert
             for ( auto p = sw; p != se; p = p + reader::point( 1, 0 ) )
                 if ( grid[ p ].attach( south ) )
                     box( p );
+
+            return obj;
         }
 
         void object( int x, int y ) { object( reader::point( x, y ) ); }
@@ -214,7 +216,7 @@ namespace umd::pic::convert
             if ( objects.at( p ) ) return; /* already taken up by an object */
 
             if ( c.node() )
-                objects[ p ] = &group.add< pic::node >( xpitch * p.x(), -ypitch * p.y(), 2 );
+                objects[ p ] = group.add< pic::node >( xpitch * p.x(), -ypitch * p.y(), 2 );
 
             if ( c.attach( south ) && c.attach( east ) )
                 box( p );
@@ -253,8 +255,8 @@ namespace umd::pic::convert
             }
 
             auto w = p.x() - origin.x() - 1;
-            auto obj = &group.add< pic::text >( xpitch * ( origin.x() + w / 2.0 ),
-                                                ypitch * ( - p.y() ), txt );
+            auto obj = group.add< pic::text >( xpitch * ( origin.x() + w / 2.0 ),
+                                               ypitch * ( - p.y() ), txt );
             while ( p != origin ) /* fixme off by one */
             {
                 objects[ p ] = obj;

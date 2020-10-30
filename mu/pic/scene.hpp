@@ -18,6 +18,7 @@ namespace umd::pic
     struct element
     {
         virtual void emit( writer &w ) const = 0;
+        virtual void fill( writer & ) const {}
         virtual ~element() {}
     };
 
@@ -305,6 +306,10 @@ namespace umd::pic
         void emit( writer &o ) const override
         {
             path( o, true );
+        }
+
+        void fill( writer &o ) const override
+        {
             auto col = 1 - _shaded * 1.0 / 4;
             if ( _shaded )
                 o << "fill ", path( o, false )
@@ -329,6 +334,8 @@ namespace umd::pic
 
         void emit( writer &o ) const override
         {
+            for ( auto obj : _objects )
+                obj->fill( o );
             for ( auto obj : _objects )
                 obj->emit( o );
         }

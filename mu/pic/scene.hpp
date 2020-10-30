@@ -241,6 +241,9 @@ namespace umd::pic
         void set_dashed( int s, bool d ) { _dashed[ s ] = d; }
         void set_visible( int s, bool d ) { _hidden[ s ] = !d; }
 
+        float width() const { return _w; }
+        float height() const { return _h; }
+
         pic::port port( dir_t p ) const override
         {
             switch ( p )

@@ -201,11 +201,23 @@ namespace umd::pic::convert
 
             for ( auto p = ne; p != se; p = p + reader::point( 0, 1 ) )
                 if ( grid[ p ].attach( east ) )
-                    box( p );
+                {
+                    auto joined = box( p );
+                    if ( obj->height() > joined->height() )
+                        joined->set_visible( west, false );
+                    else
+                        obj->set_visible( east, false );
+                }
 
             for ( auto p = sw; p != se; p = p + reader::point( 1, 0 ) )
                 if ( grid[ p ].attach( south ) )
-                    box( p );
+                {
+                    auto joined = box( p );
+                    if ( obj->width() > joined->width() )
+                        joined->set_visible( north, false );
+                    else
+                        obj->set_visible( south, false );
+                }
 
             return obj;
         }

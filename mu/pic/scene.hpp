@@ -3,6 +3,7 @@
 #pragma once
 #include "types.hpp"
 #include "writer.hpp"
+#include <brick-string>
 
 #include <memory>
 #include <vector>
@@ -24,6 +25,21 @@ namespace umd::pic
     {
         obj.emit( w );
         return w;
+    }
+
+    struct string_writer : writer
+    {
+        brq::string_builder &b;
+        string_writer( brq::string_builder &b ) : b ( b ) {}
+        virtual void emit_mpost( std::string_view sv ) { b << sv; }
+        virtual void emit_tex( std::u32string_view sv ) { b << sv; }
+    };
+
+    static inline brq::string_builder &operator<<( brq::string_builder &s, const element &obj )
+    {
+        string_writer sw( s );
+        obj.emit( sw );
+        return s;
     }
 
     struct point : element

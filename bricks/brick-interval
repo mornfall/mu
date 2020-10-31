@@ -269,7 +269,7 @@ namespace brq
 
         constexpr size_t size() const
         {
-            return static_cast< size_t >( high._value ) - static_cast< size_t >( low._value );
+            return static_cast< size_t >( high._value ) - static_cast< size_t >( low._value ) + 1;
         }
 
         constexpr bool constant() const { return low == high; }

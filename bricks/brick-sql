@@ -1437,30 +1437,6 @@ BRICK_SQL_OP( | )
         sql::raw_sql< select_tab > raw_sql( std::string_view sv ) { return { *this, sv }; }
     };
 
-    template< typename select, typename... cols >
-    struct select_distinct : extend< select >
-    {
-        brq::cons_list_t< cols... > _cols;
-        auto order_columns() const { return _cols; }
-        using extend< select >::extend;
-        auto exec() { return this->_exec( this ); }
-
-        template< typename... et >
-        select_distinct( const select &q, et... e ) : extend< select >( q ), _cols( e... ) {}
-
-        template< typename stream >
-        void print( stream &s, int &id ) const
-        {
-            s << "select distinct ";
-            if constexpr ( sizeof...( cols ) > 0 )
-                s << " on ( ", sql::print( s, _cols, id ), s << " ) ";
-            this->_query.print( s, id );
-        }
-
-        template< typename table, typename... joins >
-        auto from() { return sql_join< joins... >( select_tab< select_distinct, table >( *this ) ); }
-    };
-
     template< typename select, typename... views >
     struct select_with : extend< select >
     {
@@ -1489,6 +1465,33 @@ BRICK_SQL_OP( | )
 
         template< typename table, typename... joins >
         auto from() { return sql_join< joins... >( select_tab< select_with, table >( *this ) ); }
+    };
+
+    template< typename select, typename... cols >
+    struct select_distinct : extend< select >
+    {
+        brq::cons_list_t< cols... > _cols;
+        auto order_columns() const { return _cols; }
+        using extend< select >::extend;
+        auto exec() { return this->_exec( this ); }
+
+        template< typename... et >
+        select_distinct( const select &q, et... e ) : extend< select >( q ), _cols( e... ) {}
+
+        template< typename stream >
+        void print( stream &s, int &id ) const
+        {
+            s << "select distinct ";
+            if constexpr ( sizeof...( cols ) > 0 )
+                s << " on ( ", sql::print( s, _cols, id ), s << " ) ";
+            this->_query.print( s, id );
+        }
+
+        template< typename table, typename... joins >
+        auto from() { return sql_join< joins... >( select_tab< select_distinct, table >( *this ) ); }
+
+        template< typename... ct, typename... et >
+        select_with< select_distinct, ct..., et... > with( et... e ) { return { *this, e... }; }
     };
 
     template< typename... cols >

@@ -151,7 +151,7 @@ namespace umd::doc
         void mpost_start() override
         {
             out.emit( "<div class=\"center\"><tex>\\startMPpage\n",
-                      "color fg; fg := black;" );
+                      "color fg; fg := black; picture dotted; dotted := dashpattern( on 1 off 1.5 ); " );
             _in_mpost = true;
         }
 

@@ -137,8 +137,13 @@ std::string to_string( const SystemOutput &o ) {
 
 struct Pipe {
     Pipe() {
-        if ( ::pipe2( _fds, O_CLOEXEC ) == -1 )
+        if ( ::pipe2( _fds.data(), O_CLOEXEC ) == -1 )
             throw ProcError( "could not create pipe" );
+    }
+
+    Pipe( Pipe && o ) : _fds( o._fds ) {
+        o._fds[0] = -1;
+        o._fds[1] = -1;
     }
 
     ~Pipe() { close(); }
@@ -196,7 +201,7 @@ struct Pipe {
 #endif
 
   private:
-    int _fds[2];
+    std::array< int, 2 > _fds;
 };
 
 inline SystemOutput spawnAndWait( SpawnOpts opts, std::vector< std::string > args )
@@ -313,17 +318,16 @@ inline SystemOutput shellSpawnAndWait( std::string shellcmd ) {
 struct spawn_result
 {
     pid_t pid;
-    int to_child,
-        from_chld;
+    Pipe to_child,
+         from_chld;
 };
 
 template < typename Exec >
 spawn_result spawn( Exec exec )
 {
-    int to_parent_from_child[2];
-    int to_child_from_parent[2];
-    if ( ::pipe( to_parent_from_child ) == -1 || ::pipe( to_child_from_parent ) == -1 )
-        throw brq::system_error( "spawn: pipe" );
+#ifdef __unix__
+    Pipe to_child,
+         from_child;
 
     pid_t pid = ::fork();
 
@@ -332,30 +336,29 @@ spawn_result spawn( Exec exec )
     if ( pid == 0 )
     {
         /* CHILD */
-        if ( ::dup2( to_child_from_parent[0], STDIN_FILENO ) == -1 ||
-                ::dup2( to_parent_from_child[1], STDOUT_FILENO ) == -1 )
-            throw brq::system_error( "spawn: dup2" );
-
-        ::close( to_parent_from_child[0] );
-        ::close( to_parent_from_child[1] );
-        ::close( to_child_from_parent[0] );
-        ::close( to_child_from_parent[1] );
+        to_child.attachStdin();
+        from_child.attachStdout();
+        to_child.close();
+        from_child.close();
 
         exec();
         throw brq::system_error( "spawn: exec didn't, in fact, exec" );
     }
 
     /* PARENT */
-    ::close( to_child_from_parent[0] );
-    ::close( to_parent_from_child[1] );
+    to_child.closeRead();
+    from_child.closeWrite();
 
-    return { pid, to_child_from_parent[1], to_parent_from_child[0] };
+    return { pid, std::move( to_child ), std::move( from_child ) };
+#else
+#error implementation of brick::proc::spawn for this platform is missing
+#endif
 }
 
 
 /* Pipethough for filtering data through a subprocess.
  *
- * 'Exec' shall execve(2) one way or another.
+ * 'Exec' shall execve(2) eventually.
  * 'Write' is called when writing is possible; gets the file descriptor as its argument and returns
  *         whether to attempt for furter writes.
  *         See the 'feed' function for a ready implementation.
@@ -364,11 +367,17 @@ spawn_result spawn( Exec exec )
  *        See the 'each_line' function for a handy wrapper.
  *
  * File descriptors are in both cases closed automatically, don't do it in the callbacks.
+ *
+ * Returns the return code of the subprocess.
  */
 template < typename Exec, typename Write, typename Read >
-void pipethrough( Exec exec, Write do_write, Read do_read )
+int pipethrough( Exec exec, Write do_write, Read do_read )
 {
-    auto [ pid, to_child, from_child ] = spawn( exec );
+#ifdef __unix__
+    auto [ pid, to_child_p, from_child_p ] = spawn( exec );
+
+    int to_child = to_child_p.write(),
+        from_child = from_child_p.read();
 
     ::fcntl( to_child, F_SETFL, O_NONBLOCK );
     ::fcntl( from_child, F_SETFL, O_NONBLOCK );
@@ -395,24 +404,30 @@ void pipethrough( Exec exec, Write do_write, Read do_read )
         if ( fdset[0].revents & POLLERR
                 || fdset[0].revents & POLLOUT && !do_write( to_child ) )
         {
-            close( to_child );
+            to_child_p.close();
             fdset[0].fd = -1;
         }
 
         if ( fdset[1].revents & POLLERR
                 || fdset[1].revents & (POLLIN | POLLHUP) && !do_read( from_child ) )
         {
-            close( from_child );
+            from_child_p.close();
             break;
         }
     }
 
     int wst;
-    if ( waitpid( pid, &wst, 0 ) > 0 )
-    {
-        if ( WIFEXITED( wst ) && WEXITSTATUS( wst ) != 0 )
-            throw std::runtime_error( "pipethrough exited with " + std::to_string( WEXITSTATUS( wst ) ) );
-    }
+    if ( waitpid( pid, &wst, 0 ) < 0 )
+        throw brq::system_error( "pipethrough: wait" );
+    if ( WIFEXITED( wst ) )
+        return WEXITSTATUS( wst );
+    if ( WIFSIGNALED( wst ) )
+        return - WTERMSIG( wst );
+    UNREACHABLE( "wrong waitpid result type" );
+    // pipes get closed here
+#else
+#error implementation of brick::proc::pipethrough for this platform is missing
+#endif
 }
 
 template< typename Yield, unsigned BUFFER_SIZE = 512 >

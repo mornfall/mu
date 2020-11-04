@@ -322,8 +322,9 @@ struct spawn_result
          from_chld;
 };
 
-template < typename Exec >
-spawn_result spawn( Exec exec )
+template< typename Exec >
+std::enable_if_t< std::is_invocable_v< Exec >, spawn_result >
+spawn( Exec exec )
 {
 #ifdef __unix__
     Pipe to_child,
@@ -355,6 +356,22 @@ spawn_result spawn( Exec exec )
 #endif
 }
 
+inline auto spawn( std::vector< std::string > args )
+{
+    std::vector< const char * > cargs;
+    std::transform( args.begin(), args.end(), std::back_inserter( cargs ),
+                    []( const std::string &s ) { return s.c_str(); } );
+    cargs.push_back( nullptr );
+
+    return spawn( [&](){ ::execvp( cargs[ 0 ], const_cast< char * const * >( cargs.data() ) ); } );
+}
+
+template< typename... Args >
+auto spawn( Args &&... args )
+{
+    return spawn( std::vector< std::string >{ std::forward< Args >( args )... } );
+}
+
 
 /* Pipethough for filtering data through a subprocess.
  *
@@ -368,13 +385,13 @@ spawn_result spawn( Exec exec )
  *
  * File descriptors are in both cases closed automatically, don't do it in the callbacks.
  *
- * Returns the return code of the subprocess.
+ * Returns the return code of the subprocess or a negative number of the signal that terminated it.
  */
-template < typename Exec, typename Write, typename Read >
-int pipethrough( Exec exec, Write do_write, Read do_read )
+template < typename Write, typename Read, typename... Exec >
+int pipethrough( Write do_write, Read do_read, Exec... exec )
 {
 #ifdef __unix__
-    auto [ pid, to_child_p, from_child_p ] = spawn( exec );
+    auto [ pid, to_child_p, from_child_p ] = spawn( exec... );
 
     int to_child = to_child_p.write(),
         from_child = from_child_p.read();

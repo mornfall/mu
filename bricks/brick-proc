@@ -669,6 +669,55 @@ struct TestSpawn {
     }
 };
 
+struct TestPipethrough {
+    using strs = std::vector< std::string >;
+    TEST( lines ) {
+        strs out;
+        proc::pipethrough( proc::feed( "foo\nbar\nbaz" ),
+                           proc::each_line( [&]( auto l ){ out.emplace_back( l ); }),
+                           "cat" );
+        ASSERT_EQ( out, strs{ "foo", "bar", "baz" } );
+    }
+    TEST( noread ) {
+        std::string out;
+        proc::pipethrough( []( int ){ return false; },
+                           proc::each_line( [&]( auto l ){ out = l; }),
+                           "echo", "-e", "lorem ipsum\\nhello world" );
+        ASSERT_EQ( out, "hello world" );
+    }
+    TEST( empty ) {
+        int n = 0;
+        proc::pipethrough( proc::feed( "this\ngets\ndiscarded" ),
+                           proc::each_line( [&]( auto ){ ++n; }),
+                           "sh", "-c", "> /dev/null" );
+        ASSERT_EQ( n, 0 );
+    }
+    TEST( retval ) {
+        int n = 0;
+        int ret = proc::pipethrough( []( int ){ return false; },
+                                     proc::each_line( [&]( auto ){ ++n; }),
+                                     "true" );
+        ASSERT_EQ( ret, 0 );
+        ASSERT_EQ( n, 0 );
+        ret = proc::pipethrough( []( int ){ return false; },
+                                 proc::each_line( [&]( auto ){ ++n; }),
+                                 "false" );
+        ASSERT_LT( 0, ret );
+        ASSERT_EQ( n, 0 );
+
+        try {
+            ret = proc::pipethrough( []( int ){ return false; },
+                                     proc::each_line( [&]( auto ){ ++n; }),
+                                     "/dev/null" );
+        } catch ( ... ) {
+            // this only happens in the child
+            abort();
+        }
+        ASSERT_LT( ret, 0 );
+        ASSERT_EQ( n, 0 );
+    }
+};
+
 };
 
 }

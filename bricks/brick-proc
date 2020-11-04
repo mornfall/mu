@@ -2,6 +2,7 @@
 
 /*
  * (c) 2016 Vladimír Štill <xstill@fi.muni.cz>
+ * (c) 2020 Adam Matoušek <xmatous3@fi.muni.cz>
  */
 
 /* Redistribution and use in source and binary forms, with or without
@@ -47,6 +48,8 @@
 #include <signal.h>
 #include <spawn.h>
 #include <sys/wait.h>
+#include <fcntl.h>
+#include <poll.h>
 #endif
 
 extern char **environ;
@@ -306,6 +309,166 @@ inline SystemOutput shellSpawnAndWait( SpawnOpts opts, std::string shellcmd ) {
 inline SystemOutput shellSpawnAndWait( std::string shellcmd ) {
     return shellSpawnAndWait( None, shellcmd );
 }
+
+struct spawn_result
+{
+    pid_t pid;
+    int to_child,
+        from_chld;
+};
+
+template < typename Exec >
+spawn_result spawn( Exec exec )
+{
+    int to_parent_from_child[2];
+    int to_child_from_parent[2];
+    if ( ::pipe( to_parent_from_child ) == -1 || ::pipe( to_child_from_parent ) == -1 )
+        throw brq::system_error( "spawn: pipe" );
+
+    pid_t pid = ::fork();
+
+    if ( pid == -1 )
+        throw brq::system_error( "spawn: fork" );
+    if ( pid == 0 )
+    {
+        /* CHILD */
+        if ( ::dup2( to_child_from_parent[0], STDIN_FILENO ) == -1 ||
+                ::dup2( to_parent_from_child[1], STDOUT_FILENO ) == -1 )
+            throw brq::system_error( "spawn: dup2" );
+
+        ::close( to_parent_from_child[0] );
+        ::close( to_parent_from_child[1] );
+        ::close( to_child_from_parent[0] );
+        ::close( to_child_from_parent[1] );
+
+        exec();
+        throw brq::system_error( "spawn: exec didn't, in fact, exec" );
+    }
+
+    /* PARENT */
+    ::close( to_child_from_parent[0] );
+    ::close( to_parent_from_child[1] );
+
+    return { pid, to_child_from_parent[1], to_parent_from_child[0] };
+}
+
+
+/* Pipethough for filtering data through a subprocess.
+ *
+ * 'Exec' shall execve(2) one way or another.
+ * 'Write' is called when writing is possible; gets the file descriptor as its argument and returns
+ *         whether to attempt for furter writes.
+ *         See the 'feed' function for a ready implementation.
+ * 'Read' is called when reading is possible; gets the file descriptor as its argument and returns
+ *        whether to run the pipethrough further.
+ *        See the 'each_line' function for a handy wrapper.
+ *
+ * File descriptors are in both cases closed automatically, don't do it in the callbacks.
+ */
+template < typename Exec, typename Write, typename Read >
+void pipethrough( Exec exec, Write do_write, Read do_read )
+{
+    auto [ pid, to_child, from_child ] = spawn( exec );
+
+    ::fcntl( to_child, F_SETFL, O_NONBLOCK );
+    ::fcntl( from_child, F_SETFL, O_NONBLOCK );
+
+    pollfd fdset[2] = { { to_child, POLLOUT, 0 },
+                        { from_child, POLLIN, 0 } };
+
+    while ( true )
+    {
+        int res = poll( fdset, 2, 10 * 1000 );
+
+        if ( res == -1 )
+        {
+            if ( errno == EINTR )
+                continue;
+            throw brq::system_error( "pipethrough: poll" );
+        }
+
+        if ( res == 0 )
+        {
+            throw std::runtime_error( "pipethrough: poll timed out" );
+        }
+
+        if ( fdset[0].revents & POLLERR
+                || fdset[0].revents & POLLOUT && !do_write( to_child ) )
+        {
+            close( to_child );
+            fdset[0].fd = -1;
+        }
+
+        if ( fdset[1].revents & POLLERR
+                || fdset[1].revents & (POLLIN | POLLHUP) && !do_read( from_child ) )
+        {
+            close( from_child );
+            break;
+        }
+    }
+
+    int wst;
+    if ( waitpid( pid, &wst, 0 ) > 0 )
+    {
+        if ( WIFEXITED( wst ) && WEXITSTATUS( wst ) != 0 )
+            throw std::runtime_error( "pipethrough exited with " + std::to_string( WEXITSTATUS( wst ) ) );
+    }
+}
+
+template< typename Yield, unsigned BUFFER_SIZE = 512 >
+struct each_line
+{
+    char _buffer[ BUFFER_SIZE ];
+    std::string _line_buffer;
+    Yield yield;
+
+    each_line( Yield y ) : yield( y ) {}
+    ~each_line()
+    {
+        // in case the last line doesn't end with LF
+        if ( ! _line_buffer.empty() )
+            yield( _line_buffer );
+    }
+
+    bool operator()( int fd )
+    {
+        int res = read( fd, _buffer, BUFFER_SIZE - 1 );
+        if ( res == -1 )
+        {
+            if ( errno == EAGAIN || errno == EWOULDBLOCK )
+                return true;
+            throw brq::system_error( "each_line: read" );
+        }
+
+        _buffer[ res ] = '\0';
+        _line_buffer.append( _buffer );
+        for ( int lf; ( lf = _line_buffer.find( '\n' ) ) != std::string::npos; )
+        {
+            yield( _line_buffer.substr( 0, lf ) ); // don't include the newline
+            _line_buffer.erase( 0, lf + 1 );
+        }
+
+        return res > 0;
+    };
+};
+
+inline auto feed( std::string_view data )
+{
+    return [data] ( int fd ) mutable -> bool {
+        int res = write( fd, data.data(), data.length() );
+        if ( res == -1 )
+        {
+            if ( errno == EPIPE )
+                return false;
+            if ( errno == EAGAIN || errno == EWOULDBLOCK )
+                return true;
+            throw brq::system_error( "feed: write" );
+        }
+        data.remove_prefix( res );
+        return !data.empty();
+    };
+}
+
 
 struct XTerm
 {

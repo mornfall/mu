@@ -22,6 +22,7 @@
 
 #include "brick-assert"
 #include "brick-except"
+#include "brick-string"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -214,7 +215,7 @@ namespace brq
         return std::make_pair( path.substr( 0, count ), path.substr( count + 1, length ) );
     }
 
-    inline std::pair< std::string, std::string > absolute_prefix( std::string path )
+    inline split_view absolute_prefix( std::string_view path )
     {
 #ifdef _WIN32 /* this must go before general case, because \ is prefix of \\ */
         if ( path.size() >= 3 && path[ 1 ] == ':' && is_path_separator( path[ 2 ] ) )
@@ -225,11 +226,11 @@ namespace brq
         // this is absolute path in both windows and unix
         if ( path.size() >= 1 && is_path_separator( path[ 0 ] ) )
             return std::make_pair( path.substr( 0, 1 ), path.substr( 1 ) );
-        return std::make_pair( std::string(), path );
+        return { {}, path };
     }
 
-    inline bool is_absolute( std::string path ) { return absolute_prefix( path ).first.size() != 0; }
-    inline bool is_relative( std::string path ) { return !is_absolute( path ); }
+    inline bool is_absolute( std::string_view path ) { return absolute_prefix( path ).first.size() != 0; }
+    inline bool is_relative( std::string_view path ) { return !is_absolute( path ); }
 
     template< typename It,
               // prohibit taking precedence over variadic join
@@ -261,14 +262,14 @@ namespace brq
 
     template< typename... FilePaths >
     inline std::string join_path( FilePaths &&...paths ) {
-        return join_path( std::vector< std::string >{ std::forward< FilePaths >( paths )... } );
+        return join_path( std::vector< std::string_view >{ std::forward< FilePaths >( paths )... } );
     }
 
-    inline std::vector< std::string > split_path( std::string path )
+    inline std::vector< std::string_view > split_path( std::string_view path )
     {
         auto abs = absolute_prefix( path );
         path = abs.second;
-        std::vector< std::string > out;
+        std::vector< std::string_view > out;
         if ( !abs.first.empty() )
             out.push_back( abs.first );
         auto last = path.begin();
@@ -278,28 +279,28 @@ namespace brq
             auto next = std::find_if( last, path.end(), &is_path_separator );
             if ( next == path.end() )
             {
-                out.emplace_back( last, next );
+                out.emplace_back( last, next - last );
                 return out;
             }
             if ( last != next )
-                out.emplace_back( last, next );
+                out.emplace_back( last, next - last );
             last = ++next;
         }
     }
 
-    inline std::string dirname( std::string path )
+    inline std::string dirname( std::string_view path )
     {
         auto p = split_path( path );
         p.pop_back();
         return join_path( p );
     }
 
-    inline std::string basename( std::string path )
+    inline std::string_view basename( std::string_view path )
     {
         return split_path( path ).back();
     }
 
-    inline std::string normalize_path( std::string path )
+    inline std::string normalize_path( std::string_view path )
     {
         auto abs = absolute_prefix( path );
         auto split = split_path( abs.second );
@@ -433,7 +434,7 @@ namespace brq
 #define stat _stat64
 #endif
 
-    inline std::unique_ptr< struct stat > stat( std::string pathname )
+    inline std::unique_ptr< struct stat > stat( std::string_view pathname )
     {
 #if _WIN32
         // from MSDN:
@@ -443,7 +444,7 @@ namespace brq
         pathname = normalize_path( pathname );
 #endif
         std::unique_ptr< struct stat > res( new struct stat );
-        if ( ::stat( pathname.c_str(), res.get() ) == -1 ) {
+        if ( ::stat( std::string( pathname ).c_str(), res.get() ) == -1 ) {
             if ( errno == ENOENT )
                 return std::unique_ptr< struct stat >();
             else
@@ -453,10 +454,10 @@ namespace brq
     }
 
 #ifndef _WIN32
-    inline std::unique_ptr< struct stat > lstat( std::string pathname )
+    inline std::unique_ptr< struct stat > lstat( std::string_view pathname )
     {
         std::unique_ptr< struct stat > res( new struct stat );
-        if ( ::lstat( pathname.c_str(), res.get() ) == -1 ) {
+        if ( ::lstat( std::string( pathname ).c_str(), res.get() ) == -1 ) {
             if ( errno == ENOENT )
                 return std::unique_ptr< struct stat >();
             else
@@ -467,20 +468,20 @@ namespace brq
 #endif
 
 #ifdef _WIN32
-    inline void mkdir_if_missing( std::string dir, int )
+    inline void mkdir_if_missing( std::string_view dir, int )
 #else
-    inline void mkdir_if_missing( std::string dir, mode_t mode )
+    inline void mkdir_if_missing( std::string_view dir, mode_t mode )
 #endif
     {
         for ( int i = 0; i < 5; ++i )
         {
             // If it does not exist, make it
 #ifdef _WIN32
-            if ( ::_mkdir( dir.c_str() ) != -1 )
+            if ( ::_mkdir( stdn:string( dir ).c_str() ) != -1 )
 #else
-                if ( ::mkdir( dir.c_str(), mode ) != -1 )
+            if ( ::mkdir( std::string( dir ).c_str(), mode ) != -1 )
 #endif
-                    return;
+                return;
 
             // throw on all errors except EEXIST. Note that EEXIST "includes the case
             // where pathname is a symbolic link, dangling or not."
@@ -518,13 +519,13 @@ namespace brq
 
     inline void create_dir( std::string dir, int mode = 0777 )
     {
-        std::pair< std::string, std::string > abs = absolute_prefix( dir );
+        auto abs = absolute_prefix( dir );
         auto split = split_path( abs.second );
         std::vector< std::string > todo;
         for ( auto &x : split )
         {
             todo.emplace_back( x );
-            mkdir_if_missing( abs.first + join_path( todo ), mode );
+            mkdir_if_missing( format( abs.first, join_path( todo ) ).data(), mode );
         }
     }
 
@@ -569,9 +570,9 @@ namespace brq
     };
 #endif
 
-    inline void renameIfExists( std::string src, std::string dst )
+    inline void rename_if_exists( std::string_view src, std::string_view dst )
     {
-        int res = ::rename( src.c_str(), dst.c_str() );
+        int res = ::rename( std::string( src ).c_str(), std::string( dst ).c_str() );
         if ( res < 0 && errno != ENOENT )
             brq::raise< system_error >() << "moving " << src << " to " << dst;
     }
@@ -892,21 +893,21 @@ namespace brq
             return buffer;
         }
 
-        std::string read_file( const std::string &file,
+        std::string read_file( std::string_view file,
                                size_t length = std::numeric_limits< size_t >::max() )
         {
-            std::ifstream in( file.c_str(), std::ios::binary );
+            std::ifstream in( file, std::ios::binary );
             if ( !in.is_open() )
                 brq::raise() << "reading file " << file;
             return read_file( in, length );
         }
 
-        std::string read_file_or( const std::string& file, const std::string& def,
+        std::string read_file_or( std::string_view file, std::string_view def,
                                   size_t length = std::numeric_limits< size_t >::max() )
         {
-            std::ifstream in( file.c_str(), std::ios::binary );
+            std::ifstream in( file, std::ios::binary );
             if ( !in.is_open() )
-                return def;
+                return std::string( def );
             return read_file( in, length );
         }
 
@@ -955,7 +956,7 @@ namespace brq
 
 namespace brq::t_fs
 {
-    using vs = std::vector< std::string >;
+    using vs = std::vector< std::string_view >;
 
     struct TestSplit
     {

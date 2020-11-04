@@ -1997,6 +1997,13 @@ BRICK_SQL_OP( | )
         create( txn, v, view::construct( txn.select( typename view::columns() ) ), as_temp );
     }
 
+    template< typename view >
+    std::enable_if_t< view::is_view > materialize( txn &txn, view v )
+    {
+        std::string name( get_name( v ) );
+        txn.exec( "create temp table " + name + " on commit drop as select * from " + name );
+    }
+
     template< typename schema >
     txn &txn::initdb( schema s, bool clear )
     {

@@ -446,7 +446,7 @@ namespace brq
         pathname = normalize_path( pathname );
 #endif
         std::unique_ptr< struct stat > res( new struct stat );
-        if ( ::stat( std::string( pathname ).c_str(), res.get() ) == -1 ) {
+        if ( ::stat( c_str( pathname ), res.get() ) == -1 ) {
             if ( errno == ENOENT )
                 return std::unique_ptr< struct stat >();
             else
@@ -459,7 +459,7 @@ namespace brq
     inline std::unique_ptr< struct stat > lstat( std::string_view pathname )
     {
         std::unique_ptr< struct stat > res( new struct stat );
-        if ( ::lstat( std::string( pathname ).c_str(), res.get() ) == -1 ) {
+        if ( ::lstat( c_str( pathname ), res.get() ) == -1 ) {
             if ( errno == ENOENT )
                 return std::unique_ptr< struct stat >();
             else
@@ -479,9 +479,9 @@ namespace brq
         {
             // If it does not exist, make it
 #ifdef _WIN32
-            if ( ::_mkdir( stdn:string( dir ).c_str() ) != -1 )
+            if ( ::_mkdir( c_str( dir ) ) != -1 )
 #else
-            if ( ::mkdir( std::string( dir ).c_str(), mode ) != -1 )
+            if ( ::mkdir( c_str( dir ), mode ) != -1 )
 #endif
                 return;
 
@@ -537,7 +537,7 @@ namespace brq
         if ( !dir.empty() )
             create_dir( dir );
 
-        int fd = ::open( file.c_str(), O_CREAT | O_RDONLY, mode );
+        int fd = ::open( c_str( file ), O_CREAT | O_RDONLY, mode );
         if ( fd == -1 )
             raise< system_error >() << "creating file " << file;
         ::close( fd );

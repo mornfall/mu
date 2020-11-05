@@ -409,6 +409,36 @@ namespace brq
         return {};
     }
 
+    struct c_str
+    {
+        const char *_data;
+        bool _owned = false;
+
+        c_str( const c_str & ) = delete;
+        c_str( const c_str && ) = delete;
+
+        explicit c_str( std::string_view sv )
+        {
+            if ( uintptr_t( sv.end() ) % 4096 == 0 || sv.end()[ 0 ] != 0 )
+            {
+                _owned = true;
+                char *data = new char[ sv.size() + 1 ];
+                std::copy( sv.begin(), sv.end(), data );
+                data[ sv.size() ] = 0;
+                _data = data;
+            }
+            else
+                _data = sv.begin();
+        }
+
+        operator const char*() { return _data; }
+
+        ~c_str()
+        {
+            if ( _owned )
+                delete[] _data;
+        }
+    };
 }
 
 namespace t_brq

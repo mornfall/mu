@@ -201,7 +201,7 @@ namespace brq
         return drop_extension( path ) + "." + extension;
     }
 
-    inline std::pair< std::string, std::string > split_filename( std::string path )
+    inline split_view split_filename( std::string_view path )
     {
         auto begin = path.rbegin();
         while ( is_path_separator( *begin ) )
@@ -236,6 +236,7 @@ namespace brq
               // prohibit taking precedence over variadic join
               typename = typename std::enable_if<
                   !std::is_same< It, std::string >::value &&
+                  !std::is_same< It, std::string_view >::value &&
                   !(std::is_pointer< It >::value &&
                     std::is_same< typename std::remove_cv<
                     typename std::remove_pointer< It >::type >::type, char >::value)
@@ -251,12 +252,13 @@ namespace brq
             else if ( !out.empty() && is_path_separator( out.back() ) )
                 out += *begin;
             else
-                out += path_separators[0] + *begin;
+                out += path_separators[0], out += *begin;
         }
         return out;
     }
 
-    inline std::string join_path( std::vector< std::string > paths ) {
+    inline std::string join_path( std::vector< std::string_view > paths )
+    {
         return join_path( paths.begin(), paths.end() );
     }
 
@@ -517,11 +519,11 @@ namespace brq
         brq::raise() << "ensuring path: " << dir << " exists and looks like a dangling symlink";
     }
 
-    inline void create_dir( std::string dir, int mode = 0777 )
+    inline void create_dir( std::string_view dir, int mode = 0777 )
     {
         auto abs = absolute_prefix( dir );
         auto split = split_path( abs.second );
-        std::vector< std::string > todo;
+        std::vector< std::string_view > todo;
         for ( auto &x : split )
         {
             todo.emplace_back( x );
@@ -529,7 +531,7 @@ namespace brq
         }
     }
 
-    inline void create_file( std::string file, int mode = 0666 )
+    inline void create_file( std::string_view file, int mode = 0666 )
     {
         auto dir = split_filename( file ).first;
         if ( !dir.empty() )

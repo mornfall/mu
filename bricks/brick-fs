@@ -898,7 +898,7 @@ namespace brq
         std::string read_file( std::string_view file,
                                size_t length = std::numeric_limits< size_t >::max() )
         {
-            std::ifstream in( file, std::ios::binary );
+            std::ifstream in( c_str( file ), std::ios::binary );
             if ( !in.is_open() )
                 brq::raise() << "reading file " << file;
             return read_file( in, length );
@@ -907,7 +907,7 @@ namespace brq
         std::string read_file_or( std::string_view file, std::string_view def,
                                   size_t length = std::numeric_limits< size_t >::max() )
         {
-            std::ifstream in( file, std::ios::binary );
+            std::ifstream in( c_str( file ), std::ios::binary );
             if ( !in.is_open() )
                 return std::string( def );
             return read_file( in, length );

@@ -155,8 +155,13 @@ namespace brq
 #endif
         rules_t _rules;
         bool _print_tid = false, _print_location = false, _use_syslog = false;
+        std::string _syslog_meta;
 
-        void use_syslog( bool s = true ) { _use_syslog = s; }
+        void use_syslog( bool s = true, std::string meta = "" )
+        {
+            _use_syslog = s;
+            _syslog_meta = meta.empty() ? "" : meta + " ";
+        }
 
         trace()
         {
@@ -250,7 +255,7 @@ namespace brq
             b << "\n";
 #ifdef __unix__
             if ( _use_syslog )
-                ::syslog( level > 0 ? LOG_DEBUG : LOG_INFO, "%s", b.buffer() );
+                ::syslog( level > 0 ? LOG_DEBUG : LOG_INFO, "%s%s", _syslog_meta.c_str(), b.buffer() );
             else
                 ::write( 2, b.buffer(), b.size() );
 #else

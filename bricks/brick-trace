@@ -67,11 +67,12 @@
 #define TRACE(...) static_cast< decltype(__VA_ARGS__, void(0)) >(0)
 #define NOISE(...) static_cast< decltype(__VA_ARGS__, void(0)) >(0)
 #else
-#define TRACE(...) ::brq::trace_fn< true >( 3, BRICK_LOCATION( "" ), __VA_ARGS__ )
-#define NOISE(...) ::brq::trace_fn< true >( 4, BRICK_LOCATION( "" ), __VA_ARGS__ )
+#define TRACE(...) ::brq::trace_fn< true >( 4, BRICK_LOCATION( "" ), __VA_ARGS__ )
+#define NOISE(...) ::brq::trace_fn< true >( 5, BRICK_LOCATION( "" ), __VA_ARGS__ )
 #endif
-#define DEBUG(...) ::brq::trace_fn< false >( 2, BRICK_LOCATION( "" ), __VA_ARGS__ )
-#define INFO(...)  ::brq::trace_fn< false >( 1, BRICK_LOCATION( "" ), __VA_ARGS__ )
+#define DEBUG(...) ::brq::trace_fn< false >( 3, BRICK_LOCATION( "" ), __VA_ARGS__ )
+#define INFO(...)  ::brq::trace_fn< false >( 2, BRICK_LOCATION( "" ), __VA_ARGS__ )
+#define WARN(...)  ::brq::trace_fn< false >( 1, BRICK_LOCATION( "" ), __VA_ARGS__ )
 #define ERROR(...) ::brq::trace_fn< false >( 0, BRICK_LOCATION( "" ), __VA_ARGS__ )
 
 namespace brq
@@ -165,11 +166,11 @@ namespace brq
                 _print_location = true;
             }
             else
-                add_rule( "+", 1, 0 ); /* print info-level messages by default */
+                add_rule( "+", 2, 0 ); /* print info-level messages by default */
         }
 
-        static constexpr std::array< const char *, 5 > levels =
-            { "error", "info", "debug", "trace", "noise" };
+        static constexpr std::array< const char *, 6 > levels =
+            { "error", "warning", "info", "debug", "trace", "noise" };
 
         static std::string_view level( int i ) { return levels[ i ]; }
         static int level( std::string_view name )

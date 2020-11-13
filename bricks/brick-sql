@@ -1771,6 +1771,27 @@ BRICK_SQL_OP( | )
         where_clause< delete_from, we_t > where( const we_t &we ) { return { *this, we }; }
     };
 
+    template< typename q_t, typename... qs_t >
+    struct select_union : query_head<>
+    {
+        cons_list_t< q_t, qs_t... > qs;
+
+        select_union( q_t q, qs_t... qs ) : query_head( q.txn() ), qs( q, qs... ) {}
+
+        template< typename stream >
+        void print( stream &s, int &id ) const
+        {
+            bool first = true;
+            auto one = [&]( const auto &q )
+            {
+                if ( !first ) s << " union ";
+                q.print( s, id );
+                first = false;
+            };
+            qs.each( one );
+        }
+    };
+
     struct txn
     {
         sql::conn &_conn;

@@ -183,22 +183,29 @@ namespace brq
         return false;
     }
 
-    inline std::pair< std::string, std::string > split_extension( std::string path )
+    inline split_view split_extension( std::string_view path )
     {
         auto pos = path.rfind( '.' );
         if ( pos == std::string::npos )
-            return std::make_pair( path, std::string() );
-        return std::make_pair( path.substr( 0, pos ), path.substr( pos ) );
+            return { path, {} };
+        return { path.substr( 0, pos ), path.substr( pos ) };
     }
 
-    inline std::string take_extension( std::string path ) { return split_extension( path ).second; }
-    inline std::string drop_extension( std::string path ) { return split_extension( path ).first; }
+    inline std::string_view take_extension( std::string_view path )
+    {
+        return split_extension( path ).second;
+    }
+
+    inline std::string_view drop_extension( std::string_view path )
+    {
+        return split_extension( path ).first;
+    }
 
     inline std::string replace_extension( std::string path, std::string extension )
     {
         if ( !extension.empty() && extension[0] == '.' )
-            return drop_extension( path ) + extension;
-        return drop_extension( path ) + "." + extension;
+            return format( drop_extension( path ), extension ).buffer();
+        return format( drop_extension( path ), ".", extension ).buffer();
     }
 
     inline split_view split_filename( std::string_view path )

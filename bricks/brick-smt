@@ -160,23 +160,23 @@ namespace brq
             case op::fp_div:     return { "fp.div", 2, 0, 0, true, smt_op_other };
             case op::fp_rem:     return { "fp.rem", 2, 0, 0, true, smt_op_other };
 
-            case op::fp_true:    return { "fp.true",  2, 0, 1, true, smt_op_other };
-            case op::fp_false:   return { "fp.false", 2, 0, 1, true, smt_op_other };
-            case op::fp_ord:     return { "fp.ord",   2, 0, 1, true, smt_op_other };
-            case op::fp_une:     return { "fp.une",   2, 0, 1, true, smt_op_other };
-            case op::fp_one:     return { "fp.one",   2, 0, 1, true, smt_op_other };
-            case op::fp_uno:     return { "fp.uno",   2, 0, 1, true, smt_op_other };
-            case op::fp_oeq:     return { "fp.oeq",   2, 0, 1, true, smt_op_other };
-            case op::fp_ueq:     return { "fp.ueq",   2, 0, 1, true, smt_op_other };
+            case op::fp_true:    return { "fp.true",  2, 0, 1, true, smt_op_compare };
+            case op::fp_false:   return { "fp.false", 2, 0, 1, true, smt_op_compare };
+            case op::fp_ord:     return { "fp.ord",   2, 0, 1, true, smt_op_compare };
+            case op::fp_une:     return { "fp.une",   2, 0, 1, true, smt_op_compare };
+            case op::fp_one:     return { "fp.one",   2, 0, 1, true, smt_op_compare };
+            case op::fp_uno:     return { "fp.uno",   2, 0, 1, true, smt_op_compare };
+            case op::fp_oeq:     return { "fp.oeq",   2, 0, 1, true, smt_op_compare };
+            case op::fp_ueq:     return { "fp.ueq",   2, 0, 1, true, smt_op_compare };
 
-            case op::fp_ule:     return { "fp.ule",   2, 0, 1, true, smt_op_other };
-            case op::fp_ult:     return { "fp.ult",   2, 0, 1, true, smt_op_other };
-            case op::fp_uge:     return { "fp.uge",   2, 0, 1, true, smt_op_other };
-            case op::fp_ugt:     return { "fp.egt",   2, 0, 1, true, smt_op_other };
-            case op::fp_ole:     return { "fp.sle",   2, 0, 1, true, smt_op_other };
-            case op::fp_olt:     return { "fp.slt",   2, 0, 1, true, smt_op_other };
-            case op::fp_oge:     return { "fp.sge",   2, 0, 1, true, smt_op_other };
-            case op::fp_ogt:     return { "fp.sgt",   2, 0, 1, true, smt_op_other };
+            case op::fp_ule:     return { "fp.ule",   2, 0, 1, true, smt_op_compare };
+            case op::fp_ult:     return { "fp.ult",   2, 0, 1, true, smt_op_compare };
+            case op::fp_uge:     return { "fp.uge",   2, 0, 1, true, smt_op_compare };
+            case op::fp_ugt:     return { "fp.egt",   2, 0, 1, true, smt_op_compare };
+            case op::fp_ole:     return { "fp.sle",   2, 0, 1, true, smt_op_compare };
+            case op::fp_olt:     return { "fp.slt",   2, 0, 1, true, smt_op_compare };
+            case op::fp_oge:     return { "fp.sge",   2, 0, 1, true, smt_op_compare };
+            case op::fp_ogt:     return { "fp.sgt",   2, 0, 1, true, smt_op_compare };
 
             case op::bv_extract: return { "extract", 1, 2, 0, false, smt_op_other };
             case op::bv_concat:  return { "concat",  2, 0, 0, false, smt_op_other };

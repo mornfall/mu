@@ -953,11 +953,7 @@ namespace brq::sql
         cons_list_t< args... > _args;
         bool _parens = false;
 
-        template< typename... Ts >
-        where_expr( Ts... ts )
-            : _args( ts... )
-        {}
-
+        where_expr( args... as ) : _args( as... ) {}
         where_expr() = default;
 
         template< typename stream >

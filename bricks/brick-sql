@@ -331,7 +331,7 @@ namespace brq::sql
             s << " ";
         }
         else if constexpr ( V::is_function )
-            v.print( s, id );
+            s << get_name( v, 0 ), v.print( s, id );
         else if constexpr ( V::is_column )
             s << v.column_name( v ) << "::" << sql_type< typename V::type >();
         else if constexpr ( V::is_query )
@@ -386,13 +386,18 @@ namespace brq::sql
     template< typename T, bool call = false >
     struct constant : column< T, false >
     {
-        template< typename CT >
-        static std::string_view column_name( const CT &ct )
+        static constexpr const bool is_function = true;
+
+        template< typename stream >
+        void print( stream &s, int & ) const
         {
-            static std::string n = std::string( get_name( ct, false ) ) +
-                ( call ? "()::" : "::" ) + sql_type< T >();
-            return n;
+            if ( call )
+                s << "()";
+            if constexpr ( !std::is_same_v< T, void > )
+                s << "::" << sql_type< T >();
         }
+
+        template< typename stmt > void bind( stmt &s ) const {}
     };
 
     template< typename tab, typename col >
@@ -425,8 +430,8 @@ namespace brq::sql
     template< typename T >
     using unqualify = std::conditional_t< T::is_qualified, typename T::bare, T >;
 
-    template< template< typename... > class self, typename... args >
-    struct function : cons_list_t< args... >::car_t
+    template< typename type, typename... args >
+    struct function : column< type >
     {
         static constexpr bool is_qualified = true;
         static constexpr bool is_function  = true;
@@ -435,18 +440,15 @@ namespace brq::sql
         using bare = typename args_t::car_t;
         args_t _args;
 
-        template< typename... Ts >
-        function( Ts... ts )
-            : args_t::car_t( args_t( ts... ).car() ), _args( ts... )
-        {}
+        function( args... ts ) : _args( ts... ) {}
+        function() = default;
 
         template< typename stream >
         void print( stream &s, int &id ) const
         {
-            s << get_name< self< args... > >( 0 ) << "( ";
+            s << "( ";
             sql::print( s, _args, id );
             s << " )";
-            using type = typename self< args... >::type;
             if constexpr ( !std::is_same_v< type, void > )
                 s << "::" << sql_type< type >();
         }
@@ -458,24 +460,29 @@ namespace brq::sql
         }
     };
 
-    template< typename col > struct count : function< count, col >
+    template< typename... cols >
+    using endomorphism = function< typename cons_list_t< cols... >::car_t::type, cols... >;
+
+    template< typename col > struct count : function< int32_t, col >
     {
-        explicit count( const col &c = col() ) : function< count, col >( c ) {}
-        using type = int32_t;
+        explicit count( const col &c = col() ) : function< int32_t, col >( c ) {}
     };
 
-    template< typename col > struct min   : function< min, col >   { using type = typename col::type; };
-    template< typename col > struct max   : function< max, col >   { using type = typename col::type; };
-    template< typename col > struct sum   : function< sum, col >
+    template< typename col > struct min   : endomorphism< col > {};
+    template< typename col > struct max   : endomorphism< col > {};
+    template< typename col > struct sum   : endomorphism< col >
     {
-        explicit sum( const col &c = col() ) : function< sum, col >( c ) {}
-        using type = typename col::type;
+        explicit sum( const col &c = col() ) : endomorphism< col >( c ) {}
     };
-    template< typename col > struct every : function< every, col > { using type = typename col::type; };
 
-    template< typename col, typename type > struct cast_to : function< cast_to, col >
+    template< typename col > struct every : endomorphism< col > {};
+
+    template< typename col, typename type > struct cast_to : function< type, col >
     {
-        using function< cast_to, col >::function;
+        static constexpr const bool is_query = true;
+        static constexpr const bool is_column = false;
+        static constexpr const bool is_function = false;
+        using function< type, col >::function;
 
         template< typename stream >
         void print( stream &s, int &id ) const
@@ -495,27 +502,25 @@ namespace brq::sql
         cast_to< col, T > to() { return { _col }; }
     };
 
-    template< typename col, typename... vals >
-    struct coalesce : function< coalesce, col, vals... >
+    template< typename... cols >
+    struct coalesce : endomorphism< cols... >
     {
-        coalesce( const col &c, const vals & ... v ) : function< coalesce, col, vals... >( c, v... ) {}
-        using type = typename col::type;
+        coalesce( const cols & ... v ) : endomorphism< cols... >( v... ) {}
     };
 
     template< typename col >
-    struct substring : function< substring, col >
+    struct substring : endomorphism< col >
     {
         std::string _pat;
 
-        substring( const col &c, std::string_view p ) : function< substring, col >( c ), _pat( p ) {}
-        using type = typename col::type;
+        substring( const col &c, std::string_view p ) : endomorphism< col >( c ), _pat( p ) {}
 
         template< typename stream >
         void print( stream &s, int &id ) const
         {
-            s << "substring( ";
+            s << "( ";
             sql::print( s, this->_args, id );
-            s << " from '" << _pat << "' )::" << sql_type< type >();
+            s << " from '" << _pat << "' )::" << sql_type< typename col::type >();
         }
     };
 
@@ -941,6 +946,8 @@ namespace brq::sql
         static constexpr bool is_query = false;
         static constexpr bool is_enum = false;
         static constexpr bool is_function = false;
+        static constexpr bool is_asc = true;
+
         using type = void; /* we don't know :( */
 
         cons_list_t< args... > _args;
@@ -998,6 +1005,7 @@ namespace brq::sql
         static constexpr bool is_query = false;
         static constexpr bool is_function = false;
         static constexpr bool is_expr = true;
+        static constexpr bool is_asc = true;
 
         brq::cons_list_t< cols... > _cols;
         tuple( cols... c ) : _cols( c... ) {}
@@ -1146,14 +1154,9 @@ BRICK_SQL_OP( | )
             auto print_one = [&]( auto &c )
             {
                 s << ( count++ ? ", " : "" );
-                if constexpr ( std::remove_reference_t< decltype( c ) >::is_column )
-                {
-                    s << std::string( c.column_name( c ) );
-                    if ( !c.is_asc )
-                        s << " desc ";
-                }
-                else
-                    c.print( s, id );
+                sql::print( s, c, id );
+                if ( !c.is_asc )
+                    s << " desc ";
             };
             l.each( print_one );
         }

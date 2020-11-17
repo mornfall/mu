@@ -400,6 +400,8 @@ namespace brq::sql
         template< typename stmt > void bind( stmt &s ) const {}
     };
 
+    struct row_number : constant< void, true > {};
+
     template< typename tab, typename col >
     struct in_table : col
     {

@@ -1043,6 +1043,15 @@ BRICK_SQL_OP( % )
 BRICK_SQL_OP( & )
 BRICK_SQL_OP( | )
 
+    template< typename F, typename P, typename O >
+    auto over( F function, P partition, O order )
+    {
+        where_expr window{ where_operator( "partition by" ), partition,
+                           where_operator( "order by" ), order };
+        set_nested( window, primary );
+        return where_expr{ function, where_operator( "over" ), window };
+    }
+
 #undef BRICK_SQL_OP
 
     template< typename A >

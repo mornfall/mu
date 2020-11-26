@@ -636,10 +636,10 @@ namespace brq::sql
             PQsetNoticeProcessor( _handle, msg, this );
         }
 
-        void exec( std::string sql )
+        void exec( std::string_view sql )
         {
             _notices.clear();
-            auto result = PQexec( handle(), sql.c_str() );
+            auto result = PQexec( handle(), c_str( sql ) );
             if ( PQresultStatus( result ) != PGRES_COMMAND_OK )
                 raise< error >() << "executing " << sql << ": " << errmsg();
         }
@@ -1844,7 +1844,7 @@ BRICK_SQL_OP( | )
             return *this;
         }
 
-        txn &exec( std::string q )
+        txn &exec( std::string_view q )
         {
             open();
             stmt<> s( _conn, q );

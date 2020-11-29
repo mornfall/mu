@@ -1382,7 +1382,7 @@ BRICK_SQL_OP( | )
         void print( stream &s, int &id ) const
         {
             this->_query.print( s, id );
-            s << _sql;
+            s << " " << _sql;
         }
 
         template< typename table >

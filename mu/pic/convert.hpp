@@ -136,6 +136,11 @@ namespace umd::pic::convert
             joins j;
             bool dashed[ 4 ] = { false };
 
+            if ( processed.count( p ) )
+                return nullptr;
+            else
+                processed.insert( p );
+
             auto nw = p;
             auto [ ne, jn ] = boundary( p, east,   mj[ 0 ], false, dashed + 0 );
             auto [ sw, je ] = boundary( p, south,  mj[ 1 ], true,  dashed + 3 );
@@ -163,6 +168,7 @@ namespace umd::pic::convert
 
             double w = ne.x() - nw.x();
             double h = sw.y() - nw.y();
+
             auto obj = group.add< pic::box >( xpitch * (   p.x() + w / 2 ),
                                               ypitch * ( - p.y() - h / 2 ),
                                               xpitch * w, ypitch * h );
@@ -173,6 +179,26 @@ namespace umd::pic::convert
 
             std::u32string txt;
             int last_x = p.x(), last_y = 0;
+
+            for ( auto p = ne; p != se; p = p + reader::point( 0, 1 ) )
+                if ( grid[ p ].attach( east ) )
+                    if ( auto joined = box( p ) )
+                    {
+                        if ( obj->height() > joined->height() )
+                            joined->set_visible( west, false );
+                        else
+                            obj->set_visible( east, false );
+                    }
+
+            for ( auto p = sw; p != se; p = p + reader::point( 1, 0 ) )
+                if ( grid[ p ].attach( south ) )
+                    if ( auto joined = box( p ) )
+                    {
+                        if ( obj->width() > joined->width() )
+                            joined->set_visible( north, false );
+                        else
+                            obj->set_visible( south, false );
+                    }
 
             for ( int y = p.y(); y <= p.y() + h; ++y )
                 for ( int x = p.x(); x <= p.x() + w; ++x )
@@ -198,26 +224,6 @@ namespace umd::pic::convert
             if ( !txt.empty() )
                 group.add< pic::label >( xpitch * (   p.x() + w / 2 ),
                                          ypitch * ( - p.y() - 1.08 * h / 2 ), txt );
-
-            for ( auto p = ne; p != se; p = p + reader::point( 0, 1 ) )
-                if ( grid[ p ].attach( east ) )
-                {
-                    auto joined = box( p );
-                    if ( obj->height() > joined->height() )
-                        joined->set_visible( west, false );
-                    else
-                        obj->set_visible( east, false );
-                }
-
-            for ( auto p = sw; p != se; p = p + reader::point( 1, 0 ) )
-                if ( grid[ p ].attach( south ) )
-                {
-                    auto joined = box( p );
-                    if ( obj->width() > joined->width() )
-                        joined->set_visible( north, false );
-                    else
-                        obj->set_visible( south, false );
-                }
 
             return obj;
         }

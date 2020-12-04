@@ -627,7 +627,8 @@ namespace umd::doc
         try_directive();
         try_table();
         while ( try_dispmath() );
-        try_picture();
+        if ( !in_code )
+            try_picture();
         try_nested();
 
         if ( todo.empty() )

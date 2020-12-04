@@ -65,9 +65,17 @@ namespace umd::doc
             return l.substr( 0, l.size() - v.size() - 1 );
         }
 
+        static int count( sv s, char32_t ch )
+        {
+            int count = 0;
+            while ( !s.empty() && s[ 0 ] == ch )
+                s.remove_prefix( 1 ), ++ count;
+            return count;
+        }
+
         static int newline( sv s )  { return s[ 0 ] == U'\n'; }
         static int space( sv s )    { return s[ 0 ] == U' ' || s[ 0 ] == U'\n'; }
-        static int parbreak( sv s ) { return s[ 0 ] == U'\n' && s.size() >= 2 && s[ 1 ] == U'\n' ? 2 : 0; }
+        static int parbreak( sv s ) { int c = count( s, U'\n' ); return c >= 2 ? c : 0; }
 
         std::u32string_view fetch_line() { return fetch( todo, newline ); }
         std::u32string_view fetch_word() { return fetch( todo, space ); }

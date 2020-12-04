@@ -73,6 +73,8 @@ namespace umd::doc
         virtual void em_stop() {}
         virtual void tt_start() {}
         virtual void tt_stop() {}
+        virtual void bf_start() {}
+        virtual void bf_stop() {}
         virtual void math_start() = 0;
         virtual void math_stop() = 0;
         virtual void small_start() {}

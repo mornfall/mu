@@ -111,6 +111,8 @@ namespace umd::doc
         virtual void em_stop()  { out.emit( "}" ); }
         virtual void tt_start() { out.emit( "{\\code{}" ); }
         virtual void tt_stop()  { out.emit( "}" ); }
+        virtual void bf_start() { out.emit( "{\\bf\\realbf{}" ); }
+        virtual void bf_stop()  { out.emit( "}" ); }
 
         virtual void small_start() { out.emit( "{\\ss{}\\smaller" ); }
         virtual void small_stop() { out.emit( "}" ); }

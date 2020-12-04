@@ -221,6 +221,8 @@ namespace umd::doc
                 case U'›': if ( !in_math ) flush(), w.tt_stop(); break;
                 case U'«': flush(); w.em_start(); break;
                 case U'»': flush(); w.em_stop(); break;
+                case U'❮': flush(); w.bf_start(); break;
+                case U'❯': flush(); w.bf_stop(); break;
                 case U'⟦':
                     if ( !in_math )
                         flush(), w.math_start();

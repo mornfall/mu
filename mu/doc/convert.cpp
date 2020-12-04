@@ -305,7 +305,9 @@ namespace umd::doc
             auto par = fetch_par();
             if ( par[ 0 ] == head )
             {
-                w.footnote( par.substr( 1 ) );
+                w.footnote_start();
+                emit_text( par.substr( 1 ) );
+                w.footnote_stop();
                 break;
             }
         }

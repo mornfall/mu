@@ -111,7 +111,8 @@ namespace umd::doc
         virtual void code_stop() = 0;
         virtual void quote_start() {}
         virtual void quote_stop() {}
-        virtual void footnote( sv body ) = 0;
+        virtual void footnote_start() = 0;
+        virtual void footnote_stop() = 0;
 
         /* paragraphs & paging */
         virtual void paragraph() {}
@@ -160,7 +161,8 @@ namespace umd::doc
         virtual void code_start( sv ) {}
         virtual void code_line( sv ) {}
         virtual void code_stop() {}
-        virtual void footnote( sv ) {}
+        virtual void footnote_start() {}
+        virtual void footnote_stop() {}
     };
 
 }

@@ -210,7 +210,7 @@ namespace brq
 
         struct iterator
         {
-            using value_type = value_type;
+            using value_type = generator::value_type;
             using difference_type = ssize_t;
             using pointer = value_type *;
             using reference = value_type &;

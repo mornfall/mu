@@ -210,6 +210,7 @@ namespace brq
 
         struct iterator
         {
+            using value_type = value_type;
             gen_t _gen;
             state_t _state;
 

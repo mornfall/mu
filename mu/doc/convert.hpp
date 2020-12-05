@@ -3,6 +3,7 @@
 #include "pic/writer.hpp"
 #include <string_view>
 #include <stack>
+#include <cassert>
 
 namespace umd::doc
 {

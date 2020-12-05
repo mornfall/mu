@@ -813,7 +813,8 @@ namespace brq::sql
 
         using iterator = sql::iterator< cols... >;
         iterator begin() { return iterator( _result, 0 ); }
-        iterator end()   { return iterator( _result, PQntuples( _result ) ); }
+        iterator end()   { return iterator( _result, size() ); }
+        int size() const { return PQntuples( _result ); }
 
         row< cols... > result()
         {

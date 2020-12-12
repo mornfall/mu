@@ -1845,6 +1845,34 @@ BRICK_SQL_OP( | )
             return *this;
         }
 
+        struct savepoint
+        {
+            txn *_txn;
+            std::string _name;
+
+            savepoint( txn *t, std::string_view name ) : _txn( t ), _name( name )
+            {
+                _txn->exec( brq::format( "savepoint ", name ).buffer() );
+            }
+
+            ~savepoint()
+            {
+                DEBUG( "~savepoint", std::uncaught_exceptions() );
+                if ( std::uncaught_exceptions() )
+                    rollback();
+            }
+
+            void rollback()
+            {
+                _txn->exec( brq::format( "rollback to savepoint ", _name ).buffer() );
+            }
+        };
+
+        savepoint save( std::string_view name = "save_except" )
+        {
+            return { this, name };
+        }
+
         txn &exec( std::string_view q )
         {
             open();

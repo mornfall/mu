@@ -498,6 +498,14 @@ namespace brq::sql
     {
         explicit sum( const col &c = col() ) : endomorphism< col >( c ) {}
     };
+    template< typename col > struct distinct : endomorphism< col >
+    {
+        explicit distinct( const col &c = col() ) : endomorphism< col >( c ) {}
+    };
+    template< typename col, typename... cols > struct greatest : endomorphism< cols... >
+    {
+        using type = typename col::type;
+    };
 
     template< typename col > struct every : endomorphism< col > {};
 

@@ -1565,6 +1565,9 @@ BRICK_SQL_OP( | )
         template< typename table, typename... joins >
         auto from() { return sql_join< joins... >( select_tab< select_cols, table >( *this ) ); }
 
+        template< typename we_t >
+        where_clause< select_cols, we_t > where( const we_t &we ) { return { *this, we }; }
+
         template< typename... ct, typename... et >
         select_distinct< select_cols, ct..., et... > distinct( et... e )
         {
@@ -2080,7 +2083,9 @@ BRICK_SQL_OP( | )
         int id = -1;
         s << ( as_temp ? "create temp table " : "create view " )
           << get_name( v ) << " ";
-        print_columns( s, typename view::columns::template map_t< unqualify >(), "( ", " )" );
+        using cols = typename view::columns::template map_t< unqualify >;
+        if ( !cols::empty )
+            print_columns( s, cols(), "( ", " )" );
         s << ( as_temp ? " on commit drop as " : " with ( security_barrier ) as " );
 
         q.print( s, id );
@@ -2091,9 +2096,16 @@ BRICK_SQL_OP( | )
     }
 
     template< typename view >
-    std::enable_if_t< view::is_view > create( txn &txn, view v, bool as_temp = false )
+    std::enable_if_t< view::is_view && !view::columns::empty >
+    create( txn &txn, view v, bool as_temp = false )
     {
         create( txn, v, view::construct( txn.select( typename view::columns() ) ), as_temp );
+    }
+
+    template< typename view >
+    std::enable_if_t< view::is_view && view::columns::empty > create( txn &txn, view v )
+    {
+        create( txn, v, txn.select().where( false ) );
     }
 
     template< typename view >

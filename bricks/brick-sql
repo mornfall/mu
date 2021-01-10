@@ -1490,7 +1490,7 @@ BRICK_SQL_OP( | )
             auto fmt = [&]( auto v )
             {
                 using view = decltype( v );
-                s << ( i++ ? ", " : "with " );
+                s << ( i++ ? ", " : "with recursive " );
                 s << get_name( v ) << " ";
                 print_columns( s, typename view::columns::template map_t< unqualify >(), "( ", " )" );
                 s << " as ( ";

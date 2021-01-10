@@ -1154,7 +1154,8 @@ BRICK_SQL_OP( | )
                      const char *delim = ", ", const char *start = "", const char *end = "" )
     {
         bool first = true;
-        l.each( [&]( const auto &c ) { s << ( first ? start : delim ) << c; first = false; } );
+        s << start;
+        l.each( [&]( const auto &c ) { s << ( first ? " " : delim ) << c; first = false; } );
         s << end;
     }
 

@@ -492,22 +492,19 @@ namespace brq::sql
         explicit count( const col &c = col() ) : function< int32_t, col >( c ) {}
     };
 
-    template< typename col > struct min   : endomorphism< col > {};
-    template< typename col > struct max   : endomorphism< col > {};
-    template< typename col > struct sum   : endomorphism< col >
-    {
-        explicit sum( const col &c = col() ) : endomorphism< col >( c ) {}
-    };
-    template< typename col > struct distinct : endomorphism< col >
-    {
-        explicit distinct( const col &c = col() ) : endomorphism< col >( c ) {}
-    };
-    template< typename col, typename... cols > struct greatest : endomorphism< cols... >
-    {
-        using type = typename col::type;
-    };
+#define BRICK_SQL_ENDO(n) \
+    template< typename... cols > struct n : endomorphism< cols... > \
+    { explicit n( cols... cs ) : endomorphism< cols... >( cs... ) {} n() = default; }
 
-    template< typename col > struct every : endomorphism< col > {};
+    BRICK_SQL_ENDO( min );
+    BRICK_SQL_ENDO( max );
+    BRICK_SQL_ENDO( sum );
+    BRICK_SQL_ENDO( greatest );
+    BRICK_SQL_ENDO( least );
+    BRICK_SQL_ENDO( distinct );
+    BRICK_SQL_ENDO( every );
+
+#undef BRICK_SQL_ENDO
 
     template< typename col, typename type > struct cast_to : function< type, col >
     {

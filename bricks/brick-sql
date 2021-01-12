@@ -1827,8 +1827,10 @@ BRICK_SQL_OP( | )
     struct select_union : query_head<>
     {
         cons_list_t< q_t, qs_t... > qs;
+        bool all = false;
 
         select_union( q_t q, qs_t... qs ) : query_head( q.txn() ), qs( q, qs... ) {}
+        select_union( bool a, q_t q, qs_t... qs ) : select_union( q, qs... ) { all = a; }
 
         template< typename stream >
         void print( stream &s, int &id ) const
@@ -1836,7 +1838,7 @@ BRICK_SQL_OP( | )
             bool first = true;
             auto one = [&]( const auto &q )
             {
-                if ( !first ) s << " union ";
+                if ( !first ) s << " union " << ( all ? "all " : "" );
                 q.print( s, id );
                 first = false;
             };

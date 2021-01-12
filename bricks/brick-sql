@@ -772,7 +772,8 @@ namespace brq::sql
         template< typename T >
         void fetch_raw( T &t )
         {
-            ASSERT( !PQgetisnull( _result, _row, _col ) );
+            ASSERT( !PQgetisnull( _result, _row, _col ), "row =", _row, "col =", _col );
+            ASSERT_EQ( PQgetlength( _result, _row, _col ), sizeof( T ) );
             std::memcpy( &t, PQgetvalue( _result, _row, _col ), sizeof( T ) );
         }
 

@@ -1511,6 +1511,11 @@ BRICK_SQL_OP( | )
         auto from() { return sql_join< joins... >( select_tab< select_with, table >( *this ) ); }
     };
 
+    template< typename... views, typename query > auto with( query q )
+    {
+        return select_with< query, views... >( q );
+    };
+
     template< typename select, typename... cols >
     struct select_distinct : extend< select >
     {

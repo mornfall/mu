@@ -1359,7 +1359,9 @@ BRICK_SQL_OP( | )
                     else if constexpr ( !tabs_left::cdr_t::empty )
                         return print< stream, typename tabs_left::cdr_t >( s, id );
                     else
-                        brq::raise< error >() << "could not find join key";
+                        brq::raise< error >() << "could not find join key on "
+                                              << get_name( tab_left() ) << " x "
+                                              << get_name( tab_right() );
                 }
             }
 

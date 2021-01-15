@@ -34,6 +34,9 @@ namespace umd::doc
         void meta( sv key, sv value ) override { _meta[ key ] = value; }
         void meta_end() override
         {
+            if ( _meta[ U"naked" ] == U"yes" )
+                return;
+
             out.emit( "<!DOCTYPE html>" );
             out.emit( "<html lang=\"", _meta[ U"lang" ], "\"><head>" );
             out.emit( "<meta charset=\"UTF-8\">" );
@@ -59,7 +62,11 @@ namespace umd::doc
         }
 
         void html( sv raw ) override { out.emit( raw ); }
-        void end() override { out.emit( "</div></body></html>" ); }
+        void end() override
+        {
+            if ( _meta[ U"naked" ] != U"yes" )
+                out.emit( "</div></body></html>" );
+        }
 
         void text( std::u32string_view t ) override
         {

@@ -35,7 +35,7 @@ namespace umd::doc
         void meta_end() override
         {
             if ( _meta[ U"naked" ] == U"yes" )
-                return;
+                return out.emit( "<div>" );
 
             out.emit( "<!DOCTYPE html>" );
             out.emit( "<html lang=\"", _meta[ U"lang" ], "\"><head>" );
@@ -66,6 +66,8 @@ namespace umd::doc
         {
             if ( _meta[ U"naked" ] != U"yes" )
                 out.emit( "</div></body></html>" );
+            else
+                out.emit( "</div>" );
         }
 
         void text( std::u32string_view t ) override

@@ -2032,9 +2032,12 @@ BRICK_SQL_OP( | )
     std::enable_if_t< enum_t::is_enum > create( txn &txn, enum_t )
     {
         string_builder s;
-        s << "create type " << get_name( enum_t() ) << " as enum";
-        print_list( s, typename enum_t::values().map( [&]( auto c ) { return get_name( c, '\'' ); } ),
-                    ", ", "(", ")" );
+        s << "do $$ begin if not exists (select * from pg_type where pg_type.typname = '"
+          << get_name( enum_t(), 0 ) << "') then create type \""
+          << get_name( enum_t(), 0 ) << "\" as enum ";
+        print_list( s, typename enum_t::values().map( [&]( auto c ) { return get_name( c, 0 ); } ),
+                    "', '", "('", "')" );
+        s << "; end if; end; $$";
         txn.exec( s.buffer() );
     }
 

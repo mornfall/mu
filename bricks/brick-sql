@@ -209,27 +209,40 @@ namespace brq::sql
         fixnum operator/( int n ) const { return fixnum( value / n, scale ); }
     };
 
+    struct category_flags
+    {
+        static constexpr bool is_column   = false;
+        static constexpr bool is_enum     = false;
+        static constexpr bool is_expr     = false;
+        static constexpr bool is_query    = false;
+        static constexpr bool is_table    = false;
+        static constexpr bool is_view     = false;
+        static constexpr bool is_function = false;
+    };
+
     template< typename T >
-    struct enum_value
+    struct enum_value : category_flags
     {
         using type = T;
         static constexpr bool is_enum = true;
-        static constexpr bool is_column = false;
-        static constexpr bool is_query = false;
     };
 
     template< typename... vals >
-    struct enum_type
+    struct enum_type : category_flags
     {
         using values = cons_list_t< vals... >;
         static constexpr bool is_enum  = true;
-        static constexpr bool is_table = false;
-        static constexpr bool is_view  = false;
+        static constexpr bool is_expr  = true;
 
         typename values::co _value;
         template< typename X >
         enum_type( const X &x ) : _value( x ) {}
-        enum_type() = default;
+        enum_type() : _value( typename values::car_t() ) {}
+
+        friend string_builder &operator<<( string_builder &s, const enum_type &v )
+        {
+            return s << *v._value.match( []( const auto &d ) { return get_name( d, 0 ); } );
+        }
     };
 
     struct decimal {};
@@ -349,7 +362,7 @@ namespace brq::sql
         else if constexpr ( V::is_query )
             s << "( ", v.print( s, id ), s << " )";
         else if constexpr ( V::is_enum )
-            s << get_name( v, '\'' );
+            s << "'" << get_name( v, 0 ) << "'";
         else
             v.print( s, id );
     }
@@ -2006,7 +2019,7 @@ BRICK_SQL_OP( | )
     template< typename enum_t >
     std::enable_if_t< enum_t::is_enum > drop( txn &t, enum_t )
     {
-        t.exec() << "drop type if exists " << get_name( enum_t() ) << " cascade";
+        t.exec() << "drop type if exists \"" << get_name( enum_t(), 0 ) << "\" cascade";
     };
 
     template< typename view >

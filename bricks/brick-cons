@@ -39,7 +39,7 @@ namespace brq
 
         template< typename F >     void each( const F & ) const {}
         template< typename F >     nil map( F ) const { return {}; }
-        template< typename... Fs > auto match( Fs... ) { return std::nullopt; }
+        template< typename... Fs > auto match( Fs... ) const { return std::nullopt; }
         template< typename L >     auto cat( const L &l ) const { return l; }
         template< typename T >     static constexpr bool has = false;
 
@@ -282,10 +282,34 @@ namespace brq
                 return cdr.template get< arg_t >();
         }
 
-        auto match() { return std::nullopt; }
+        auto match() const { return std::nullopt; }
 
         template< typename F, typename... Fs >
         auto match( F f, Fs... fs )
+        {
+            if constexpr ( std::is_invocable_v< F, car_t & > )
+            {
+                using R = std::invoke_result_t< F, car_t & >;
+                using R_ = std::conditional_t< std::is_same_v< R, void >, void, std::optional< R > >;
+                if ( _is_car )
+                    return R_( f( car ) );
+                else
+                    return R_( cdr.match( f, fs... ) );
+            }
+            else
+            {
+                using R1 = decltype( match( fs... ) );
+                using R2 = decltype( cdr.match( f, fs... ) );
+                using R = std::conditional_t< std::is_same_v< R1, std::nullopt_t >, R2, R1 >;
+                if ( _is_car )
+                    return R( match( fs... ) );
+                else
+                    return R( cdr.match( f, fs... ) );
+            }
+        }
+
+        template< typename F, typename... Fs >
+        auto match( F f, Fs... fs ) const
         {
             if constexpr ( std::is_invocable_v< F, car_t & > )
             {

@@ -1171,7 +1171,7 @@ BRICK_SQL_OP( | )
     {
         bool first = true;
         s << start;
-        l.each( [&]( const auto &c ) { s << ( first ? " " : delim ) << c; first = false; } );
+        l.each( [&]( const auto &c ) { s << ( first ? "" : delim ) << c; first = false; } );
         s << end;
     }
 

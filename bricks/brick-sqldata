@@ -1,0 +1,599 @@
+// -*- mode: C++; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+
+/*
+ * Copyright (C) 2019 Petr Rockai <code@fixp.eu>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#pragma once
+#include "brick-assert"
+#include "brick-string"
+#include "brick-cons"
+#include "brick-except"
+
+#include <memory>
+#include <vector>
+#include <set>
+#include <cxxabi.h>
+#include <codecvt>
+
+namespace brq::sql
+{
+    template< typename T >
+    std::string_view get_name( char quote = '"' )
+    {
+        static std::string name;
+        if ( name.empty() )
+        {
+            int stat;
+            char *dem = abi::__cxa_demangle( typeid( T ).name(), nullptr, nullptr, &stat );
+            if ( strchr( dem, '<' ) )
+                *strchr( dem, '<' ) = 0;
+            name = strchr( dem, ':' ) ? strrchr( dem, ':' ) + 1 : dem;
+            NOISE( dem, "→", name );
+            std::free( dem );
+            if ( quote )
+                name = quote + name + quote;
+        }
+        return name;
+    }
+
+    template< typename T >
+    std::string_view get_name( T, char quote = '"' ) { return get_name< T >( quote ); }
+
+    struct date
+    {
+        unsigned julian;
+
+        explicit date( int y = 1970, int m = 1, int d = 1 )
+        {
+            if ( m > 2 )
+                m += 1, y += 4800;
+            else
+                m += 13, y += 4799;
+
+            julian = y * 365 - 32167;
+            julian += y / 4 - y / 100 + y / 400;
+            julian += 7834 * m / 256 + d;
+        }
+
+        std::tuple< int, int, int > decompose()
+        {
+            unsigned j = julian + 32044;
+            unsigned quad = j / 146097;
+            unsigned extra = (j - quad * 146097) * 4 + 3;
+
+            j += 60 + quad * 3 + extra / 146097;
+            quad = j / 1461;
+            j -= quad * 1461;
+            int y = j * 4 / 1461;
+            j = ((y != 0) ? ((j + 305) % 365) : ((j + 306) % 366)) + 123;
+            y += quad * 4;
+            quad = j * 2141 / 65536;
+
+            return { y - 4800, (quad + 10) % 12 + 1, j - 7834 * quad / 256 };
+        }
+
+        friend string_builder &operator<<( string_builder &s, date v )
+        {
+            auto [ y, m, d ] = v.decompose();
+            return s << y << "-" << pad( 2, '0' ) << m << mark << "-" << pad( 2, '0' ) << d << mark;
+        }
+    };
+
+    struct time { std::int16_t hour, min, sec; };
+
+    struct timestamp
+    {
+        std::int64_t fract = 0;
+
+        static timestamp from_unix( time_t t ) { return { ( int64_t( t ) - 946684800 ) * 1000000 }; }
+        time_t to_unix() const { return fract / 1000000 + 946684800; }
+        bool operator<( timestamp o ) const { return fract < o.fract; }
+        bool operator==( timestamp o ) const { return fract == o.fract; }
+
+        struct tm to_localtime() const
+        {
+            struct tm tm;
+            auto t = to_unix();
+            localtime_r( &t, &tm );
+            return tm;
+        }
+
+        std::string to_string( const char *fmt = "%Y-%m-%d %H:%M %Z" ) const
+        {
+            char buf[200];
+            auto tm = to_localtime();
+            strftime( buf, 200, fmt, &tm );
+            return buf;
+        }
+
+        friend auto &operator<<( brq::string_builder &s, timestamp ts )
+        {
+            return s << ts.to_string();
+        }
+    };
+
+    struct interval
+    {
+        std::int64_t seconds; std::int32_t days, months;
+
+        static interval from_seconds( time_t s )
+        {
+            return { s * 1000000, 0, 0 };
+        }
+
+        time_t as_seconds() const
+        {
+            ASSERT_EQ( months, 0 );
+            return time_t( days ) * 3600 * 24 + seconds / 1000000;
+        }
+
+        friend auto &operator<<( brq::string_builder &s, interval i )
+        {
+            return s << i.as_seconds();
+        }
+    };
+
+    template< int scale, typename base_t = int64_t >
+    struct fixnum
+    {
+        base_t value;
+        fixnum( base_t v = 0 ) : value( v * scale ) {}
+        explicit fixnum( double v ) : value( v * scale ) {}
+        fixnum( base_t v, int s ) : value( v ) { ASSERT_EQ( s, scale ); }
+        bool operator==( fixnum o ) const { return value == o.value; }
+        bool operator<( fixnum o ) const { return value < o.value; }
+        bool operator>( fixnum o ) const { return value > o.value; }
+        bool operator>=( fixnum o ) const { return value >= o.value; }
+        explicit operator bool() const { return value; }
+
+        static parse_result from_string( std::string_view s, fixnum &n )
+        {
+            base_t sign = 1, value = 0, f_scale = scale;
+            bool seen_dot = false;
+
+            if ( !s.empty() && s[ 0 ] == '-' )
+                s.remove_prefix( 1 ), sign = -1;
+
+            for ( size_t off = 0; off < s.size() && f_scale > 1; ++ off )
+                if ( std::isdigit( s[ off ] ) )
+                    value *= 10, value += s[ off ] - '0', f_scale /= seen_dot ? 10 : 1;
+                else if ( s[ off ] == '.' && !seen_dot )
+                    seen_dot = true;
+                else
+                    return no_parse( "unexpected character" );
+
+            for ( ; f_scale > 1 ; f_scale /= 10 ) value *= 10;
+            n.value = sign * value;
+            return {};
+        }
+
+        friend string_builder &operator<<( string_builder &s, fixnum n )
+        {
+            auto fract = n.value % scale;
+            int  whole = n.value / scale;
+            int f_scale = scale;
+            s << ( !whole && fract < 0 ? "-" : "" ) << whole;
+            while ( fract && fract % 10 == 0 )
+                f_scale /= 10, fract /= 10;
+            int pad_count = 0;
+            while ( f_scale > 1 )
+                pad_count += 1, f_scale /= 10;
+            if ( fract )
+                s << "." << pad( pad_count, '0' ) << std::abs( fract ) << mark;
+            return s;
+        }
+
+        friend fixnum abs( fixnum n ) { return fixnum( abs( n.value ), scale ); }
+        fixnum operator+( fixnum n ) const { return fixnum( value + n.value, scale ); }
+        fixnum operator*( int n ) const { return fixnum( value * n, scale ); }
+        fixnum operator/( int n ) const { return fixnum( value / n, scale ); }
+    };
+
+    struct category_flags
+    {
+        static constexpr bool is_column   = false;
+        static constexpr bool is_enum     = false;
+        static constexpr bool is_expr     = false;
+        static constexpr bool is_query    = false;
+        static constexpr bool is_table    = false;
+        static constexpr bool is_view     = false;
+        static constexpr bool is_function = false;
+    };
+
+    template< typename T >
+    struct enum_value : category_flags
+    {
+        using type = T;
+        static constexpr bool is_enum = true;
+    };
+
+    template< typename... vals >
+    struct enum_type : category_flags
+    {
+        using values = cons_list_t< vals... >;
+        static constexpr bool is_enum  = true;
+        static constexpr bool is_expr  = true;
+
+        typename values::co _value;
+        template< typename X >
+        enum_type( const X &x ) : _value( x ) {}
+        enum_type() : _value( typename values::car_t() ) {}
+
+        friend string_builder &operator<<( string_builder &s, const enum_type &v )
+        {
+            return s << *v._value.match( []( const auto &d ) { return get_name( d, 0 ); } );
+        }
+    };
+
+    struct decimal {};
+
+    template< typename T, typename = void > struct type_map {};
+    template<> struct type_map< bool >           { static auto name() { return "bool"; } };
+    template<> struct type_map< short >          { static auto name() { return "smallint"; } };
+    template<> struct type_map< int >            { static auto name() { return "integer"; } };
+    template<> struct type_map< int64_t >        { static auto name() { return "bigint"; } };
+    template<> struct type_map< std::u32string > { static auto name() { return "text"; } };
+    template<> struct type_map< std::u32string_view > { static auto name() { return "text"; } };
+    template<> struct type_map< std::string >    { static auto name() { return "bytea"; } };
+    template<> struct type_map< std::string_view > { static auto name() { return "bytea"; } };
+    template<> struct type_map< const char * >   { static auto name() { return "bytea"; } };
+    template<> struct type_map< date >           { static auto name() { return "date"; } };
+    template<> struct type_map< time >           { static auto name() { return "time"; } };
+    template<> struct type_map< timestamp >      { static auto name() { return "timestamp"; }; };
+    template<> struct type_map< interval >       { static auto name() { return "interval"; }; };
+    template<> struct type_map< decimal >        { static auto name() { return "decimal"; }; };
+
+    template< typename T > struct type_map< std::optional< T > > : type_map< T > {};
+
+    template< typename T, int v > struct type_map< fixnum< v, T > >
+    {
+        static auto name() { return type_map< T >::name(); }
+    };
+
+    template< size_t v > struct type_map< std::array< uint8_t, v > >
+    {
+        static auto name() { return "bytea"; }
+    };
+
+    template< typename T > struct type_map< T, std::enable_if_t< T::is_enum > >
+    {
+        static auto name() { return get_name( T(), 0 ); }
+    };
+
+    template< typename T > struct type_map< T, std::enable_if_t< T::type::is_enum > >
+    {
+        static auto name() { return get_name( typename T::type(), 0 ); }
+    };
+
+    template< typename T > auto sql_type()
+    {
+        return brq::sql::type_map< T >::name();
+    }
+
+    template< typename T > struct is_array : std::false_type {};
+    template< typename T, size_t s > struct is_array< std::array< T, s > > : std::true_type {};
+
+    template< typename T > struct is_set : std::false_type {};
+    template< typename T > struct is_set< std::set< T > > : std::true_type {};
+
+    template< typename T > struct is_optional : std::false_type {};
+    template< typename T > struct is_optional< std::optional< T > > : std::true_type {};
+
+    template< typename T, typename = void > struct is_expr : std::false_type {};
+    template< typename T > struct is_expr< T, std::enable_if_t< T::is_expr > > : std::true_type {};
+    template< typename T > struct is_expr< T, std::enable_if_t< T::is_enum > > : std::true_type {};
+    template< typename T > constexpr bool is_expr_v = is_expr< T >::value;
+    struct where_operator { const char *sql; where_operator( const char *s = "" ) : sql( s ) {} };
+
+    template< typename T >
+    static constexpr bool is_value = ( std::is_convertible_v< T, std::string_view > ||
+                                       std::is_convertible_v< T, std::u32string_view > ||
+                                       std::is_convertible_v< T, timestamp > ||
+                                       std::is_convertible_v< T, interval > ||
+                                       is_array< T >::value ||
+                                       std::is_convertible_v< T, int > ) && !is_list_v< T >;
+
+    template< typename T, bool _nullable = false >
+    struct column
+    {
+        template< typename CT >
+        static std::string_view column_name( const CT &ct ) { return get_name( ct ); }
+
+        using type = std::conditional_t< _nullable, std::optional< T >, T >;
+        using base_type = T;
+        using bare = void;
+        using table = void;
+        using qualifier = void;
+
+        static constexpr bool is_nullable = _nullable;
+        static constexpr bool is_primary = false;
+        static constexpr bool is_foreign = false;
+        static constexpr bool is_constraint = false;
+        static constexpr bool is_qualified = false;
+
+        static constexpr bool is_expr = true;
+        static constexpr bool is_column = true;
+        static constexpr bool is_function = false;
+        static constexpr bool is_asc = false;
+        static constexpr bool is_query = false;
+        static constexpr bool is_enum = false;
+    };
+
+    template< typename T, bool call = false >
+    struct constant : column< T, false >
+    {
+        static constexpr const bool is_function = true;
+
+        template< typename stream >
+        void print( stream &s, int & ) const
+        {
+            if ( call )
+                s << "()";
+            if constexpr ( !std::is_same_v< T, void > )
+                s << "::" << sql_type< T >();
+        }
+
+        template< typename stmt > void bind( stmt &s ) const {}
+    };
+
+    template< typename col >
+    struct nullable : col
+    {
+        using type = std::optional< typename col::type >;
+        static constexpr bool is_nullable = true;
+    };
+
+    template< typename T >
+    using unqualify = std::conditional_t< T::is_qualified, typename T::bare, T >;
+
+    template< typename tab, typename col, bool _nullable = false >
+    struct foreign_key : col
+    {
+        using column = col;
+        using table = tab;
+        using base_type = typename col::type;
+        static constexpr bool adds_null = _nullable && !col::is_nullable;
+        using type = std::conditional_t< adds_null, std::optional< base_type >, base_type >;
+        static constexpr bool is_nullable = _nullable;
+        static constexpr bool is_foreign = true;
+    };
+
+    template< typename col >
+    struct primary_key : col
+    {
+        template< typename CT >
+        static std::string_view column_name( const CT & ) { return col().column_name( col() ); }
+
+        using base = col;
+        static constexpr bool is_primary = true;
+    };
+
+    template< typename... cols >
+    struct unique
+    {
+        using columns = cons_list_t< cols... >;
+        static constexpr bool is_constraint = true;
+        static constexpr bool is_table = false;
+    };
+
+    template< typename T >
+    struct not_constraint { static constexpr bool value = !T::is_constraint; };
+    template< typename T >
+    struct is_primary { static constexpr bool value = T::is_primary; };
+
+    template< typename... cols >
+    struct table
+    {
+        using all = cons_list_t< cols... >;
+        using columns = decltype( all().template filter< not_constraint >() );
+        static constexpr bool is_table = true;
+        static constexpr bool is_view  = false;
+    };
+
+    template< typename... cols >
+    struct view
+    {
+        using columns = cons_list_t< cols... >;
+        static constexpr bool is_table = false;
+        static constexpr bool is_view  = true;
+        static constexpr bool is_updatable = false;
+    };
+
+    template< typename... cols >
+    struct updatable_view : view< cols... >
+    {
+        static constexpr bool is_updatable = true;
+    };
+
+    template< typename... tables_ >
+    struct schema : cons_list_t< tables_... > {};
+
+    template< typename stream, typename list >
+    void print_list( stream &s, list l,
+                     const char *delim = ", ", const char *start = "", const char *end = "" )
+    {
+        bool first = true;
+        s << start;
+        l.each( [&]( const auto &c ) { s << ( first ? "" : delim ) << c; first = false; } );
+        s << end;
+    }
+
+    template< typename stream, typename list >
+    void print_columns( stream &s, list l, const char *start = "", const char *end = "" )
+    {
+        print_list( s, l.map( [&]( auto c ) { return c.column_name( c ); } ), ", ", start, end );
+    }
+
+    template< typename T, typename X = void >
+    struct get_key { using type = X; };
+
+    template< typename T >
+    struct get_key< T, decltype( typename T::car_t(), void(0) ) >
+    {
+        using type = typename T::car_t::base;
+    };
+
+    template< typename txn_t, typename table >
+    std::enable_if_t< table::is_table > drop( txn_t &t, table )
+    {
+        t.exec() << "drop table if exists " << get_name( table() ) << " cascade";
+    };
+
+    template< typename txn_t, typename enum_t >
+    std::enable_if_t< enum_t::is_enum > drop( txn_t &t, enum_t )
+    {
+        t.exec() << "drop type if exists \"" << get_name( enum_t(), 0 ) << "\" cascade";
+    };
+
+    template< typename txn_t, typename view >
+    std::enable_if_t< view::is_view > drop( txn_t &t, view, bool cascade = false )
+    {
+        t.exec() << "drop view if exists " << get_name( view() ) << ( cascade ? " cascade" : "" );
+    };
+
+    template< typename txn_t, typename enum_t >
+    std::enable_if_t< enum_t::is_enum > create( txn_t &txn, enum_t )
+    {
+        string_builder s;
+        s << "do $$ begin if not exists (select * from pg_type where pg_type.typname = '"
+          << get_name( enum_t(), 0 ) << "') then create type \""
+          << get_name( enum_t(), 0 ) << "\" as enum ";
+        print_list( s, typename enum_t::values().map( [&]( auto c ) { return get_name( c, 0 ); } ),
+                    "', '", "('", "')" );
+        s << "; end if; end; $$";
+        txn.exec( s.buffer() );
+    }
+
+    template< typename txn_t, typename table >
+    std::enable_if_t< table::is_table > create( txn_t &txn, table, bool temp = false )
+    {
+        auto tabname = get_name( table() );
+        auto tabunq = std::string( tabname.substr( 1, tabname.size() - 2 ) );
+        txn.exec() << "create " << ( temp ? "temp " : "" ) << "table if not exists " << tabname << " ();";
+        int c_num = 0;
+        auto alter = [&] { return std::move( txn.exec() << "alter table " << tabname << " " ); };
+        auto constraint = [&]
+        {
+            return std::move( alter() << "add constraint " << tabunq << "_c" << c_num++ << " " );
+        };
+
+        for ( int i = 0; i < 8; ++i )
+            alter() << "drop constraint if exists " << tabunq << "_c" << i << " cascade";
+
+        auto print_col = [&]( auto col )
+        {
+            using col_t = decltype( col );
+
+            if constexpr ( col.is_constraint )
+            {
+                auto ex = std::move( constraint() << "unique " );
+                print_columns( ex, typename col_t::columns(), "( ", " )" );
+            }
+            else
+            {
+                using type = typename col_t::base_type;
+                bool use_serial = col.is_primary && std::is_same_v< type, int >;
+                auto typestr = sql_type< type >();
+                auto seqname = std::string( tabname.substr( 1, tabname.size() - 2 ) ) + "_pkey_seq";
+                auto colname = col.column_name( col );
+
+                alter() << "add column if not exists " << colname << " " << typestr
+                        << " default '" << type() << "'"; /* TODO make configurable! */
+                alter() << "alter column " << colname << " drop default";
+                alter() << "alter column " << colname << " type " << typestr;
+
+                if ( col.is_primary )
+                    constraint() << "primary key ( " << colname << " )";
+
+                if ( use_serial )
+                {
+                    txn.exec() << "create sequence if not exists " << seqname << " owned by "
+                               << tabname << "." << colname;
+                    alter() << "alter column " << colname << " set default nextval('" << seqname << "')";
+                }
+
+                if constexpr ( col.is_foreign )
+                {
+                    auto foreign_col = typename col_t::column();
+                    if ( !temp )
+                        constraint()
+                            << "foreign key ( " << colname << " )"
+                            << " references " << get_name( typename col_t::table() )
+                            << " ( " << foreign_col.column_name( foreign_col ) << " )";
+                }
+
+                alter() << "alter column " << colname << " "
+                        << ( col.is_nullable ? "drop" : "set" ) << " not null";
+            }
+        };
+
+        typename table::all().each( print_col );
+    }
+
+    template< typename txn_t, typename view, typename query >
+    std::enable_if_t< view::is_view && query::is_query >
+    create( txn_t &txn, view v, query q, bool as_temp = false )
+    {
+        string_builder s;
+        int id = -1;
+        s << ( as_temp ? "create temp table " : "create view " )
+          << get_name( v ) << " ";
+        using cols = typename view::columns::template map_t< unqualify >;
+        if ( !cols::empty )
+            print_columns( s, cols(), "( ", " )" );
+        s << ( as_temp ? " on commit drop as " : " with ( security_barrier ) as " );
+
+        q.print( s, id );
+
+        if ( view::is_updatable )
+            s << " with check option";
+        txn.exec( s.buffer() );
+    }
+
+    template< typename txn_t, typename view >
+    std::enable_if_t< view::is_view && !view::columns::empty >
+    create( txn_t &txn, view v, bool as_temp = false )
+    {
+        create( txn, v, view::construct( txn.select( typename view::columns() ) ), as_temp );
+    }
+
+    template< typename txn_t, typename view >
+    std::enable_if_t< view::is_view && view::columns::empty > create( txn_t &txn, view v )
+    {
+        create( txn, v, txn.select().where( false ) );
+    }
+
+    template< typename txn_t, typename view >
+    std::enable_if_t< view::is_view > materialize( txn_t &txn, view v )
+    {
+        std::string name( get_name( v ) );
+        txn.exec( "create temp table " + name + " on commit drop as select * from " + name );
+    }
+
+    template< typename txn_t, typename schema >
+    void initdb( txn_t &txn, schema s, bool clear = false )
+    {
+        if ( clear )
+            s.reverse().each( [&]( auto t ) { drop( txn, t ); } );
+        s.each( [&]( auto t ) { create( txn, t ); } );
+    }
+}
+
+namespace brq
+{
+    template< typename... args >
+    using sql_schema      = sql::schema< args... >;
+}

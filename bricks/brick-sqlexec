@@ -1,0 +1,545 @@
+// -*- mode: C++; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+
+/*
+ * Copyright (C) 2019 Petr Rockai <code@fixp.eu>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#pragma once
+#include "brick-assert"
+#include "brick-string"
+#include "brick-cons"
+#include "brick-except"
+
+#include <memory>
+#include <vector>
+#include <set>
+#include <cxxabi.h>
+#include <codecvt>
+#include <endian.h> /* beNNtoh / htobeNN */
+#include <sys/select.h>
+
+#include <libpq-fe.h>
+
+namespace brq::sql
+{
+    struct error : std::runtime_error
+    {
+        using std::runtime_error::runtime_error;
+    };
+
+    struct txn;
+
+    struct notification
+    {
+        std::string channel, payload;
+        bool valid;
+        explicit operator bool() { return valid; }
+
+        notification( std::string ch, std::string p )
+            : channel( ch ), payload( p ), valid( true )
+        {}
+
+        notification() : valid( false ) {}
+
+        bool operator<( const notification &o ) const
+        {
+            ASSERT( valid && o.valid );
+            if ( channel == o.channel )
+                return payload < o.payload;
+            else
+                return channel < o.channel;
+        }
+    };
+
+    struct conn
+    {
+        std::set< notification > _pending;
+        std::string _notices;
+        PGconn *_handle = nullptr;
+        PGconn *handle() { return _handle; }
+
+        const char *errmsg() { return PQerrorMessage( _handle ); }
+
+        conn( std::string s )
+        {
+            if ( !( _handle = PQconnectdb( s.c_str() ) ) )
+                throw std::bad_alloc();
+            if ( PQstatus( _handle ) != CONNECTION_OK )
+                raise< error >() << "connecting to " << s << " " << errmsg();
+
+            auto msg = []( void *_this, const char *msg )
+            {
+                static_cast< conn * >( _this )->_notices += msg;
+            };
+
+            PQsetNoticeProcessor( _handle, msg, this );
+        }
+
+        void exec( std::string_view sql )
+        {
+            _notices.clear();
+            auto result = PQexec( handle(), c_str( sql ) );
+            if ( PQresultStatus( result ) != PGRES_COMMAND_OK )
+                raise< error >() << "executing " << sql << ": " << errmsg();
+        }
+
+        notification check_notify()
+        {
+            PQconsumeInput( handle() );
+
+            while ( auto notify = PQnotifies( handle() ) )
+            {
+                _pending.emplace( notify->relname, notify->extra );
+                PQfreemem( notify );
+            }
+
+            if ( _pending.empty() )
+                return {};
+
+            auto rv = *_pending.begin();
+            _pending.erase( _pending.begin() );
+            return rv;
+        }
+
+        notification wait( std::optional< time_t > deadline = std::nullopt )
+        {
+            if ( auto n = check_notify() )
+                return n;
+
+            int sock = PQsocket( handle() );
+            fd_set fds;
+            FD_ZERO( &fds );
+            FD_SET( sock, &fds );
+
+            auto now = ::time( nullptr );
+            struct timeval tv = { !deadline || now >= *deadline ? 0 : *deadline - now, 0 };
+            DEBUG( "awaiting notifications, timeout =", tv.tv_sec );
+
+            if ( ::select( sock + 1, &fds, nullptr, nullptr, deadline ? &tv : nullptr ) < 0 )
+                brq::raise< system_error >() << "select on postgres socket";
+
+            auto n = check_notify();
+
+            if ( !n )
+                DEBUG( "check_notify: timeout" );
+
+            return n;
+        }
+
+        ~conn()
+        {
+            PQfinish( _handle );
+        }
+    };
+
+    template< typename... cols >
+    struct row
+    {
+        using columns_t = brq::cons_list_t< cols... >;
+        using values_t  = brq::cons_list_t< typename cols::type... >;
+        values_t _values;
+
+        row() = default;
+        row( typename cols::type... v ): _values( v... ) {}
+
+        template< typename col, typename cs_t, typename vs_t >
+        auto &get( vs_t &vs )
+        {
+            if constexpr ( std::is_same_v< col, typename cs_t::car_t > )
+                return vs.car();
+            else
+                return get< col, typename cs_t::cdr_t >( vs.cdr() );
+        }
+
+        template< int i > auto &get() { return get< i >( _values ); }
+        template< int i, typename vs_t > auto &get( vs_t &vs )
+        {
+            if constexpr ( i == 0 )
+                return vs.car();
+            else
+                return get< i - 1, typename vs_t::cdr_t >( vs.cdr() );
+        }
+
+        template< typename col >
+        auto &get() { return get< col, columns_t >( _values ); }
+    };
+
+    template< typename... cols >
+    struct iterator
+    {
+        PGresult *_result;
+        int _row = 0, _col = 0;
+
+        bool operator==( const iterator &o ) const { return o._result == _result && o._row == _row; }
+        bool operator!=( const iterator &o ) const { return !( *this == o ); }
+
+        iterator( PGresult *res, int row ) : _result( res ), _row( row ) {}
+        iterator &operator++() { ++_row; _col = 0; return *this; }
+        iterator operator++( int ) { auto r = *this; ++ (*this); return r; }
+
+        template< typename T >
+        void fetch_raw( T &t )
+        {
+            ASSERT( !PQgetisnull( _result, _row, _col ), "row =", _row, "col =", _col );
+            ASSERT_EQ( PQgetlength( _result, _row, _col ), sizeof( T ) );
+            std::memcpy( &t, PQgetvalue( _result, _row, _col ), sizeof( T ) );
+        }
+
+        void fetch_one( bool &t ) { fetch_raw( t ); }
+        void fetch_one( int16_t &t ) { fetch_raw( t ); t = be16toh( t ); }
+        void fetch_one( int32_t &t ) { fetch_raw( t ); t = be32toh( t ); }
+        void fetch_one( int64_t &t ) { fetch_raw( t ); t = be64toh( t ); }
+        void fetch_one( timestamp &t ) { fetch_raw( t.fract ); t.fract = be64toh( t.fract ); }
+        template< typename T, int s > void fetch_one( fixnum< s, T > &n ) { fetch_one( n.value ); }
+
+        template< typename T, size_t s > void fetch_one( std::array< T, s > &n )
+        {
+            ASSERT_EQ( PQgetlength( _result, _row, _col ), n.size() * sizeof( T ) );
+            std::memcpy( n.begin(), PQgetvalue( _result, _row, _col ), n.size() * sizeof( T ) );
+        }
+
+        void fetch_one( interval &i )
+        {
+            fetch_raw( i );
+            i.seconds = be64toh( i.seconds );
+            i.days    = be32toh( i.days );
+            i.months  = be32toh( i.months );
+        }
+
+        void fetch_one( std::u32string &us )
+        {
+            const char *data = PQgetvalue( _result, _row, _col );
+            std::wstring_convert< std::codecvt_utf8< char32_t >, char32_t > conv;
+            us = conv.from_bytes( data, data + PQgetlength( _result, _row, _col ) );
+        }
+
+        void fetch_one( std::string &s )
+        {
+            const char *data = PQgetvalue( _result, _row, _col );
+            s = std::string( data, data + PQgetlength( _result, _row, _col ) );
+        }
+
+        template< typename T > void fetch_one( std::optional< T > &opt )
+        {
+            if ( PQgetisnull( _result, _row, _col ) )
+                opt = std::nullopt;
+            else
+                opt = T(), fetch_one( *opt );
+        }
+
+        row< cols... > operator*()
+        {
+            row< cols... > r;
+            r._values.each( [&]( auto &v ) { fetch_one( v ); ++ _col; } );
+            return r;
+        }
+    };
+
+    template< typename... cols >
+    struct stmt
+    {
+        using columns = brq::cons_list_t< cols... >;
+        using result_t = row< cols... >;
+
+        conn &_conn;
+        brq::string_builder _query, _debug;
+
+        std::vector< std::unique_ptr< char[] > > _memory;
+        std::vector< const char * > _params;
+        std::vector< int > _lengths;
+        PGresult *_result = nullptr;
+
+        using iterator = sql::iterator< cols... >;
+        iterator begin() { return iterator( _result, 0 ); }
+        iterator end()   { return iterator( _result, size() ); }
+        int size() const { return PQntuples( _result ); }
+
+        row< cols... > result()
+        {
+            ASSERT_EQ( PQntuples( _result ), 1 );
+            return *begin();
+        }
+
+        void bind_mem( const char *data, int size )
+        {
+            _lengths.push_back( size );
+            _memory.emplace_back( new char[ size ] );
+            std::memcpy( _memory.back().get(), data, size );
+            _params.push_back( _memory.back().get() );
+        }
+
+        void bind_mem( const uint8_t *data, int size )
+        {
+            bind_mem( reinterpret_cast< const char * >( data ), size );
+        }
+
+        template< typename T >
+        stmt( conn &c, const T &t ) : _conn( c )
+        {
+            _query << t;
+            _debug << "where";
+        }
+
+        stmt( const stmt & ) = delete;
+        stmt( stmt &&o )
+            : _conn( o._conn ), _query( std::move( o._query ) ), _debug( std::move( o._debug ) ),
+              _memory( std::move( o._memory ) ), _params( o._params ),
+              _lengths( o._lengths ), _result( o._result )
+        {
+            o._result = nullptr;
+        }
+
+        ~stmt()
+        {
+            if ( _result )
+                PQclear( _result );
+        }
+
+        template< typename T >
+        void bind_raw( const T &t ) { bind_mem( reinterpret_cast< const char * >( &t ), sizeof( T ) ); }
+
+        void bind_one( interval &i )
+        {
+            i.seconds = htobe64( i.seconds );
+            i.days = htobe64( i.days );
+            i.months = htobe64( i.months );
+            bind_raw( i );
+        }
+
+        void bind_one( timestamp &t ) { t.fract = htobe64( t.fract ); bind_raw( t ); }
+        void bind_one( date &d ) { d.julian -= 2451545; d.julian = htobe32( d.julian ); bind_raw( d ); }
+        void bind_one( int64_t &t ) { t = htobe64( t ); bind_raw( t ); }
+        void bind_one( int32_t &t ) { t = htobe32( t ); bind_raw( t ); }
+        void bind_one( int16_t &t ) { t = htobe16( t ); bind_raw( t ); }
+        void bind_one( bool &t )    { bind_raw( t ); }
+        void bind_one( std::string_view s ) { bind_mem( s.data(), s.size() ); }
+        void bind_one( std::u32string_view us )
+        {
+            std::wstring_convert< std::codecvt_utf8< char32_t >, char32_t > conv;
+            auto str = conv.to_bytes( &*us.begin(), &*us.end() );
+            bind_mem( str.data(), str.size() );
+        }
+
+        template< typename T, int s > void bind_one( fixnum< s, T > &f ) { bind_one( f.value ); }
+
+        template< size_t n >
+        void bind_one( const std::array< uint8_t, n > &s ) { bind_mem( s.begin(), s.size() ); }
+
+        template< typename T >
+        std::enable_if_t< T::is_enum > bind_one( T v )
+        {
+            v._value.match( [&]( auto x ) { bind_one( std::string( get_name( x, 0 ) ) ); } );
+        }
+
+        template< typename T > void bind_one( std::optional< T > v )
+        {
+            if ( v.has_value() )
+                bind_one( *v );
+            else
+            {
+                _lengths.push_back( 0 );
+                _params.push_back( nullptr );
+            }
+        }
+
+        stmt &exec()
+        {
+            std::vector< int > formats( _params.size(), 1 );
+
+            DEBUG( _query.buffer(), _params.size() ? _debug.buffer() : "" );
+            _conn._notices.clear();
+            _result = PQexecParams( _conn.handle(), _query.buffer(), _params.size(), nullptr,
+                                    _params.data(), _lengths.data(), formats.data(), 1 );
+
+            auto r = PQresultStatus( _result );
+            if ( r != PGRES_COMMAND_OK && r != PGRES_TUPLES_OK )
+                raise< error >() << "executing " << _query.buffer() << ": " << _conn.errmsg();
+
+            return *this;
+        }
+
+        template< typename list_t >
+        stmt &bind_list( list_t list )
+        {
+            int count = 0;
+            list.each( [&]( auto ) { ++count; } );
+            _params.reserve( _params.size() + count );
+            _memory.reserve( _memory.size() + count );
+
+            int i = _params.size();
+            list.each( [&]( auto &v ) { _debug << " $" << ++i << " = '" << v << "'"; } );
+            list.each( [&]( auto &v ) { bind_one( v ); } );
+            return *this;
+        }
+
+        template< typename... args >
+        stmt &bind( const args &... vs )
+        {
+            return bind_list( cons_list( vs... ) );
+        }
+    };
+
+    struct txn_base
+    {
+        sql::conn &_conn;
+        bool _closed = true;
+
+        explicit txn_base( sql::conn &conn ) : _conn( conn ) { open(); }
+
+        void open()
+        {
+            if ( _closed )
+            {
+                _closed = false;
+                exec( "begin transaction" );
+            }
+        }
+
+        txn_base( txn_base&& rhs ) noexcept;
+
+        txn_base() = delete;
+        txn_base& operator=( const txn_base &rhs ) = delete;
+
+        sql::conn &conn() { return _conn; }
+
+        void commit()
+        {
+            if ( !_closed )
+            {
+                exec( "commit transaction" );
+                _closed = true;
+            }
+        }
+
+        void rollback() noexcept
+        {
+            if ( !_closed )
+            {
+                exec( "rollback transaction" );
+                _closed = true;
+            }
+        }
+
+        struct savepoint
+        {
+            txn_base *_txn;
+            std::string _name;
+
+            savepoint( txn_base *t, std::string_view name ) : _txn( t ), _name( name )
+            {
+                _txn->exec( brq::format( "savepoint ", name ).buffer() );
+            }
+
+            ~savepoint()
+            {
+                DEBUG( "~savepoint", std::uncaught_exceptions() );
+                if ( std::uncaught_exceptions() )
+                    rollback();
+            }
+
+            void rollback()
+            {
+                _txn->exec( brq::format( "rollback to savepoint ", _name ).buffer() );
+            }
+        };
+
+        savepoint save( std::string_view name = "save_except" )
+        {
+            return { this, name };
+        }
+
+        void exec( std::string_view q )
+        {
+            open();
+            stmt<> s( _conn, q );
+            s.exec();
+        }
+
+        template< typename... v >
+        void exec( std::string q, v... vals )
+        {
+            open();
+            stmt<> s( _conn, q );
+            s.bind( vals... );
+            s.exec();
+        }
+
+        struct autoexec : brq::string_builder
+        {
+            txn_base &_txn;
+            autoexec( autoexec && ) = default;
+            autoexec( txn_base &t ) : _txn( t ) {}
+            ~autoexec() { if ( _buffer ) _txn.exec( _buffer ); }
+
+            template< typename T >
+            autoexec &operator<<( const T &x )
+            {
+                *static_cast< brq::string_builder * >( this ) << x;
+                return *this;
+            }
+        };
+
+        autoexec exec() { return { *this }; }
+
+        template< typename t >
+        std::enable_if_t< t::is_table > notify() { notify( get_name( t() ) ); }
+
+        template< typename t >
+        std::enable_if_t< t::is_table > listen() { exec() << "listen " << get_name( t() ); }
+
+        void notify( std::string_view ch, std::string_view p = "" )
+        {
+            exec() << "notify " << ch << ", '" << p << "'";
+        }
+
+        void listen( std::string_view sv ) { exec() << "listen " << sv; }
+
+        notification wait( std::optional< time_t > deadline = std::nullopt )
+        {
+            ASSERT( _closed ); /* waiting with an open transaction causes a deadlock */
+            return _conn.wait( deadline );
+        }
+
+        ~txn_base() noexcept { if ( !_closed ) rollback(); }
+    };
+}
+
+namespace brq
+{
+    using sql_connection  = sql::conn;
+    using sql_transaction = sql::txn;
+    using sql_error       = sql::error;
+    template< typename... args >
+    using sql_statement   = sql::stmt< args... >;
+}
+
+namespace std
+{
+    template< typename... cols >
+    struct tuple_size< brq::sql::row< cols... > >
+        : std::integral_constant< std::size_t, sizeof...( cols ) >
+    {};
+
+    template< typename col, typename... cols >
+    struct tuple_element< 0, brq::sql::row< col, cols... > >
+    {
+        using type = typename col::type;
+    };
+
+    template< size_t I, typename col, typename... cols >
+    struct tuple_element< I, brq::sql::row< col, cols... > >
+        : tuple_element< I - 1, brq::sql::row< cols... > >
+    {};
+}

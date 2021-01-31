@@ -219,6 +219,18 @@ namespace brq
             }
         }
 
+        [[gnu::always_inline]] void update_short( const uint8_t *data, int count )
+        {
+            for ( int i = 0; i < count; ++ i )
+                update_aligned( data[ i ] );
+        }
+
+        [[gnu::always_inline]] void update_short( std::string_view sv )
+        {
+            for ( char c : sv )
+                update_aligned( c );
+        }
+
         void update_aligned() {}
         void update() {}
 
@@ -264,6 +276,13 @@ namespace brq
     {
         hash_state s( seed );
         s.update_aligned( data, len );
+        return s.hash();
+    }
+
+    static inline hash64_t hash_short( std::string_view sv, hash64_t seed = 0 )
+    {
+        hash_state s( seed );
+        s.update_short( sv );
         return s.hash();
     }
 

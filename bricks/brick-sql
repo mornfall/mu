@@ -915,6 +915,7 @@ BRICK_SQL_OP( | )
         template< typename stream >
         void print( stream &s, int &id ) const
         {
+            this->_query._query._returning = false;
             this->_query.print( s, id );
             s << " on conflict ( ";
             print_columns( s, cons_list( cols()... ) );
@@ -951,7 +952,8 @@ BRICK_SQL_OP( | )
             if constexpr ( !std::is_same_v< typename insert::primary_l, brq::nil > )
             {
                 using primary = unqualify< typename insert::primary_l::car_t >;
-                s << " returning " << primary().column_name( primary() );
+                if ( this->_query._returning )
+                    s << " returning " << primary().column_name( primary() );
             }
         }
 
@@ -969,7 +971,7 @@ BRICK_SQL_OP( | )
     struct insert
     {
         sql::conn &_conn;
-        bool _quiet = false;
+        mutable bool _quiet = false, _returning = true;
 
         using table = tbl;
         using primary_l = decltype( typename table::columns().template filter< is_primary >() );

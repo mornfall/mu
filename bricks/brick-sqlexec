@@ -247,68 +247,15 @@ namespace brq::sql
         }
     };
 
-    template< typename... cols >
-    struct stmt
+    template< typename self_t >
+    struct binder
     {
-        using columns = brq::cons_list_t< cols... >;
-        using result_t = row< cols... >;
+        self_t &self() { return *static_cast< self_t * >( this ); }
 
-        conn &_conn;
-        brq::string_builder _query, _debug;
-
-        std::vector< std::unique_ptr< char[] > > _memory;
-        std::vector< const char * > _params;
-        std::vector< int > _lengths;
-        PGresult *_result = nullptr;
-
-        using iterator = sql::iterator< cols... >;
-        iterator begin() { return iterator( _result, 0 ); }
-        iterator end()   { return iterator( _result, size() ); }
-        int size() const { return PQntuples( _result ); }
-
-        row< cols... > result()
+        template< typename T > void bind_raw( const T &t )
         {
-            ASSERT_EQ( PQntuples( _result ), 1 );
-            return *begin();
+            bind_mem( reinterpret_cast< const char * >( &t ), sizeof( T ) );
         }
-
-        void bind_mem( const char *data, int size )
-        {
-            _lengths.push_back( size );
-            _memory.emplace_back( new char[ size ] );
-            std::memcpy( _memory.back().get(), data, size );
-            _params.push_back( _memory.back().get() );
-        }
-
-        void bind_mem( const uint8_t *data, int size )
-        {
-            bind_mem( reinterpret_cast< const char * >( data ), size );
-        }
-
-        template< typename T >
-        stmt( conn &c, const T &t ) : _conn( c )
-        {
-            _query << t;
-            _debug << "where";
-        }
-
-        stmt( const stmt & ) = delete;
-        stmt( stmt &&o )
-            : _conn( o._conn ), _query( std::move( o._query ) ), _debug( std::move( o._debug ) ),
-              _memory( std::move( o._memory ) ), _params( o._params ),
-              _lengths( o._lengths ), _result( o._result )
-        {
-            o._result = nullptr;
-        }
-
-        ~stmt()
-        {
-            if ( _result )
-                PQclear( _result );
-        }
-
-        template< typename T >
-        void bind_raw( const T &t ) { bind_mem( reinterpret_cast< const char * >( &t ), sizeof( T ) ); }
 
         void bind_one( interval &i )
         {
@@ -348,13 +295,119 @@ namespace brq::sql
             if ( v.has_value() )
                 bind_one( *v );
             else
-            {
-                _lengths.push_back( 0 );
-                _params.push_back( nullptr );
-            }
+                self().bind_null();
         }
 
-        stmt &exec()
+        void bind_mem( const uint8_t *data, int size )
+        {
+            bind_mem( reinterpret_cast< const char * >( data ), size );
+        }
+
+        void bind_mem( const char*data, int size ) { self().bind_mem( data, size ); }
+    };
+
+    template< typename col > using get_type = typename col::type;
+
+    template< typename cols >
+    struct copy_in : binder< copy_in< cols > >
+    {
+        using columns = cols;
+        using values = typename columns::template map_t< get_type >;
+        bool _prepend_size = false;
+        bool _open = true;
+        conn &_conn;
+
+        copy_in( conn &c )
+            : _conn( c )
+        {
+            this->bind_mem( "PGCOPY\n\377\r\n\0", 11 );
+            put32( 0 );
+            put32( 0 );
+        }
+
+        void put32( int32_t v ) { this->bind_one( v ); }
+        void put16( int16_t v ) { this->bind_one( v ); }
+
+        void close()
+        {
+            if ( !_open ) return;
+            _open = false;
+            put16( -1 );
+            PQputCopyEnd( _conn.handle(), nullptr );
+            auto r = PQgetResult( _conn.handle() );
+            auto s = PQresultStatus( r );
+            if ( s != PGRES_COMMAND_OK )
+                raise< error >() << "executing copy: " << _conn.errmsg();
+        }
+
+        copy_in( const copy_in & ) = delete;
+        ~copy_in() { close(); }
+        void bind_null() { put32( -1 ); }
+        template< typename... T > void put( const T &... args ) { put_list( values( args... ) ); }
+
+        void bind_mem( const char *data, int size )
+        {
+            if ( _prepend_size )
+                _prepend_size = false, put32( size );
+            PQputCopyData( _conn.handle(), data, size );
+        }
+
+        void put_list( values list )
+        {
+            put16( values::size );
+            list.each( [&]( auto &v ) { _prepend_size = true; this->bind_one( v ); } );
+        }
+    };
+
+    struct stmt_base : binder< stmt_base >
+    {
+        conn &_conn;
+        brq::string_builder _query, _debug;
+
+        std::vector< std::unique_ptr< char[] > > _memory;
+        std::vector< const char * > _params;
+        std::vector< int > _lengths;
+        PGresult *_result = nullptr;
+
+        int size() const { return PQntuples( _result ); }
+
+        void bind_mem( const char *data, int size )
+        {
+            _lengths.push_back( size );
+            _memory.emplace_back( new char[ size ] );
+            std::memcpy( _memory.back().get(), data, size );
+            _params.push_back( _memory.back().get() );
+        }
+
+        void bind_null()
+        {
+            _lengths.push_back( 0 );
+            _params.push_back( nullptr );
+        }
+
+        template< typename T >
+        stmt_base( conn &c, const T &t ) : _conn( c )
+        {
+            _query << t;
+            _debug << "where";
+        }
+
+        stmt_base( const stmt_base & ) = delete;
+        stmt_base( stmt_base &&o )
+            : _conn( o._conn ), _query( std::move( o._query ) ), _debug( std::move( o._debug ) ),
+              _memory( std::move( o._memory ) ), _params( o._params ),
+              _lengths( o._lengths ), _result( o._result )
+        {
+            o._result = nullptr;
+        }
+
+        ~stmt_base()
+        {
+            if ( _result )
+                PQclear( _result );
+        }
+
+        void exec()
         {
             std::vector< int > formats( _params.size(), 1 );
 
@@ -364,14 +417,12 @@ namespace brq::sql
                                     _params.data(), _lengths.data(), formats.data(), 1 );
 
             auto r = PQresultStatus( _result );
-            if ( r != PGRES_COMMAND_OK && r != PGRES_TUPLES_OK )
+            if ( r != PGRES_COMMAND_OK && r != PGRES_TUPLES_OK && r != PGRES_COPY_IN )
                 raise< error >() << "executing " << _query.buffer() << ": " << _conn.errmsg();
-
-            return *this;
         }
 
         template< typename list_t >
-        stmt &bind_list( list_t list )
+        void bind_list( list_t list )
         {
             int count = 0;
             list.each( [&]( auto ) { ++count; } );
@@ -381,13 +432,37 @@ namespace brq::sql
             int i = _params.size();
             list.each( [&]( auto &v ) { _debug << " $" << ++i << " = '" << v << "'"; } );
             list.each( [&]( auto &v ) { bind_one( v ); } );
+        }
+    };
+
+    template< typename... cols >
+    struct stmt : stmt_base
+    {
+        using stmt_base::stmt_base;
+        using columns = brq::cons_list_t< cols... >;
+        using result_t = row< cols... >;
+
+        using iterator = sql::iterator< cols... >;
+        iterator begin() { return iterator( _result, 0 ); }
+        iterator end()   { return iterator( _result, size() ); }
+
+        row< cols... > result()
+        {
+            ASSERT_EQ( PQntuples( _result ), 1 );
+            return *begin();
+        }
+
+        stmt &exec()
+        {
+            stmt_base::exec();
             return *this;
         }
 
         template< typename... args >
         stmt &bind( const args &... vs )
         {
-            return bind_list( cons_list( vs... ) );
+            bind_list( cons_list( vs... ) );
+            return *this;
         }
     };
 
@@ -474,6 +549,19 @@ namespace brq::sql
             stmt<> s( _conn, q );
             s.bind( vals... );
             s.exec();
+        }
+
+        template< typename tab >
+        sql::copy_in< typename tab::columns > copy_in()
+        {
+            string_builder b;
+            b <<  "COPY " << get_name( tab() ) << " ( ";
+            using cols = typename tab::columns;
+            int i = 0;
+            cols().each( [&]( const auto &c ) { b << ( i++ ? ", " : "" ) << c.column_name( c ); } );
+            b << " ) FROM STDIN BINARY";
+            exec( b.data() );
+            return { _conn };
         }
 
         struct autoexec : brq::string_builder

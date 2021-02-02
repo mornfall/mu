@@ -720,6 +720,8 @@ BRICK_SQL_OP( | )
         sql::raw_sql< select_tab > raw_sql( std::string_view sv ) { return { *this, sv }; }
     };
 
+    template< typename... > struct select;
+
     template< typename select, typename... views >
     struct select_with : extend< select >
     {
@@ -738,8 +740,7 @@ BRICK_SQL_OP( | )
                 s << get_name( v ) << " ";
                 print_columns( s, typename view::columns::template map_t< unqualify >(), "( ", " )" );
                 s << " as ( ";
-                auto &txn = const_cast< select_with * >( this )->txn();
-                view::construct( txn.select( typename view::columns() ) ).print( s, id );
+                view::construct( sql::select( typename view::columns() ) ).print( s, id );
                 s << " )";
             };
             _views.each( fmt );
@@ -808,6 +809,7 @@ BRICK_SQL_OP( | )
         using query_head< cols... >::query_head;
         select( sql::txn &t, cols... e ) : query_head< cols... >( t ), _cols( e... ) {}
         select( cols... e ) : _cols( e... ) {}
+        select( brq::cons_list_t< cols... > cs ) : _cols( cs ) {}
 
         template< typename... ct, typename... et >
         select< cols..., ct..., et... > columns( et... e )

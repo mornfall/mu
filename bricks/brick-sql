@@ -975,7 +975,7 @@ BRICK_SQL_OP( | )
     template< typename tbl >
     struct insert
     {
-        sql::conn &_conn;
+        sql::conn *_conn = nullptr;
         mutable bool _quiet = false, _returning = true;
 
         using table = tbl;
@@ -984,8 +984,10 @@ BRICK_SQL_OP( | )
                                          sql::stmt< typename get_key< primary_l >::type > >;
         using order_columns = brq::nil;
 
-        insert( sql::conn &c, bool q ) : _conn( c ), _quiet( q ) {}
-        sql::conn &conn() { return _conn; }
+        insert() = default;
+        insert( sql::conn &c, bool q ) : _conn( &c ), _quiet( q ) {}
+
+        sql::conn &conn() { return *_conn; }
 
         template< typename... cols >
         auto values( to_view< const typename cols::type & >... v )

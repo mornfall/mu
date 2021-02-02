@@ -551,6 +551,13 @@ namespace brq::sql
             s.exec();
         }
 
+        template< typename query_t >
+        std::enable_if_t< query_t::is_query, typename query_t::stmt > exec( query_t q )
+        {
+            q._txn = this;
+            return q.exec();
+        }
+
         template< typename tab >
         sql::copy_in< typename tab::columns > copy_in()
         {

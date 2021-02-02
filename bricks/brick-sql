@@ -985,12 +985,19 @@ BRICK_SQL_OP( | )
         using order_columns = brq::nil;
 
         insert() = default;
-        insert( sql::conn &c, bool q ) : _conn( &c ), _quiet( q ) {}
+        explicit insert( sql::conn &c ) : _conn( &c ) {}
+
+        insert on_conflict_do_nothing() const
+        {
+            auto i = *this;
+            i._quiet = true;
+            return i;
+        }
 
         sql::conn &conn() { return *_conn; }
 
         template< typename... cols >
-        auto values( to_view< const typename cols::type & >... v )
+        auto values( to_view< const typename cols::type & >... v ) const
         {
             return insert_values< insert, cols... >( *this, typename cols::type( v )... );
         }
@@ -1106,7 +1113,7 @@ BRICK_SQL_OP( | )
         sql::select< args... > select( cons_list_t< args... > ) { open(); return { *this }; }
 
         template< typename table >
-        insert< table > insert_into( bool quiet = false ) { open(); return { _conn, quiet }; }
+        insert< table > insert_into() { open(); return insert< table >{ _conn }; }
 
         template< typename table >
         update< table > update() { open(); return { *this }; }

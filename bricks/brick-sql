@@ -68,13 +68,13 @@ namespace brq::sql
             s << " ";
         }
         else if constexpr ( V::is_function )
-            s << get_name( v, 0 ), v.print( s, id );
+            s << get_name( v ), v.print( s, id );
         else if constexpr ( V::is_column )
             s << v.column_name( v ) << "::" << sql_type< typename V::type >();
         else if constexpr ( V::is_query )
             s << "( ", v.print( s, id ), s << " )";
         else if constexpr ( V::is_enum )
-            s << "'" << get_name( v, 0 ) << "'";
+            s << "'" << get_name( v ) << "'";
         else
             v.print( s, id );
     }
@@ -111,8 +111,8 @@ namespace brq::sql
         template< typename CT >
         static std::string_view column_name( const CT & )
         {
-            static auto name = std::string( get_name( tab() ) ) +
-                               "." + std::string( col().column_name( col() ) );
+            static auto name = "\"" + std::string( get_name( tab() ) ) +
+                               "\"." + std::string( col().column_name( col() ) );
             return name;
         }
     };
@@ -583,8 +583,8 @@ BRICK_SQL_OP( | )
             {
                 if ( !foreign_column.empty() && !primary_column.empty() )
                 {
-                    cond << get_name( tab_right() ) << "." << foreign_column
-                         << " = " << get_name( tab_left() ) << "." << primary_column;
+                    cond << "\"" << get_name( tab_right() ) << "\"." << foreign_column
+                         << " = \"" << get_name( tab_left() ) << "\"." << primary_column;
                 }
                 else
                 {
@@ -593,8 +593,8 @@ BRICK_SQL_OP( | )
                     typename tab_left::columns().each( find_foreign_right );
 
                     if ( !foreign_column.empty() && !primary_column.empty() )
-                        cond << get_name( tab_left() ) << "." << foreign_column
-                             << " = " << get_name( tab_right() ) << "." << primary_column;
+                        cond << "\"" << get_name( tab_left() ) << "\"." << foreign_column
+                             << " = \"" << get_name( tab_right() ) << "\"." << primary_column;
                     else if constexpr ( !tabs_left::cdr_t::empty )
                         return print< stream, typename tabs_left::cdr_t >( s, id );
                     else
@@ -613,7 +613,7 @@ BRICK_SQL_OP( | )
                 case join_type::right: s << " right"; break;
             }
 
-            s << " join " << get_name( tab_right() ) << " on ";
+            s << " join \"" << get_name( tab_right() ) << "\" on ";
             if constexpr ( std::is_same_v< on_t, brq::nil > )
                 s << cond.buffer();
             else
@@ -696,7 +696,7 @@ BRICK_SQL_OP( | )
         void print( stream &s, int &id ) const
         {
             this->_query.print( s, id );
-            s << " from " << get_name( tab() );
+            s << " from \"" << get_name( tab() ) << "\"";
         }
 
         template< typename table, typename... joins >
@@ -736,8 +736,8 @@ BRICK_SQL_OP( | )
             auto fmt = [&]( auto v )
             {
                 using view = decltype( v );
-                s << ( i++ ? ", " : "with recursive " );
-                s << get_name( v ) << " ";
+                s << ( i++ ? ", \"" : "with recursive \"" );
+                s << get_name( v ) << "\" ";
                 print_columns( s, typename view::columns::template map_t< unqualify >(), "( ", " )" );
                 s << " as ( ";
                 v.construct().print( s, id );
@@ -944,7 +944,7 @@ BRICK_SQL_OP( | )
         template< typename stream >
         void print( stream &s, int &id ) const
         {
-            s << "insert into " << get_name( typename insert::table() );
+            s << "insert into \"" << get_name( typename insert::table() ) << "\"";
             cons_list_t< cols... > l;
             print_columns( s, l, "( ", " )" );
             s << " values";
@@ -1044,7 +1044,7 @@ BRICK_SQL_OP( | )
         template< typename stream >
         void print( stream &s, int & ) const
         {
-            s << "update " << get_name( table() );
+            s << "update \"" << get_name( table() ) << "\"";
         }
 
         template< typename... cols >
@@ -1063,7 +1063,7 @@ BRICK_SQL_OP( | )
         template< typename stream >
         void print( stream &s, int & ) const
         {
-            s << "delete from " << get_name( table() );
+            s << "delete from \"" << get_name( table() ) << "\"";
         }
 
         template< typename we_t >

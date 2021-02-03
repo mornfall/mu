@@ -560,7 +560,7 @@ BRICK_SQL_OP( | )
 
             auto find_primary = [&]( auto t )
             {
-                if ( t.is_primary )
+                if constexpr ( t.is_primary )
                 {
                     if constexpr ( t.is_qualified )
                     {

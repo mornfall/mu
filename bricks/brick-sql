@@ -981,7 +981,7 @@ BRICK_SQL_OP( | )
         mutable bool _quiet = false, _returning = true;
 
         using table = tbl;
-        using primary_l = decltype( typename table::columns().template filter< is_primary >() );
+        using primary_l = typename table::columns::template filter_t< is_primary >;
         using stmt = std::conditional_t< std::is_same_v< primary_l, brq::nil >, sql::stmt<>,
                                          sql::stmt< typename get_key< primary_l >::type > >;
         using order_columns = brq::nil;

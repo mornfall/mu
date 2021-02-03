@@ -372,6 +372,15 @@ BRICK_SQL_OP( | )
         static constexpr bool is_enum = false;
         static constexpr bool is_function = false;
         using type = void; /* we don't know :( */
+
+        template< typename stmt, typename T >
+        stmt _exec( T *t )
+        {
+            stmt s( t->conn(), *t );
+            t->bind( s );
+            s.exec();
+            return s;
+        }
     };
 
     template< typename q, typename col >
@@ -389,18 +398,10 @@ BRICK_SQL_OP( | )
         extend( query q ) : _query( q ) {}
 
         auto order_columns() const { return _query.order_columns(); }
+        template< typename T > stmt _exec( T *t ) { return query_base::_exec< stmt >( t ); }
 
         template< typename stmt >
         void bind( stmt &s ) const { _query.bind( s ); }
-
-        template< typename T >
-        stmt _exec( T *t )
-        {
-            stmt s( t->conn(), *t );
-            t->bind( s );
-            s.exec();
-            return s;
-        }
     };
 
     template< typename select, typename... cols >
@@ -847,6 +848,8 @@ BRICK_SQL_OP( | )
             _cols.each( [&]( const auto &c ) { sql::bind( s, c ); } );
         }
 
+        using typename query_head< cols... >::stmt;
+        stmt exec() { return query_base::_exec< stmt >( this ); }
         sql::raw_sql< select > raw_sql( std::string_view sv ) { return { *this, sv }; }
     };
 

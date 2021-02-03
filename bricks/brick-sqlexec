@@ -594,6 +594,12 @@ namespace brq::sql
         template< typename t >
         std::enable_if_t< t::is_table > listen() { exec() << "listen " << get_name( t() ); }
 
+        template< typename t >
+        std::enable_if_t< t::is_table || t::is_view > lock( std::string_view mode )
+        {
+            exec() << "lock " << get_name( t() ) << " in " << mode << " mode";
+        }
+
         void notify( std::string_view ch, std::string_view p = "" )
         {
             exec() << "notify " << ch << ", '" << p << "'";

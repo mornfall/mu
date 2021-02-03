@@ -397,6 +397,7 @@ BRICK_SQL_OP( | )
         sql::txn &txn() { return _query.txn(); }
         extend( query q ) : _query( q ) {}
 
+        void set_skip_select() { _query.set_skip_select(); }
         auto order_columns() const { return _query.order_columns(); }
         template< typename T > stmt _exec( T *t ) { return query_base::_exec< stmt >( t ); }
 
@@ -801,7 +802,7 @@ BRICK_SQL_OP( | )
     struct select : query_head< cols... >
     {
         brq::cons_list_t< cols... > _cols;
-        bool _distinct = false;
+        bool _skip_select = false;
 
         using query_head< cols... >::query_head;
         select( sql::txn &t, cols... e ) : query_head< cols... >( t ), _cols( e... ) {}
@@ -824,7 +825,7 @@ BRICK_SQL_OP( | )
         select_distinct< select, ct..., et... > distinct( et... e )
         {
             auto s = *this;
-            s._distinct = true;
+            s._skip_select = true;
             return { s, e... };
         }
 
@@ -834,10 +835,12 @@ BRICK_SQL_OP( | )
             return { *this, e... };
         }
 
+        void set_skip_select() { _skip_select = true; }
+
         template< typename stream >
         void print( stream &s, int &id ) const
         {
-            if ( !_distinct )
+            if ( !_skip_select )
                 s << "select ";
             sql::print( s, _cols, id );
         }

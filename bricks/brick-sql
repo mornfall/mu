@@ -1112,7 +1112,7 @@ BRICK_SQL_OP( | )
         sql::select< ct..., et... > select( et... e ) { open(); return { *this, ct()..., e... }; }
 
         template< typename... args >
-        sql::select< args... > select( cons_list_t< args... > ) { open(); return { *this }; }
+        sql::select< args... > select_list( cons_list_t< args... > ) { open(); return { *this }; }
 
         template< typename table >
         insert< table > insert_into() { open(); return insert< table >{ _conn }; }

@@ -426,6 +426,7 @@ namespace brq::sql
     {
         static constexpr bool is_view         = true;
         static constexpr bool is_updatable    = false;
+        static constexpr bool is_materialized = false;
 
         static auto select() { return sql::select< cols... >(); }
     };
@@ -434,6 +435,12 @@ namespace brq::sql
     struct updatable_view : view< cols... >
     {
         static constexpr bool is_updatable = true;
+    };
+
+    template< typename... cols >
+    struct materialized_view : view< cols... >
+    {
+        static constexpr bool is_materialized = true;
     };
 
     template< typename... tables_ >
@@ -476,10 +483,20 @@ namespace brq::sql
         t.exec() << "drop type if exists \"" << get_name( enum_t(), 0 ) << "\" cascade";
     };
 
+    struct pg_views : table<> {};
+    struct pg_matviews : table<> {};
+    struct viewname : column< std::string > {};
+    struct matviewname : column< std::string > {};
+
     template< typename txn_t, typename view >
-    std::enable_if_t< view::is_view > drop( txn_t &t, view, bool cascade = false )
+    std::enable_if_t< view::is_view > drop( txn_t &t, view v, bool cascade = false )
     {
-        t.exec() << "drop view if exists \"" << get_name( view() ) << ( cascade ? "\" cascade" : "\"" );
+        for ( auto _ : t.select< viewname >().template from< pg_views >()
+                        .where( viewname() == get_name( v ) ).exec() )
+            t.exec() << "drop view \"" << get_name( v ) << ( cascade ? "\" cascade" : "\"" );
+        for ( auto _ : t.select< matviewname >().template from< pg_matviews >()
+                        .where( matviewname() == get_name( v ) ).exec() )
+            t.exec() << "drop materialized view \"" << get_name( v ) << ( cascade ? "\" cascade" : "\"" );
     };
 
     template< typename txn_t, typename enum_t >
@@ -561,24 +578,79 @@ namespace brq::sql
         typename table::all().each( print_col );
     }
 
+    struct current_schema : constant< std::string, true > {};
+
+    template< typename txn_t, typename view >
+    std::enable_if_t< view::is_materialized > create_refresh( txn_t &txn, view v )
+    {
+        string_builder q_str;
+        auto q = view::trigger();
+        int id = -1;
+        q.set_skip_select();
+        q.print( q_str, id );
+
+        auto [ schema ] = txn.select< current_schema >().exec().result();
+
+        auto token   = format( get_name( v ), "_token" ),
+             refresh = format( get_name( v ), "_refresh" );
+
+        txn.exec() << "drop table if exists " << token;
+        txn.exec() << "create table " << token << " as select " << q_str;
+        txn.exec() << "create procedure " << refresh
+                   << "() security definer language plpgsql set search_path to " << schema
+                   << " as $$ "
+                   << "declare updated  " << token << "; "
+                   << "        previous " << token << "; "
+                   << "begin select into strict updated " << q_str << "; "
+                   << "      select into strict previous * from " << token << "; "
+                   << " if updated != previous then "
+                   << "  delete from " << token << "; "
+                   << "  insert into " << token << " values ( updated.* ); "
+                   << "  refresh materialized view \"" << get_name( v ) << "\"; "
+                   << " end if; end; $$";
+
+        int i = 0;
+
+        auto mkidx = [&]( auto c )
+        {
+            if constexpr ( decltype( c )::is_constraint )
+            {
+                string_builder b;
+                b << "create unique index " << get_name( v ) << "_c" << i++
+                  << " on \"" << get_name( v ) << "\" ";
+                print_columns( b, typename decltype( c )::columns(), "( ", " )" );
+                txn.exec( b.data() );
+            }
+        };
+
+        using cols = typename view::columns::template map_t< unqualify >;
+        cols().each( mkidx );
+    }
+
     template< typename txn_t, typename view, typename query >
     std::enable_if_t< view::is_view && query::is_query >
     create( txn_t &txn, view v, query q, bool as_temp = false )
     {
         string_builder s;
         int id = -1;
-        s << ( as_temp ? "create temp table " : "create view " )
+        s << ( view::is_materialized ? "create materialized view " :
+                             as_temp ? "create temp table " : "create view " )
           << "\"" << get_name( v ) << "\" ";
+
         using cols = typename view::columns::template map_t< unqualify >;
         if ( !cols::empty )
             print_columns( s, cols(), "( ", " )" );
-        s << ( as_temp ? " on commit drop as " : " with ( security_barrier ) as " );
+        s << ( view::is_materialized ? " as " :
+               as_temp ? " on commit drop as " : " with ( security_barrier ) as " );
 
         q.print( s, id );
 
         if ( view::is_updatable )
             s << " with check option";
         txn.exec( s.buffer() );
+
+        if constexpr ( view::is_materialized )
+            create_refresh( txn, v );
     }
 
     template< typename txn_t, typename view >

@@ -255,14 +255,10 @@ namespace brq::sql
     struct txn;
 
     template< typename... args >
-    struct where_expr
+    struct where_expr : column_flags
     {
         static constexpr bool is_expr = true;
-        static constexpr bool is_column = false;
-        static constexpr bool is_query = false;
-        static constexpr bool is_enum = false;
-        static constexpr bool is_function = false;
-        static constexpr bool is_asc = true;
+        static constexpr bool is_asc  = true;
 
         using type = void; /* we don't know :( */
 

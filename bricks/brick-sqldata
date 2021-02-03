@@ -680,6 +680,28 @@ namespace brq::sql
             s.reverse().each( [&]( auto t ) { drop( txn, t ); } );
         s.each( [&]( auto t ) { create( txn, t ); } );
     }
+
+    template< typename txn_t, typename schema_t >
+    void init_refresh( txn_t &txn, schema_t s )
+    {
+        string_builder b;
+        auto [ schema ] = txn.select< current_schema >().exec().result();
+
+        b << "create or replace procedure refresh_materialized_views() language sql "
+             "security definer set search_path to " << schema << " as $$\n";
+
+        auto out = [&]( auto v )
+        {
+            if constexpr ( v.is_view )
+                if constexpr ( v.is_materialized )
+                    b << "call " << get_name( v ) << "_refresh();\n";
+        };
+
+        s.each( out );
+
+        b << "$$";
+        txn.exec( b.data() );
+    }
 }
 
 namespace brq

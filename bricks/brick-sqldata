@@ -596,16 +596,16 @@ namespace brq::sql
 
         txn.exec() << "drop table if exists " << token;
         txn.exec() << "create table " << token << " as select " << q_str;
-        txn.exec() << "create procedure " << refresh
+        txn.exec() << "create or replace procedure " << refresh
                    << "() security definer language plpgsql set search_path to " << schema
                    << " as $$ "
-                   << "declare updated  " << token << "; "
-                   << "        previous " << token << "; "
-                   << "begin select into strict updated " << q_str << "; "
-                   << "      select into strict previous * from " << token << "; "
-                   << " if updated != previous then "
+                   << "declare _updated_  " << token << "; "
+                   << "        _previous_ " << token << "; "
+                   << "begin select into strict _updated_ " << q_str << "; "
+                   << "      select into strict _previous_ * from " << token << "; "
+                   << " if _updated_ != _previous_ then "
                    << "  delete from " << token << "; "
-                   << "  insert into " << token << " values ( updated.* ); "
+                   << "  insert into " << token << " values ( _updated_.* ); "
                    << "  refresh materialized view \"" << get_name( v ) << "\"; "
                    << " end if; end; $$";
 

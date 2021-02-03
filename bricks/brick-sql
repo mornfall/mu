@@ -782,7 +782,7 @@ BRICK_SQL_OP( | )
     };
 
     template< typename... cols >
-    struct query_head : query_base
+    struct query_head : query_base, with_columns< cols... >
     {
         using stmt = sql::stmt< cols... >;
         sql::txn *_txn;
@@ -801,7 +801,7 @@ BRICK_SQL_OP( | )
     template< typename... cols >
     struct select : query_head< cols... >
     {
-        brq::cons_list_t< cols... > _cols;
+        typename query_head< cols...>::columns _cols;
         bool _skip_select = false;
 
         using query_head< cols... >::query_head;

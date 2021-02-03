@@ -389,23 +389,40 @@ namespace brq::sql
         static constexpr bool is_constraint = true;
     };
 
+    template< typename T, typename = void > struct is_constraint_ : std::false_type {};
     template< typename T >
-    struct not_constraint { static constexpr bool value = !T::is_constraint; };
-    template< typename T >
-    struct is_primary { static constexpr bool value = T::is_primary; };
+    struct is_constraint_< T, std::enable_if_t< T::is_constraint > > : std::true_type {};
+    template< typename T > using is_constraint  = is_constraint_< T >;
+    template< typename T > using not_constraint = std::negation< is_constraint< T > >;
 
-    template< typename... cols >
-    struct table
+    template< typename T > struct is_primary { static constexpr bool value = T::is_primary; };
+
+    template< typename... > struct with_columns;
+
+    template< typename col, typename... cols >
+    struct with_columns< col, cols... >
     {
-        using all = cons_list_t< cols... >;
-        using columns = decltype( all().template filter< not_constraint >() );
+        using all         = std::conditional_t< is_list_v< col >, col, cons_list_t< col, cols... > >;
+        using columns     = typename all::template filter_t< not_constraint >;
+        using constraints = typename all::template filter_t< is_constraint >;
+    };
+
+    template<> struct with_columns<>
+    {
+        using all = cons_list_t<>;
+        using columns = all;
+        using constraints = all;
+    };
+
+    template< typename... cols > struct table : with_columns< cols... >, category_flags
+    {
         static constexpr bool is_table = true;
     };
 
     template< typename... > struct select;
 
     template< typename... cols >
-    struct view : category_flags
+    struct view : with_columns< cols... >, category_flags
     {
         static constexpr bool is_view         = true;
         static constexpr bool is_updatable    = false;

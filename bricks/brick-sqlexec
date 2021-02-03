@@ -144,15 +144,17 @@ namespace brq::sql
         }
     };
 
-    template< typename... cols >
+    template< typename col > using get_type = typename col::type;
+
+    template< typename cols >
     struct row
     {
-        using columns_t = brq::cons_list_t< cols... >;
-        using values_t  = brq::cons_list_t< typename cols::type... >;
+        using columns_t = cols;
+        using values_t  = typename cols::template map_t< get_type >;
         values_t _values;
 
         row() = default;
-        row( typename cols::type... v ): _values( v... ) {}
+        row( const cols &v ): _values( v ) {}
 
         template< typename col, typename cs_t, typename vs_t >
         auto &get( vs_t &vs )
@@ -176,7 +178,7 @@ namespace brq::sql
         auto &get() { return get< col, columns_t >( _values ); }
     };
 
-    template< typename... cols >
+    template< typename cols >
     struct iterator
     {
         PGresult *_result;
@@ -239,9 +241,9 @@ namespace brq::sql
                 opt = T(), fetch_one( *opt );
         }
 
-        row< cols... > operator*()
+        row< cols > operator*()
         {
-            row< cols... > r;
+            row< cols > r;
             r._values.each( [&]( auto &v ) { fetch_one( v ); ++ _col; } );
             return r;
         }
@@ -305,8 +307,6 @@ namespace brq::sql
 
         void bind_mem( const char*data, int size ) { self().bind_mem( data, size ); }
     };
-
-    template< typename col > using get_type = typename col::type;
 
     template< typename cols >
     struct copy_in : binder< copy_in< cols > >
@@ -436,17 +436,17 @@ namespace brq::sql
     };
 
     template< typename... cols >
-    struct stmt : stmt_base
+    struct stmt : stmt_base, with_columns< cols... >
     {
         using stmt_base::stmt_base;
-        using columns = brq::cons_list_t< cols... >;
-        using result_t = row< cols... >;
+        using typename with_columns< cols... >::columns;
+        using result_t = row< columns >;
 
-        using iterator = sql::iterator< cols... >;
+        using iterator = sql::iterator< columns >;
         iterator begin() { return iterator( _result, 0 ); }
         iterator end()   { return iterator( _result, size() ); }
 
-        row< cols... > result()
+        row< columns > result()
         {
             ASSERT_EQ( PQntuples( _result ), 1 );
             return *begin();
@@ -628,19 +628,14 @@ namespace brq
 
 namespace std
 {
-    template< typename... cols >
-    struct tuple_size< brq::sql::row< cols... > >
-        : std::integral_constant< std::size_t, sizeof...( cols ) >
+    template< typename cols >
+    struct tuple_size< brq::sql::row< cols > >
+        : std::integral_constant< std::size_t, cols::size >
     {};
 
-    template< typename col, typename... cols >
-    struct tuple_element< 0, brq::sql::row< col, cols... > >
+    template< size_t I, typename cols >
+    struct tuple_element< I, brq::sql::row< cols > >
     {
-        using type = typename col::type;
+        using type = typename cols::template type_at< I >::type;
     };
-
-    template< size_t I, typename col, typename... cols >
-    struct tuple_element< I, brq::sql::row< col, cols... > >
-        : tuple_element< I - 1, brq::sql::row< cols... > >
-    {};
 }

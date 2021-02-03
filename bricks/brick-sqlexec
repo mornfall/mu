@@ -471,15 +471,17 @@ namespace brq::sql
         sql::conn &_conn;
         bool _closed = true;
 
-        explicit txn_base( sql::conn &conn ) : _conn( conn ) { open(); }
+        explicit txn_base( sql::conn &conn ) : _conn( conn ) {}
 
-        void open()
+        virtual bool open()
         {
             if ( _closed )
             {
                 _closed = false;
                 exec( "begin transaction" );
+                return true;
             }
+            return false;
         }
 
         txn_base( txn_base&& rhs ) noexcept;

@@ -740,7 +740,7 @@ BRICK_SQL_OP( | )
                 s << get_name( v ) << " ";
                 print_columns( s, typename view::columns::template map_t< unqualify >(), "( ", " )" );
                 s << " as ( ";
-                view::construct( sql::select( typename view::columns() ) ).print( s, id );
+                v.construct().print( s, id );
                 s << " )";
             };
             _views.each( fmt );

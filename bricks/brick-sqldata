@@ -403,6 +403,8 @@ namespace brq::sql
         static constexpr bool is_view  = false;
     };
 
+    template< typename... > struct select;
+
     template< typename... cols >
     struct view
     {
@@ -410,6 +412,8 @@ namespace brq::sql
         static constexpr bool is_table = false;
         static constexpr bool is_view  = true;
         static constexpr bool is_updatable = false;
+
+        static auto select() { return sql::select< cols... >(); }
     };
 
     template< typename... cols >
@@ -567,7 +571,7 @@ namespace brq::sql
     std::enable_if_t< view::is_view && !view::columns::empty >
     create( txn_t &txn, view v, bool as_temp = false )
     {
-        create( txn, v, view::construct( txn.select( typename view::columns() ) ), as_temp );
+        create( txn, v, view::construct(), as_temp );
     }
 
     template< typename txn_t, typename view >

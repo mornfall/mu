@@ -158,6 +158,14 @@ namespace brq
             return make_cons( car_, cdr_ );
         }
 
+        template< typename F >
+        auto map( F f ) const
+        {
+            auto car_ = f( car() );
+            auto cdr_ = cdr().map( f );
+            return make_cons( car_, cdr_ );
+        }
+
         cons( const car_t &car, const cdr_t &cdr ) : cdr_t( cdr ), _car( car ) {}
         cons( const car_t &car ) : _car( car ) {}
 

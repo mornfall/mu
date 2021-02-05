@@ -234,6 +234,7 @@ namespace brq
     struct cons_list_t: cons_list_t_< Ts... >
     {
         using cons_list_t_< Ts... >::cons_list_t_;
+        cons_list_t( Ts... ts ) : cons_list_t_< Ts... >( ts... ) {}
     };
 
     static_assert( std::is_same_v< cons_list_t< int, int >::unique_t, cons_list_t_< int > > );

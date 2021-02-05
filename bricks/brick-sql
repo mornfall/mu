@@ -25,8 +25,8 @@ namespace brq::sql
 {
     struct txn;
 
-    template< bool bind = true, typename stream, typename V >
-    static void print( stream &s, const V &v, int &id )
+    template< bool sub = false, typename stream, typename V >
+    static stream &print( stream &s, const V &v, int &id )
     {
         if constexpr ( is_set< V >::value )
         {
@@ -61,7 +61,7 @@ namespace brq::sql
             auto item = [&]( const auto &i )
             {
                 s << ( first ? "" : ", " );
-                print( s, i, id );
+                print< sub >( s, i, id );
                 first = false;
             };
             v.each( item );
@@ -72,11 +72,18 @@ namespace brq::sql
         else if constexpr ( V::is_column )
             s << v.column_name( v ) << "::" << sql_type< typename V::type >();
         else if constexpr ( V::is_query )
-            s << "( ", v.print( s, id ), s << " )";
+        {
+            if ( sub ) s << "( ";
+            v.print( s, id ), v.print_tail( s, id );
+            if ( sub ) s << " )";
+        }
         else if constexpr ( V::is_enum )
             s << "'" << get_name( v ) << "'";
-        else
+        else if constexpr ( V::is_expr )
             v.print( s, id );
+        else
+            v.give_me_a_build_error();
+        return s;
     }
 
     template< typename stmt, typename V >
@@ -170,7 +177,7 @@ namespace brq::sql
         void print( stream &s, int &id ) const
         {
             s << "( ";
-            sql::print( s, _args, id );
+            sql::print< true >( s, _args, id );
             s << " )";
             if constexpr ( !std::is_same_v< type, void > )
                 s << "::" << sql_type< type >();
@@ -219,6 +226,8 @@ namespace brq::sql
             sql::print( s, this->_args, id );
             s << ")::" << sql_type< type >();
         }
+
+        void print_tail( string_builder &, int & ) const {}
     };
 
     template< typename col > struct cast
@@ -272,7 +281,7 @@ namespace brq::sql
         stream &print( stream &s, int &id ) const
         {
             s << ( _parens ? "( " : "" );
-            _args.each( [&]( auto v ) { sql::print( s, v, id ); s << " "; } );
+            _args.each( [&]( auto v ) { sql::print< true >( s, v, id ); s << " "; } );
             return s << ( _parens ? ")" : "" );
         }
 
@@ -381,6 +390,8 @@ BRICK_SQL_OP( | )
             s.exec();
             return s;
         }
+
+        void print_tail( string_builder &, int & ) const {}
     };
 
     template< typename q, typename col >
@@ -403,6 +414,16 @@ BRICK_SQL_OP( | )
 
         template< typename stmt >
         void bind( stmt &s ) const { _query.bind( s ); }
+
+        void print( string_builder &s, int &id ) const
+        {
+            _query.print( s, id );
+        }
+
+        void print_tail( string_builder &s, int &id ) const
+        {
+            _query.print_tail( s, id );
+        }
     };
 
     template< typename select, typename... cols >
@@ -737,9 +758,8 @@ BRICK_SQL_OP( | )
                 s << ( i++ ? ", \"" : "with recursive \"" );
                 s << get_name( v ) << "\" ";
                 print_columns( s, typename view::columns::template map_t< unqualify >(), "( ", " )" );
-                s << " as ( ";
-                v.construct().print( s, id );
-                s << " )";
+                s << " as ";
+                sql::print< true >( s, v.construct(), id );
             };
             _views.each( fmt );
             this->_query.print( s, id );
@@ -922,7 +942,6 @@ BRICK_SQL_OP( | )
         template< typename stream >
         void print( stream &s, int &id ) const
         {
-            this->_query._query._returning = false;
             this->_query.print( s, id );
             s << " on conflict ( ";
             print_columns( s, cons_list( cols()... ) );
@@ -953,15 +972,6 @@ BRICK_SQL_OP( | )
             bool first = true;
             l.each( [&]( auto ) { s << ( first ? " ( " : ", " ) << "$" << id; id ++; first = false; } );
             s << " )";
-
-            if ( this->_query._quiet )
-                s << " on conflict do nothing";
-            if constexpr ( !std::is_same_v< typename insert::primary_l, brq::nil > )
-            {
-                using primary = unqualify< typename insert::primary_l::car_t >;
-                if ( this->_query._returning )
-                    s << " returning " << primary().column_name( primary() );
-            }
         }
 
         template< typename... ccols >
@@ -975,10 +985,10 @@ BRICK_SQL_OP( | )
     };
 
     template< typename tbl >
-    struct insert
+    struct insert : query_head<>
     {
         sql::conn *_conn = nullptr;
-        mutable bool _quiet = false, _returning = true;
+        mutable bool _quiet = false;
 
         using table = tbl;
         using primary_l = typename table::columns::template filter_t< is_primary >;
@@ -994,6 +1004,23 @@ BRICK_SQL_OP( | )
             auto i = *this;
             i._quiet = true;
             return i;
+        }
+
+        void print( string_builder &s, int & ) const
+        {
+            s << "insert into \"" << get_name( typename insert::table() ) << "\"";
+        }
+
+        void print_tail( string_builder &s, int & ) const
+        {
+            if ( _quiet )
+                s << " on conflict do nothing";
+
+            if constexpr ( !std::is_same_v< typename insert::primary_l, brq::nil > )
+            {
+                using primary = unqualify< typename insert::primary_l::car_t >;
+                s << " returning " << primary().column_name( primary() );
+            }
         }
 
         sql::conn &conn() { return *_conn; }
@@ -1100,8 +1127,7 @@ BRICK_SQL_OP( | )
         -> std::enable_if_t< query::is_query, decltype( s << std::string() ) >
     {
         int id = 1;
-        st.print( s, id );
-        return s;
+        return sql::print( s, st, id );
     }
 
     struct txn : txn_base

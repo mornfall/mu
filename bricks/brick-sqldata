@@ -260,6 +260,7 @@ namespace brq::sql
     template<> struct type_map< std::string >    { static auto name() { return "bytea"; } };
     template<> struct type_map< std::string_view > { static auto name() { return "bytea"; } };
     template<> struct type_map< const char * >   { static auto name() { return "bytea"; } };
+    template<> struct type_map< char * >         { static auto name() { return "bytea"; } };
     template<> struct type_map< date >           { static auto name() { return "date"; } };
     template<> struct type_map< time >           { static auto name() { return "time"; } };
     template<> struct type_map< timestamp >      { static auto name() { return "timestamp"; }; };

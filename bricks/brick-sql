@@ -882,37 +882,52 @@ BRICK_SQL_OP( | )
     template< typename T > using to_u32v = cond_t< is_u32s_v< T >, std::u32string_view, T >;
     template< typename T > using to_view = cond_t< is_str_v< T >, std::string_view, to_u32v< T > >;
 
-    template< typename insert, bool first, typename col, typename et >
-    struct insert_update_set : extend< insert >
+    template< typename query_t, typename cols_t, typename args_t >
+    struct update_set : extend< query_t >
     {
-        et _expr;
-
-        insert_update_set( insert i, et e ) : extend< insert >( i ), _expr( e ) {}
-
-        template< typename stream >
-        void print( stream &s, int &id ) const
-        {
-            this->_query.print( s, id );
-            if constexpr ( !first )
-                s << ", ";
-            s << col().column_name( col() );
-            s << " = ";
-            sql::print( s, _expr, id );
-        }
+        args_t _args;
 
         auto exec() { return this->_exec( this ); }
+
         template< typename stmt >
         void bind( stmt &s ) const
         {
             this->_query.bind( s );
-            sql::bind( s, _expr );
+            _args.each( [&]( auto &v ) { sql::bind( s, v ); } );
         }
 
-        template< typename col2, typename et2 >
-        auto set( et2 e )
+        update_set( query_t q, args_t args )
+            : extend< query_t >( q ), _args( args )
+        {}
+
+        template< typename stream >
+        bool print( stream &s, int &id ) const
         {
-            return insert_update_set< insert_update_set, false, col2, et2 >( *this, e );
+            bool first = this->_query.print( s, id );
+
+            s << ( first ? " set " : ", " );
+
+            auto fmt_update = [&]( auto col, auto arg ) -> std::string
+            {
+                string_builder b;
+                b << col.column_name( col ) << " = ";
+                sql::print( b, arg, id );
+                return b.buffer();
+            };
+
+            print_list( s, brq::zip( fmt_update, cols_t(), _args ) );
+            return false;
         }
+
+        template< typename... cols, typename... et >
+        update_set< update_set, cons_list_t< cols... >, cons_list_t< et... > > set( et... e )
+        {
+            return { *this, cons_list_t( e... ) };
+        }
+
+        /* FIXME? this does not make sense after 'on conflict update' */
+        template< typename we_t >
+        where_clause< update_set, we_t > where( const we_t &we ) { return { *this, we }; }
     };
 
     template< typename insert >
@@ -921,16 +936,17 @@ BRICK_SQL_OP( | )
         using extend< insert >::extend;
 
         template< typename stream >
-        void print( stream &s, int &id ) const
+        bool print( stream &s, int &id ) const
         {
             this->_query.print( s, id );
-            s << "update set ";
+            s << "update ";
+            return true;
         }
 
-        template< typename cols, typename et >
-        auto set( et e )
+        template< typename... cols, typename... et >
+        update_set< insert_update, cons_list_t< cols... >, cons_list_t< et... > > set( et... e )
         {
-            return insert_update_set< insert_update, true, cols, et >( *this, e );
+            return { *this, cons_list_t( e... ) };
         }
     };
 
@@ -947,17 +963,17 @@ BRICK_SQL_OP( | )
             print_columns( s, cons_list( cols()... ) );
             s << " ) do ";
         }
+
         insert_update< conflict_clause > update() { return { *this }; }
     };
 
-    template< typename insert, typename... cols >
+    template< typename insert, typename... vals_t >
     struct insert_values : extend< insert >
     {
-        using vals = brq::cons_list_t< typename cols::type... >;
-        vals _vals;
+        cons_list_t< vals_t... > _vals;
 
-        insert_values( insert i, typename cols::type... v )
-            : extend< insert >( i ), _vals( std::move( v )... )
+        insert_values( insert i, to_view< const vals_t & >... v )
+            : extend< insert >( i ), _vals( vals_t( v )... )
         {}
 
         auto exec() { return this->_exec( this ); }
@@ -965,12 +981,11 @@ BRICK_SQL_OP( | )
         template< typename stream >
         void print( stream &s, int &id ) const
         {
-            s << "insert into \"" << get_name( typename insert::table() ) << "\"";
-            cons_list_t< cols... > l;
-            print_columns( s, l, "( ", " )" );
+            this->_query.print( s, id );
             s << " values";
-            bool first = true;
-            l.each( [&]( auto ) { s << ( first ? " ( " : ", " ) << "$" << id; id ++; first = false; } );
+
+            int i = 0;
+            _vals.each( [&]( const auto & ) { s << ( i++ ? ", " : " ( " ) << "$" << id; id ++; } );
             s << " )";
         }
 
@@ -980,7 +995,58 @@ BRICK_SQL_OP( | )
         template< typename stmt >
         void bind( stmt &s ) const
         {
+            this->_query.bind( s );
             s.bind_list( _vals );
+        }
+    };
+
+    template< typename insert, typename query_t >
+    struct insert_query : extend< insert >
+    {
+        query_t _subquery;
+
+        insert_query( insert i, query_t q )
+            : extend< insert >( i ), _subquery( std::move( q ) )
+        {}
+
+        auto exec() { return this->_exec( this ); }
+
+        template< typename stream >
+        void print( stream &s, int &id ) const
+        {
+            this->_query.print( s, id );
+
+            s << " ( ";
+            _subquery.print( s, id );
+            s << " )";
+        }
+
+        template< typename stmt >
+        void bind( stmt &s ) const
+        {
+            this->_query.bind( s );
+            _subquery.bind( s );
+        }
+
+        template< typename... cols >
+        conflict_clause< insert_query, cols... > on_conflict() { return { *this }; }
+    };
+
+    template< typename insert, typename... cols_t >
+    struct insert_columns : extend< insert >
+    {
+        using extend< insert >::extend;
+
+        void print( string_builder &s, int &id ) const
+        {
+            this->_query.print( s, id );
+            sql::print_columns( s, cons_list_t< cols_t... >(), "( ", " )" );
+        }
+
+        template< typename... cols >
+        auto values( to_view< const typename cols_t::type & >... v ) const
+        {
+            return insert_values< insert_columns, typename cols_t::type... >( *this, v... );
         }
     };
 
@@ -1026,43 +1092,22 @@ BRICK_SQL_OP( | )
         sql::conn &conn() { return *_conn; }
 
         template< typename... cols >
+        auto columns() const
+        {
+            return insert_columns< insert, cols... >( *this );
+        }
+
+        template< typename... cols >
         auto values( to_view< const typename cols::type & >... v ) const
         {
-            return insert_values< insert, cols... >( *this, typename cols::type( v )... );
+            return columns< cols... >().values( v... );
         }
-    };
 
-    template< typename update, typename... cols >
-    struct update_set : extend< update >
-    {
-        auto exec() { return this->_exec( this ); }
-
-        template< typename stmt >
-        void bind( stmt &s ) const { this->_query.bind( s ); s.bind_list( _values ); }
-
-        cons_list_t< typename cols::type... > _values;
-        update_set( update u, const typename cols::type &... v )
-            : extend< update >( u ), _values( v... )
-        {}
-
-        template< typename stream >
-        void print( stream &s, int &id ) const
+        template< typename query_t >
+        auto query( query_t q ) const
         {
-            this->_query.print( s, id );
-            s << " set ";
-            cons_list_t< cols... > list;
-            auto fmt_update = [&]( auto col ) -> std::string
-            {
-                string_builder b;
-                b << col.column_name( col ) << " = $" << id ++
-                  << "::" << sql_type< typename decltype( col )::type >();
-                return b.buffer();
-            };
-            print_list( s, list.map( fmt_update ) );
+            return insert_query< insert, query_t >( *this, q );
         }
-
-        template< typename we_t >
-        where_clause< update_set, we_t > where( const we_t &we ) { return { *this, we }; }
     };
 
     template< typename table >
@@ -1071,15 +1116,17 @@ BRICK_SQL_OP( | )
         using query_head<>::query_head;
 
         template< typename stream >
-        void print( stream &s, int & ) const
+        bool print( stream &s, int & ) const
         {
             s << "update \"" << get_name( table() ) << "\"";
+            return true;
         }
 
-        template< typename... cols >
-        update_set< update, cols... > set( const typename cols::type &... v )
+        template< typename... cols_t, typename... args_t >
+        auto set( const args_t &... v ) ->
+            update_set< update, cons_list_t< cols_t... >, cons_list_t< args_t... > >
         {
-            return { *this, v... };
+            return { *this, cons_list_t( v... ) };
         }
     };
 

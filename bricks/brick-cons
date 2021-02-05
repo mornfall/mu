@@ -175,6 +175,16 @@ namespace brq
         cons() = default;
     };
 
+    template< typename F > auto zip( F f, nil, nil ) { return nil(); }
+
+    template< typename F, typename A, typename B >
+    auto zip( F f, A a, B b )
+    {
+        auto car_ = f( a.car(), b.car() );
+        auto cdr_ = zip( f, a.cdr(), b.cdr() );
+        return make_cons( car_, cdr_ );
+    }
+
     template< typename D >
     constexpr auto cons_reverse( nil, const D &rev )
     {

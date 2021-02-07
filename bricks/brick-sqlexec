@@ -493,6 +493,10 @@ namespace brq::sql
             return false;
         }
 
+        bool valid() const
+        {
+            return _conn && !_closed;
+        }
 
         txn_base( txn_base&& rhs ) noexcept = default;
         txn_base& operator=( txn_base &&rhs ) = default;

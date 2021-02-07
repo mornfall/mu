@@ -79,6 +79,11 @@ namespace brq::sql
             if ( PQstatus( _handle ) != CONNECTION_OK )
                 raise< error >() << "connecting to " << s << " " << errmsg();
 
+            setup_notices();
+        }
+
+        void setup_notices()
+        {
             auto msg = []( void *_this, const char *msg )
             {
                 static_cast< conn * >( _this )->_notices += msg;
@@ -93,6 +98,7 @@ namespace brq::sql
               _handle( rhs._handle )
         {
             rhs._handle = nullptr;
+            setup_notices();
         }
 
         void exec( std::string_view sql )
@@ -148,7 +154,8 @@ namespace brq::sql
 
         ~conn()
         {
-            PQfinish( _handle );
+            if ( _handle )
+                PQfinish( _handle );
         }
     };
 
@@ -498,8 +505,21 @@ namespace brq::sql
             return _conn && !_closed;
         }
 
-        txn_base( txn_base&& rhs ) noexcept = default;
-        txn_base& operator=( txn_base &&rhs ) = default;
+        txn_base( txn_base&& rhs ) noexcept
+            : _conn( rhs._conn ), _closed( rhs._closed )
+        {
+            rhs._closed = true;
+        }
+
+        txn_base& operator=( txn_base &&rhs )
+        {
+            rollback();
+            _conn = rhs._conn;
+            _closed = rhs._closed;
+            rhs._closed = true;
+            return *this;
+        }
+
         txn_base& operator=( const txn_base &rhs ) = delete;
 
         sql::conn &conn() { return *_conn; }

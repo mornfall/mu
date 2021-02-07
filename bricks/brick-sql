@@ -1199,7 +1199,7 @@ BRICK_SQL_OP( | )
         sql::select< args... > select_list( cons_list_t< args... > ) { open(); return { *this }; }
 
         template< typename table >
-        insert< table > insert_into() { open(); return insert< table >{ _conn }; }
+        insert< table > insert_into() { open(); return insert< table >{ conn() }; }
 
         template< typename table >
         update< table > update() { open(); return { *this }; }

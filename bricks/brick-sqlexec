@@ -476,10 +476,11 @@ namespace brq::sql
 
     struct txn_base
     {
-        sql::conn &_conn;
+        sql::conn *_conn = nullptr;
         bool _closed = true;
 
-        explicit txn_base( sql::conn &conn ) : _conn( conn ) {}
+        explicit txn_base( sql::conn &conn ) : _conn( &conn ) {}
+        txn_base() = default;
 
         virtual bool open()
         {
@@ -492,12 +493,12 @@ namespace brq::sql
             return false;
         }
 
-        txn_base( txn_base&& rhs ) noexcept;
 
-        txn_base() = delete;
+        txn_base( txn_base&& rhs ) noexcept = default;
+        txn_base& operator=( txn_base &&rhs ) = default;
         txn_base& operator=( const txn_base &rhs ) = delete;
 
-        sql::conn &conn() { return _conn; }
+        sql::conn &conn() { return *_conn; }
 
         void commit()
         {
@@ -548,7 +549,7 @@ namespace brq::sql
         void exec( std::string_view q )
         {
             open();
-            stmt<> s( _conn, q );
+            stmt<> s( conn(), q );
             s.exec();
         }
 
@@ -556,7 +557,7 @@ namespace brq::sql
         void exec( std::string q, v... vals )
         {
             open();
-            stmt<> s( _conn, q );
+            stmt<> s( conn(), q );
             s.bind( vals... );
             s.exec();
         }
@@ -578,7 +579,7 @@ namespace brq::sql
             cols().each( [&]( const auto &c ) { b << ( i++ ? ", " : "" ) << c.column_name( c ); } );
             b << " ) FROM STDIN BINARY";
             exec( b.data() );
-            return { _conn };
+            return { conn() };
         }
 
         struct autoexec : brq::string_builder
@@ -620,7 +621,7 @@ namespace brq::sql
         notification wait( std::optional< time_t > deadline = std::nullopt )
         {
             ASSERT( _closed ); /* waiting with an open transaction causes a deadlock */
-            return _conn.wait( deadline );
+            return conn().wait( deadline );
         }
 
         ~txn_base() noexcept { if ( !_closed ) rollback(); }

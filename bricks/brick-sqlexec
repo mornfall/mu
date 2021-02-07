@@ -87,6 +87,14 @@ namespace brq::sql
             PQsetNoticeProcessor( _handle, msg, this );
         }
 
+        conn( conn &&rhs ) noexcept
+            : _pending( std::move( rhs._pending ) ),
+              _notices( std::move( rhs._notices ) ),
+              _handle( rhs._handle )
+        {
+            rhs._handle = nullptr;
+        }
+
         void exec( std::string_view sql )
         {
             _notices.clear();

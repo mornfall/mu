@@ -809,9 +809,12 @@ namespace brq
 
     inline void rmtree( std::string dir )
     {
-        traverse_dir_tree( dir, []( std::string ) { return true; },
-                                []( std::string p ) { if ( p != "." ) rmdir( p ); },
-                                unlink, false );
+        if ( auto s = stat( dir ); s && S_ISDIR( s->st_mode ) )
+            traverse_dir_tree( dir, []( std::string ) { return true; },
+                                    []( std::string p ) { if ( p != "." ) rmdir( p ); },
+                                    unlink, false );
+        else if ( s )
+            unlink( dir ); /* I guess? */
     }
 
     struct change_dir

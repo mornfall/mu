@@ -135,39 +135,79 @@ std::string to_string( const SystemOutput &o ) {
 
 }
 
-struct Pipe {
-    Pipe() {
-        if ( ::pipe2( _fds.data(), O_CLOEXEC ) == -1 )
-            throw ProcError( "could not create pipe" );
+struct fd
+{
+    int _number = -1;
+    int number() const { return _number; }
+
+    template< typename... args_t >
+    void open( args_t... args )
+    {
+        _number = ::open( args... );
+        if ( _number < 0 )
+            brq::raise< brq::system_error >() << "error opening file" << brq::format( args... );
     }
 
-    Pipe( Pipe && o ) : _fds( o._fds ) {
-        o._fds[0] = -1;
-        o._fds[1] = -1;
+    void close()
+    {
+        if ( _number >= 0 )
+            ::close( _number );
+        _number = -1;
     }
 
-    ~Pipe() { close(); }
-
-    void close() {
-        closeRead();
-        closeWrite();
+    void acquire( int n )
+    {
+        close();
+        _number = n;
     }
 
-    void closeRead() {
-        int r = _fds[0];
-        _fds[0] = -1;
-        if ( r >= 0 )
-            ::close( r );
+    template< typename... args_t >
+    fd( args_t... args ) { open( args... ); }
+
+    fd() = default;
+    fd( const fd & ) = delete;
+    fd &operator=( const fd &rhs ) = delete;
+
+    fd( fd &&rhs ) : _number( rhs._number )
+    {
+        rhs._number = -1;
     }
 
-    void closeWrite() {
-        int w = _fds[1];
-        _fds[1] = -1;
-        if ( w >= 0 )
-            ::close( w );
+    fd &operator=( fd &&rhs )
+    {
+        close();
+        _number = rhs._number;
+        rhs._number = -1;
+        return *this;
     }
 
-    std::string drain() {
+    ~fd() { close(); }
+};
+
+struct pipe
+{
+    fd _in, _out;
+
+    pipe()
+    {
+        int fds[ 2 ];
+        if ( ::pipe2( fds, O_CLOEXEC ) == -1 )
+            brq::raise< brq::system_error >() << "could not create a pipe";
+        _in.acquire( fds[ 0 ] );
+        _out.acquire( fds[ 1 ] );
+    }
+
+    void close()
+    {
+        _in.close();
+        _out.close();
+    }
+
+    void close_read()  { _in.close(); }
+    void close_write() { _out.close(); }
+
+    std::string drain()
+    {
         std::string str;
         char data[ 1024 ];
         long n;
@@ -179,7 +219,8 @@ struct Pipe {
         return str;
     }
 
-    void push( std::string s ) {
+    void push( std::string s )
+    {
         const char *ptr = s.data();
         const char *const end = ptr + s.size();
         int r = 0;
@@ -189,19 +230,12 @@ struct Pipe {
         }
     }
 
-    int read() const { return _fds[0]; }
-    int write() const { return _fds[1]; }
+    int read()  const { return _in.number(); }
+    int write() const { return _out.number(); }
 
-#ifdef __unix__
-    void attachStdout() { ::dup2( write(), STDOUT_FILENO ); }
-    void attachStderr() { ::dup2( write(), STDERR_FILENO ); }
-    void attachStdin() { ::dup2( read(), STDIN_FILENO ); }
-#else
-#error attach* fuctions are not supporrted on this platfrom
-#endif
-
-  private:
-    std::array< int, 2 > _fds;
+    void attach_stdout() { ::dup2( write(), STDOUT_FILENO ); }
+    void attach_stderr() { ::dup2( write(), STDERR_FILENO ); }
+    void attach_stdin()  { ::dup2( read(), STDIN_FILENO ); }
 };
 
 inline SystemOutput spawnAndWait( SpawnOpts opts, std::vector< std::string > args )
@@ -220,26 +254,26 @@ inline SystemOutput spawnAndWait( SpawnOpts opts, std::vector< std::string > arg
 #ifdef __unix__
     std::future< void > inf;
     std::future< std::string > outf, errf;
-    std::unique_ptr< Pipe > inp, outp, errp;
+    std::unique_ptr< pipe > inp, outp, errp;
     if ( opts.hasStdin )
-        inp = std::make_unique< Pipe >();
+        inp = std::make_unique< pipe >();
     if ( opts.hasFlag( CaptureStdout ) )
-        outp = std::make_unique< Pipe >();
+        outp = std::make_unique< pipe >();
     if ( opts.hasFlag( CaptureStderr ) )
-        errp = std::make_unique< Pipe >();
+        errp = std::make_unique< pipe >();
 
     pid_t pid;
     if ( (pid = ::fork()) == 0 ) {
         if ( inp ) {
-            inp->attachStdin();
+            inp->attach_stdin();
             inp->close();
         }
         if ( outp ) {
-            outp->attachStdout();
+            outp->attach_stdout();
             outp->close();
         }
         if ( errp ) {
-            errp->attachStderr();
+            errp->attach_stderr();
             errp->close();
         }
 
@@ -248,15 +282,15 @@ inline SystemOutput spawnAndWait( SpawnOpts opts, std::vector< std::string > arg
         ::_exit( 1 );
     } else if ( pid > 0 ) {
         if ( inp ) {
-            inp->closeRead();
+            inp->close_read();
             inf = std::async( std::launch::async, [&] { inp->push( opts.in ); inp->close(); } );
         }
         if ( outp ) {
-            outp->closeWrite();
+            outp->close_write();
             outf = std::async( std::launch::async, [&] { return outp->drain(); } );
         }
         if ( errp ) {
-            errp->closeWrite();
+            errp->close_write();
             errf = std::async( std::launch::async, [&] { return errp->drain(); } );
         }
         int status;
@@ -318,7 +352,7 @@ inline SystemOutput shellSpawnAndWait( std::string shellcmd ) {
 struct spawn_result
 {
     pid_t pid;
-    Pipe to_child,
+    pipe to_child,
          from_chld;
 };
 
@@ -327,7 +361,7 @@ std::enable_if_t< std::is_invocable_v< Exec >, spawn_result >
 spawn( Exec exec )
 {
 #ifdef __unix__
-    Pipe to_child,
+    pipe to_child,
          from_child;
 
     pid_t pid = ::fork();
@@ -337,8 +371,8 @@ spawn( Exec exec )
     if ( pid == 0 )
     {
         /* CHILD */
-        to_child.attachStdin();
-        from_child.attachStdout();
+        to_child.attach_stdin();
+        from_child.attach_stdout();
         to_child.close();
         from_child.close();
 
@@ -347,8 +381,8 @@ spawn( Exec exec )
     }
 
     /* PARENT */
-    to_child.closeRead();
-    from_child.closeWrite();
+    to_child.close_read();
+    from_child.close_write();
 
     return { pid, std::move( to_child ), std::move( from_child ) };
 #else
@@ -372,35 +406,21 @@ auto spawn( Args &&... args )
     return spawn( std::vector< std::string >{ std::forward< Args >( args )... } );
 }
 
+/* • ‹write› is called when writing is possible; gets the file descriptor as
+ *   its argument and returns whether to attempt for further writes; see the
+ *   ‹feed› function for a pre-made implementation.
+ * • ‹read› is called when reading is possible; gets the file descriptor as
+ *   its argument and returns whether to continue. See ‹each_line›
+ *   for a handy wrapper. */
 
-/* Pipethough for filtering data through a subprocess.
- *
- * 'Exec' shall execve(2) eventually.
- * 'Write' is called when writing is possible; gets the file descriptor as its argument and returns
- *         whether to attempt for furter writes.
- *         See the 'feed' function for a ready implementation.
- * 'Read' is called when reading is possible; gets the file descriptor as its argument and returns
- *        whether to run the pipethrough further.
- *        See the 'each_line' function for a handy wrapper.
- *
- * File descriptors are in both cases closed automatically, don't do it in the callbacks.
- *
- * Returns the return code of the subprocess or a negative number of the signal that terminated it.
- */
-template < typename Write, typename Read, typename... Exec >
-int pipethrough( Write do_write, Read do_read, Exec... exec )
+template < typename write_t, typename read_t >
+void communicate( fd fd_out, fd fd_in, write_t do_write, read_t do_read )
 {
-#ifdef __unix__
-    auto [ pid, to_child_p, from_child_p ] = spawn( exec... );
+    ::fcntl( fd_out.number(), F_SETFL, O_NONBLOCK );
+    ::fcntl( fd_in.number(),  F_SETFL, O_NONBLOCK );
 
-    int to_child = to_child_p.write(),
-        from_child = from_child_p.read();
-
-    ::fcntl( to_child, F_SETFL, O_NONBLOCK );
-    ::fcntl( from_child, F_SETFL, O_NONBLOCK );
-
-    pollfd fdset[2] = { { to_child, POLLOUT, 0 },
-                        { from_child, POLLIN, 0 } };
+    pollfd fdset[2] = { { fd_out.number(), POLLOUT, 0 },
+                        { fd_in.number(),  POLLIN,  0 } };
 
     while ( true )
     {
@@ -410,28 +430,44 @@ int pipethrough( Write do_write, Read do_read, Exec... exec )
         {
             if ( errno == EINTR )
                 continue;
-            throw brq::system_error( "pipethrough: poll" );
+            throw brq::system_error( "communicate: poll" );
         }
 
         if ( res == 0 )
-        {
             throw std::runtime_error( "pipethrough: poll timed out" );
-        }
 
-        if ( fdset[0].revents & POLLERR
-                || fdset[0].revents & POLLOUT && !do_write( to_child ) )
+        if ( ( fdset[0].revents & POLLERR ) ||
+             ( fdset[0].revents & POLLOUT ) && !do_write( fd_out ) )
         {
-            to_child_p.close();
+            fd_out.close();
             fdset[0].fd = -1;
         }
 
-        if ( fdset[1].revents & POLLERR
-                || fdset[1].revents & (POLLIN | POLLHUP) && !do_read( from_child ) )
+        if ( ( fdset[1].revents & POLLERR ) ||
+             ( fdset[1].revents & ( POLLIN | POLLHUP ) ) && !do_read( fd_in ) )
         {
-            from_child_p.close();
+            fd_in.close();
             break;
         }
     }
+}
+
+/* Pipethrough for filtering data through a subprocess.
+ *
+ * 'Exec' shall execve(2) eventually. See ‹communicate› above regarding ‹read›
+ * and ‹write›. File descriptors are closed automatically, don't do it in the
+ * callbacks.
+ *
+ * Returns the return code of the subprocess or a negative number of the signal
+ * that terminated it. */
+
+template < typename Write, typename Read, typename... Exec >
+int pipethrough( Write do_write, Read do_read, Exec... exec )
+{
+#ifdef __unix__
+    auto [ pid, to_child_p, from_child_p ] = spawn( exec... );
+
+    communicate( to_child_p.write(), from_child_p.read(), do_write, do_read );
 
     int wst;
     if ( waitpid( pid, &wst, 0 ) < 0 )

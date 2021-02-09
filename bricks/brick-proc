@@ -212,7 +212,7 @@ struct pipe
         char data[ 1024 ];
         long n;
         do {
-            n = ::read( read(), data, sizeof( data ) );
+            n = ::read( read().number(), data, sizeof( data ) );
             if ( n > 0 )
                 str += std::string( data, n );
         } while( n > 0 );
@@ -225,17 +225,17 @@ struct pipe
         const char *const end = ptr + s.size();
         int r = 0;
         while ( ptr < end && r >= 0 ) {
-            r = ::write( write(), ptr, end - ptr );
+            r = ::write( write().number(), ptr, end - ptr );
             ptr += r;
         }
     }
 
-    int read()  const { return _in.number(); }
-    int write() const { return _out.number(); }
+    const fd &read()  const { return _in; }
+    const fd &write() const { return _out; }
 
-    void attach_stdout() { ::dup2( write(), STDOUT_FILENO ); }
-    void attach_stderr() { ::dup2( write(), STDERR_FILENO ); }
-    void attach_stdin()  { ::dup2( read(), STDIN_FILENO ); }
+    void attach_stdout() { ::dup2( write().number(), STDOUT_FILENO ); }
+    void attach_stderr() { ::dup2( write().number(), STDERR_FILENO ); }
+    void attach_stdin()  { ::dup2( read().number(), STDIN_FILENO ); }
 };
 
 inline SystemOutput spawnAndWait( SpawnOpts opts, std::vector< std::string > args )

@@ -455,6 +455,12 @@ namespace brq::sql
             list.each( [&]( auto &v ) { _debug << " $" << ++i << " = '" << v << "'"; } );
             list.each( [&]( auto &v ) { bind_one( v ); } );
         }
+
+        template< typename... args >
+        void bind( const args &... vs )
+        {
+            bind_list( cons_list( vs... ) );
+        }
     };
 
     template< typename... cols >
@@ -483,7 +489,7 @@ namespace brq::sql
         template< typename... args >
         stmt &bind( const args &... vs )
         {
-            bind_list( cons_list( vs... ) );
+            stmt_base::bind( vs... );
             return *this;
         }
     };

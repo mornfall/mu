@@ -442,6 +442,24 @@ BRICK_SQL_OP( | )
         return { "case", c, "when true then", t, "else", e, "end" };
     }
 
+    struct all_of : opaque_vec
+    {
+        using opaque_vec::opaque_vec;
+        void print( string_builder &b, int &id ) const
+        {
+            opaque_vec::print( b, id, "and" );
+        }
+    };
+
+    struct any_of : opaque_vec
+    {
+        using opaque_vec::opaque_vec;
+        void print( string_builder &b, int &id ) const
+        {
+            opaque_vec::print( b, id, "or" );
+        }
+    };
+
     struct query_base
     {
         static constexpr bool is_column = false;

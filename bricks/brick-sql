@@ -106,6 +106,63 @@ namespace brq::sql
             v.bind( s );
     }
 
+    struct opaque_base
+    {
+        virtual void print( brq::string_builder &b, int &id ) const = 0;
+        virtual void bind( stmt_base &b ) const = 0;
+        virtual ~opaque_base() = default;
+    };
+
+    using opaque_ptr = std::shared_ptr< opaque_base >;
+
+    template< typename query_t >
+    struct opaque : opaque_base
+    {
+        query_t _query;
+        opaque( query_t q ) : _query( std::move( q ) ) {}
+
+        void print( brq::string_builder &b, int &id ) const override { _query.print( b, id ); }
+        void bind( stmt_base &b ) const override { _query.bind( b ); }
+    };
+
+    struct opaque_vec : category_flags
+    {
+        static const constexpr bool is_query = true;
+        static const constexpr bool is_expr  = true;
+
+        std::vector< opaque_ptr > _vec;
+        opaque_vec( std::vector< opaque_ptr > &&vec ) : _vec( std::move( vec ) ) {}
+        opaque_vec() = default;
+
+        void append( opaque_ptr p )
+        {
+            _vec.push_back( std::move( p ) );
+        }
+
+        template< typename query_t > void append( query_t q )
+        {
+            _vec.emplace_back( new opaque( q ) );
+        }
+
+        void print_tail( string_builder &, int & ) const {}
+
+        void print( string_builder &b, int &id, const char *join ) const
+        {
+            int i = 0;
+            for ( const auto &o : _vec )
+            {
+                if ( i++ ) b << " " << join << " ";
+                o->print( b, id );
+            }
+        }
+
+        template< typename stmt > void bind( stmt &s ) const
+        {
+            for ( const auto &o : _vec )
+                o->bind( s );
+        }
+    };
+
     struct row_number : constant< void, true > {};
 
     template< typename tab, typename col >

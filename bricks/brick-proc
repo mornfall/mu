@@ -367,62 +367,90 @@ inline system_output shell_spawn_and_wait( std::string shellcmd )
 }
 #endif
 
-struct spawn_result
-{
-    pid_t pid;
-    pipe to_child,
-         from_chld;
-};
-
-template< typename Exec >
-std::enable_if_t< std::is_invocable_v< Exec >, spawn_result >
-spawn( Exec exec )
-{
 #ifdef __unix__
-    pipe to_child,
-         from_child;
+struct spawn
+{
+    pid_t _pid;
+    pipe _from_child, _to_child;
+    int _status = 0;
 
-    pid_t pid = ::fork();
+    const fd &read_fd() const { return _from_child.read(); }
+    const fd &write_fd() const { return _to_child.write(); }
+    fd take_read_fd()  { return std::move( _from_child._in ); }
+    fd take_write_fd() { return std::move( _to_child._out ); }
 
-    if ( pid == -1 )
-        throw brq::system_error( "spawn: fork" );
-    if ( pid == 0 )
+    template< typename exec_t >
+    spawn( exec_t exec, std::enable_if_t< std::is_invocable_v< exec_t >, int > = 0 )
     {
-        /* CHILD */
-        to_child.attach_stdin();
-        from_child.attach_stdout();
-        to_child.close();
-        from_child.close();
+        _pid = ::fork();
 
-        exec();
-        throw brq::system_error( "spawn: exec didn't, in fact, exec" );
+        if ( _pid == 0 ) /* child */
+        {
+            _to_child.attach_stdin();
+            _from_child.attach_stdout();
+            _to_child.close();
+            _from_child.close();
+
+            exec();
+            throw brq::system_error( "spawn: exec didn't, in fact, exec" );
+        }
+
+        else if ( _pid > 0 ) /* parent */
+        {
+            _to_child.close_read();
+            _from_child.close_write();
+        }
+
+        else
+            throw brq::system_error( "spawn: fork" );
     }
 
-    /* PARENT */
-    to_child.close_read();
-    from_child.close_write();
+    static auto execvp( std::vector< std::string > args )
+    {
+        return [=]
+        {
+            std::vector< const char * > cargs;
+            std::transform( args.begin(), args.end(), std::back_inserter( cargs ),
+                            []( const std::string &s ) { return s.c_str(); } );
+            cargs.push_back( nullptr );
 
-    return { pid, std::move( to_child ), std::move( from_child ) };
-#else
-#error implementation of brick::proc::spawn for this platform is missing
+            ::execvp( cargs[ 0 ], const_cast< char * const * >( cargs.data() ) );
+        };
+    }
+
+    spawn( std::vector< std::string > args )
+        : spawn( execvp( args ) )
+    {}
+
+    template< typename... Args >
+    spawn( Args &&... args ) :
+        spawn( std::vector{ std::string( args )... } )
+    {}
+
+    int close()
+    {
+        if ( _pid < 0 )
+            return _status;
+
+        pid_t pid = _pid;
+        _pid = -1;
+        int wst;
+
+        if ( waitpid( pid, &wst, 0 ) < 0 )
+            throw brq::system_error( "spawn: wait" );
+
+        if ( WIFEXITED( wst ) )
+            _status = WEXITSTATUS( wst );
+        if ( WIFSIGNALED( wst ) )
+            _status = -WTERMSIG( wst );
+
+        return _status;
+    }
+
+    spawn &operator=( spawn && ) = default;
+    ~spawn() { close(); }
+};
 #endif
-}
-
-inline auto spawn( std::vector< std::string > args )
-{
-    std::vector< const char * > cargs;
-    std::transform( args.begin(), args.end(), std::back_inserter( cargs ),
-                    []( const std::string &s ) { return s.c_str(); } );
-    cargs.push_back( nullptr );
-
-    return spawn( [&](){ ::execvp( cargs[ 0 ], const_cast< char * const * >( cargs.data() ) ); } );
-}
-
-template< typename... Args >
-auto spawn( Args &&... args )
-{
-    return spawn( std::vector< std::string >{ std::forward< Args >( args )... } );
-}
 
 /* • ‹write› is called when writing is possible; gets the file descriptor as
  *   its argument and returns whether to attempt for further writes; see the
@@ -479,27 +507,15 @@ void communicate( fd fd_out, fd fd_in, write_t do_write, read_t do_read )
  * Returns the return code of the subprocess or a negative number of the signal
  * that terminated it. */
 
+#ifdef __unix__
 template < typename Write, typename Read, typename... Exec >
 int pipethrough( Write do_write, Read do_read, Exec... exec )
 {
-#ifdef __unix__
-    auto [ pid, to_child_p, from_child_p ] = spawn( exec... );
-
-    communicate( to_child_p.write(), from_child_p.read(), do_write, do_read );
-
-    int wst;
-    if ( waitpid( pid, &wst, 0 ) < 0 )
-        throw brq::system_error( "pipethrough: wait" );
-    if ( WIFEXITED( wst ) )
-        return WEXITSTATUS( wst );
-    if ( WIFSIGNALED( wst ) )
-        return - WTERMSIG( wst );
-    UNREACHABLE( "wrong waitpid result type" );
-    // pipes get closed here
-#else
-#error implementation of brick::proc::pipethrough for this platform is missing
-#endif
+    spawn child( exec... );
+    communicate( child.take_write_fd(), child.take_read_fd(), do_write, do_read );
+    return child.close();
 }
+#endif
 
 template< typename Yield, unsigned BUFFER_SIZE = 512 >
 struct pipe_read_lines

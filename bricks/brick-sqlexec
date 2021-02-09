@@ -323,22 +323,20 @@ namespace brq::sql
         void bind_mem( const char*data, int size ) { self().bind_mem( data, size ); }
     };
 
-    template< typename cols >
-    struct copy_in : binder< copy_in< cols > >
+    struct copy_base : binder< copy_base >
     {
-        using columns = cols;
-        using values = typename columns::template map_t< get_type >;
+        conn &_conn;
         bool _prepend_size = false;
         bool _open = true;
-        conn &_conn;
 
-        copy_in( conn &c )
-            : _conn( c )
+        void bind_mem( const char *data, int size )
         {
-            this->bind_mem( "PGCOPY\n\377\r\n\0", 11 );
-            put32( 0 );
-            put32( 0 );
+            if ( _prepend_size )
+                _prepend_size = false, put32( size );
+            PQputCopyData( _conn.handle(), data, size );
         }
+
+        void bind_null() { put32( -1 ); }
 
         void put32( int32_t v ) { this->bind_one( v ); }
         void put16( int16_t v ) { this->bind_one( v ); }
@@ -355,17 +353,26 @@ namespace brq::sql
                 raise< error >() << "executing copy: " << _conn.errmsg();
         }
 
-        copy_in( const copy_in & ) = delete;
-        ~copy_in() { close(); }
-        void bind_null() { put32( -1 ); }
-        template< typename... T > void put( const T &... args ) { put_list( values( args... ) ); }
-
-        void bind_mem( const char *data, int size )
+        copy_base( conn &c ) : _conn( c )
         {
-            if ( _prepend_size )
-                _prepend_size = false, put32( size );
-            PQputCopyData( _conn.handle(), data, size );
+            this->bind_mem( "PGCOPY\n\377\r\n\0", 11 );
+            put32( 0 );
+            put32( 0 );
         }
+
+        ~copy_base() { close(); }
+    };
+
+    template< typename cols >
+    struct copy_in : copy_base
+    {
+        using columns = cols;
+        using values = typename columns::template map_t< get_type >;
+
+        using copy_base::copy_base;
+
+        copy_in( const copy_in & ) = delete;
+        template< typename... T > void put( const T &... args ) { put_list( values( args... ) ); }
 
         void put_list( values list )
         {

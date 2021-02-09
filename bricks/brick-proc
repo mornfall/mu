@@ -3,6 +3,7 @@
 /*
  * (c) 2016 Vladimír Štill <xstill@fi.muni.cz>
  * (c) 2020 Adam Matoušek <xmatous3@fi.muni.cz>
+ * (c) 2021 Petr Ročkai <code@fixp.eu>
  */
 
 /* Redistribution and use in source and binary forms, with or without
@@ -54,48 +55,47 @@
 
 extern char **environ;
 
-namespace brick {
-namespace proc {
-
-struct ProcError : brq::error
+namespace brq
 {
-    using brq::error::error;
+
+enum spawn_opts_enum : unsigned
+{
+    none = 0,
+    capture_stdout = 0x1,
+    capture_stderr = 0x2,
+    show_cmd = 0x100
 };
 
-enum SpawnOptsEnum : unsigned {
-    None = 0,
-    CaptureStdout = 0x1,
-    CaptureStderr = 0x2,
-    ShowCmd = 0x100
-};
+struct spawn_opts
+{
+    spawn_opts( spawn_opts_enum f ) : flags( f ) { }
+    spawn_opts( unsigned f ) : flags( spawn_opts_enum( f ) ) { }
+    explicit spawn_opts( std::string in ) : has_stdin( true ), in( in ) { }
 
-struct SpawnOpts {
-    SpawnOpts( SpawnOptsEnum f ) : flags( f ) { }
-    SpawnOpts( unsigned f ) : flags( SpawnOptsEnum( f ) ) { }
-    explicit SpawnOpts( std::string in ) : hasStdin( true ), in( in ) { }
+    bool has_flag( spawn_opts_enum f ) const { return (flags & f) == f; }
 
-    bool hasFlag( SpawnOptsEnum f ) const { return (flags & f) == f; }
-
-    bool hasStdin = false;
+    bool has_stdin = false;
     std::string in;
-    SpawnOptsEnum flags = None;
+    spawn_opts_enum flags = none;
 };
 
-inline SpawnOpts StdinString( std::string in ) { return SpawnOpts( in ); }
+inline spawn_opts stdin_string( std::string in ) { return spawn_opts( in ); }
 
-inline SpawnOpts operator|( SpawnOpts a, SpawnOpts b ) {
-    a.flags = SpawnOptsEnum( a.flags | b.flags );
-    ASSERT( !(a.hasStdin && b.hasStdin) );
-    if ( b.hasStdin ) {
-        a.hasStdin = true;
+inline spawn_opts operator|( spawn_opts a, spawn_opts b )
+{
+    a.flags = spawn_opts_enum( a.flags | b.flags );
+    ASSERT( !( a.has_stdin && b.has_stdin ) );
+    if ( b.has_stdin )
+    {
+        a.has_stdin = true;
         a.in = std::move( b.in );
     }
     return a;
 }
 
-struct SystemOutput {
-
-    SystemOutput( int exitcode, int signal, std::string out, std::string err ) :
+struct system_output
+{
+    system_output( int exitcode, int signal, std::string out, std::string err ) :
         _exitcode( exitcode ), _signal( signal ), _out( out ), _err( err )
     { }
 
@@ -115,24 +115,22 @@ struct SystemOutput {
     std::string _err;
 };
 
-inline namespace {
+static inline std::string to_string( const system_output &o )
+{
+    string_builder ss;
+    ss << "exitcode = " << o.exitcode() << ", signal = " << o.signal() << "\n";
 
-std::string to_string( const SystemOutput &o ) {
-    std::stringstream ss;
-    ss << "exitcode = " << o.exitcode() << ", signal = " << o.signal() << std::endl;
-    for ( auto x : { std::make_pair( "stdout", &o.out() ), std::make_pair( "stderr", &o.err() ) } ) {
-        if ( !x.second->empty() ) {
-            ss << x.first << ":" << std::endl;
-            std::stringstream data( *x.second );
-            std::string line;
-            while ( std::getline( data, line ) )
-                ss << "    " << line << std::endl;
-            ss << std::endl;
+    for ( auto x : { std::make_pair( "stdout", &o.out() ), std::make_pair( "stderr", &o.err() ) } )
+    {
+        if ( !x.second->empty() )
+        {
+            ss << x.first << ":" << "\n";
+            for ( auto line : splitter( *x.second, '\n' ) )
+                ss << "    " << line << "\n";
+            ss << "\n";
         }
     }
-    return ss.str();
-}
-
+    return ss.buffer();
 }
 
 struct fd
@@ -145,7 +143,7 @@ struct fd
     {
         _number = ::open( args... );
         if ( _number < 0 )
-            brq::raise< brq::system_error >() << "error opening file" << brq::format( args... );
+            raise< system_error >() << "error opening file" << brq::format( args... );
     }
 
     void close()
@@ -192,7 +190,7 @@ struct pipe
     {
         int fds[ 2 ];
         if ( ::pipe2( fds, O_CLOEXEC ) == -1 )
-            brq::raise< brq::system_error >() << "could not create a pipe";
+            raise< system_error >() << "could not create a pipe";
         _in.acquire( fds[ 0 ] );
         _out.acquire( fds[ 1 ] );
     }
@@ -238,41 +236,50 @@ struct pipe
     void attach_stdin()  { ::dup2( read().number(), STDIN_FILENO ); }
 };
 
-inline SystemOutput spawnAndWait( SpawnOpts opts, std::vector< std::string > args )
+#ifdef __unix__
+inline system_output spawn_and_wait( spawn_opts opts, std::vector< std::string > args )
 {
-    if ( opts.hasFlag( ShowCmd ) ) {
+    if ( opts.has_flag( show_cmd ) )
+    {
         std::cerr << "+ ";
         std::copy( args.begin(), args.end(), std::ostream_iterator< std::string >( std::cerr, " " ) );
         std::cerr << std::endl;
     }
+
     std::vector< const char * > cargs;
     std::transform( args.begin(), args.end(), std::back_inserter( cargs ),
                     []( const std::string &s ) { return s.c_str(); } );
     cargs.push_back( nullptr );
     std::string out, err;
 
-#ifdef __unix__
     std::future< void > inf;
     std::future< std::string > outf, errf;
     std::unique_ptr< pipe > inp, outp, errp;
-    if ( opts.hasStdin )
+    if ( opts.has_stdin )
         inp = std::make_unique< pipe >();
-    if ( opts.hasFlag( CaptureStdout ) )
+    if ( opts.has_flag( capture_stdout ) )
         outp = std::make_unique< pipe >();
-    if ( opts.hasFlag( CaptureStderr ) )
+    if ( opts.has_flag( capture_stderr ) )
         errp = std::make_unique< pipe >();
 
-    pid_t pid;
-    if ( (pid = ::fork()) == 0 ) {
-        if ( inp ) {
+    pid_t pid = ::fork();
+
+    if ( pid == 0 )
+    {
+        if ( inp )
+        {
             inp->attach_stdin();
             inp->close();
         }
-        if ( outp ) {
+
+        if ( outp )
+        {
             outp->attach_stdout();
             outp->close();
         }
-        if ( errp ) {
+
+        if ( errp )
+        {
             errp->attach_stderr();
             errp->close();
         }
@@ -280,7 +287,10 @@ inline SystemOutput spawnAndWait( SpawnOpts opts, std::vector< std::string > arg
         ::execvp( cargs[ 0 ], const_cast< char *const * >( cargs.data() ) );
         std::cerr << "exec failed: " << cargs[ 0 ] << std::endl;
         ::_exit( 1 );
-    } else if ( pid > 0 ) {
+    }
+
+    else if ( pid > 0 )
+    {
         if ( inp ) {
             inp->close_read();
             inf = std::async( std::launch::async, [&] { inp->push( opts.in ); inp->close(); } );
@@ -302,52 +312,60 @@ inline SystemOutput spawnAndWait( SpawnOpts opts, std::vector< std::string > arg
         err = errf.valid() ? errf.get() : "";
 
         if ( r < 0 )
-            throw ProcError( "waitpid error" );
-        return SystemOutput( WIFEXITED( status ) ? WEXITSTATUS( status ) : 0,
-                             WIFSIGNALED( status ) ? WTERMSIG( status ) : 0,
-                             out, err );
-    } else
-        throw ProcError( "fork failed" );
-#else
-#error implementation of brick::proc::spawnAndWait for this platform is missing
+            raise< system_error >() << "waitpid error";
+
+        return system_output( WIFEXITED( status ) ? WEXITSTATUS( status ) : 0,
+                              WIFSIGNALED( status ) ? WTERMSIG( status ) : 0,
+                              out, err );
+    }
+
+    else
+    {
+        raise< system_error >() << "fork failed";
+        abort();
+    }
+}
+
+inline system_output spawn_and_wait( std::vector< std::string > args )
+{
+    return spawn_and_wait( none, args );
+}
+
+template< typename... Args >
+system_output spawn_and_wait( spawn_opts opts, Args &&...args )
+{
+    return spawn_and_wait( opts, std::vector< std::string >{ std::forward< Args >( args )... } );
+}
+
+template< typename... Args >
+system_output spawn_and_wait( spawn_opts_enum opts, Args &&...args )
+{
+    return spawn_and_wait( spawn_opts( opts ), std::forward< Args >( args )... );
+}
+
+template< typename... Args >
+system_output spawn_and_wait( unsigned opts, Args &&...args )
+{
+    // note: result of | on spawn_opts_enum in unsigned
+    return spawn_and_wait( spawn_opts( spawn_opts_enum( opts ) ), std::forward< Args >( args )... );
+}
+
+template< typename... Args >
+system_output spawn_and_wait( Args &&...args )
+{
+    return spawn_and_wait( none, std::forward< Args >( args )... );
+}
+
+inline system_output shell_spawn_and_wait( spawn_opts opts, std::string shellcmd )
+{
+    return spawn_and_wait( opts, "/bin/sh", "-c", shellcmd );
+}
+
+inline system_output shell_spawn_and_wait( std::string shellcmd )
+{
+    return shell_spawn_and_wait( none, shellcmd );
+}
 #endif
-}
-
-inline SystemOutput spawnAndWait( std::vector< std::string > args ) {
-    return spawnAndWait( None, args );
-}
-
-template< typename... Args >
-SystemOutput spawnAndWait( SpawnOpts opts, Args &&...args ) {
-    return spawnAndWait( opts, std::vector< std::string >{ std::forward< Args >( args )... } );
-}
-
-template< typename... Args >
-SystemOutput spawnAndWait( SpawnOptsEnum opts, Args &&...args ) {
-    return spawnAndWait( SpawnOpts( opts ), std::forward< Args >( args )... );
-}
-
-template< typename... Args >
-SystemOutput spawnAndWait( unsigned opts, Args &&...args ) { // note: result of | on SpawnOptsEnum in unsigned
-    return spawnAndWait( SpawnOpts( SpawnOptsEnum( opts ) ), std::forward< Args >( args )... );
-}
-
-template< typename... Args >
-SystemOutput spawnAndWait( Args &&...args ) {
-    return spawnAndWait( None, std::forward< Args >( args )... );
-}
-
-inline SystemOutput shellSpawnAndWait( SpawnOpts opts, std::string shellcmd ) {
-#ifdef __unix__
-    return spawnAndWait( opts, "/bin/sh", "-c", shellcmd );
-#else
-#error shell spawn is not supported on this platform
-#endif
-}
-
-inline SystemOutput shellSpawnAndWait( std::string shellcmd ) {
-    return shellSpawnAndWait( None, shellcmd );
-}
 
 struct spawn_result
 {
@@ -410,7 +428,7 @@ auto spawn( Args &&... args )
  *   its argument and returns whether to attempt for further writes; see the
  *   ‹feed› function for a pre-made implementation.
  * • ‹read› is called when reading is possible; gets the file descriptor as
- *   its argument and returns whether to continue. See ‹each_line›
+ *   its argument and returns whether to continue. See ‹pipe_read_lines›
  *   for a handy wrapper. */
 
 template < typename write_t, typename read_t >
@@ -484,14 +502,14 @@ int pipethrough( Write do_write, Read do_read, Exec... exec )
 }
 
 template< typename Yield, unsigned BUFFER_SIZE = 512 >
-struct each_line
+struct pipe_read_lines
 {
     char _buffer[ BUFFER_SIZE ];
     std::string _line_buffer;
     Yield yield;
 
-    each_line( Yield y ) : yield( y ) {}
-    ~each_line()
+    pipe_read_lines( Yield y ) : yield( y ) {}
+    ~pipe_read_lines()
     {
         // in case the last line doesn't end with LF
         if ( ! _line_buffer.empty() )
@@ -505,7 +523,7 @@ struct each_line
         {
             if ( errno == EAGAIN || errno == EWOULDBLOCK )
                 return true;
-            throw brq::system_error( "each_line: read" );
+            throw brq::system_error( "pipe_read_lines: read" );
         }
 
         _buffer[ res ] = '\0';
@@ -517,10 +535,10 @@ struct each_line
         }
 
         return res > 0;
-    };
+    }
 };
 
-inline auto feed( std::string_view data )
+inline auto pipe_feed( std::string_view data )
 {
     return [data] ( int fd ) mutable -> bool {
         int res = write( fd, data.data(), data.length() );
@@ -537,8 +555,7 @@ inline auto feed( std::string_view data )
     };
 }
 
-
-struct XTerm
+struct xterm
 {
     struct
     {
@@ -549,7 +566,7 @@ struct XTerm
         std::unique_ptr< brq::posix_buf > buf;
     } _d;
 
-    struct SBuf : brq::posix_buf
+    struct sbuf : brq::posix_buf
     {
         using brq::posix_buf::posix_buf;
 
@@ -608,21 +625,21 @@ struct XTerm
         tio.c_oflag = 0;
         tcsetattr( _d.slavefd, TCSANOW, &tio );
 
-        _d.buf.reset( new SBuf( _d.masterfd ) );
+        _d.buf.reset( new sbuf( _d.masterfd ) );
         _d.stream.reset( new std::iostream( _d.buf.get() ) );
     }
 
     std::iostream &stream() { return *_d.stream; }
 
-    XTerm() = default;
-    XTerm( const XTerm & ) = delete;
-    XTerm( XTerm &&o )
+    xterm() = default;
+    xterm( const xterm & ) = delete;
+    xterm( xterm &&o )
     {
         _d = std::move( o._d );
         o._d.pid = 0;
     }
 
-    ~XTerm()
+    ~xterm()
     {
         if ( _d.pid )
         {
@@ -634,116 +651,139 @@ struct XTerm
         _d.pid = 0;
     }
 };
-
 }
 
-namespace t_proc {
+namespace t_brq
+{
 
-struct TestSpawn {
-    TEST( basic_true ) {
-        auto r = proc::spawnAndWait( "true" );
+struct test_spawn
+{
+    TEST( basic_true )
+    {
+        auto r = brq::spawn_and_wait( "true" );
         ASSERT_EQ( r.exitcode(), 0 );
         ASSERT_EQ( r.signal(), 0 );
         ASSERT( r );
     }
 
-    TEST( basic_false ) {
-        auto r = proc::spawnAndWait( "false" );
+    TEST( basic_false )
+    {
+        auto r = brq::spawn_and_wait( "false" );
         ASSERT_LT( 0, r.exitcode() );
         ASSERT_EQ( r.signal(), 0 );
         ASSERT( !r );
     }
 
-    TEST( echo1 ) {
-        auto r = proc::spawnAndWait( proc::CaptureStdout, "printf", "a" );
+    TEST( echo1 )
+    {
+        auto r = brq::spawn_and_wait( brq::capture_stdout, "printf", "a" );
         ASSERT( r );
         ASSERT_EQ( r.out(), "a" );
         ASSERT_EQ( r.err(), "" );
     }
 
-    TEST( echo2 ) {
-        auto r = proc::spawnAndWait( proc::CaptureStdout | proc::CaptureStderr, "printf", "a" );
+    TEST( echo2 )
+    {
+        auto r = brq::spawn_and_wait( brq::capture_stdout | brq::capture_stderr, "printf", "a" );
         ASSERT( r );
         ASSERT_EQ( r.out(), "a" );
         ASSERT_EQ( r.err(), "" );
     }
 
-    TEST( echoSpec ) {
-        auto r = proc::spawnAndWait( proc::CaptureStdout, "printf", "a\nb" );
+    TEST( echo_spec )
+    {
+        auto r = brq::spawn_and_wait( brq::capture_stdout, "printf", "a\nb" );
         ASSERT( r );
         ASSERT_EQ( r.out(), "a\nb" );
         ASSERT_EQ( r.err(), "" );
     }
 
-    TEST( shellEchoStdout ) {
-        auto r = proc::shellSpawnAndWait( proc::CaptureStdout, "printf a" );
+    TEST( shell_echo_stdout )
+    {
+        auto r = brq::shell_spawn_and_wait( brq::capture_stdout, "printf a" );
         ASSERT( r );
         ASSERT_EQ( r.out(), "a" );
         ASSERT_EQ( r.err(), "" );
     }
 
-    TEST( shellEchoStderr ) {
-        auto r = proc::shellSpawnAndWait( proc::CaptureStdout | proc::CaptureStderr, "printf a >&2" );
+    TEST( shell_echo_stderr )
+    {
+        auto r = brq::shell_spawn_and_wait( brq::capture_stdout |
+                                            brq::capture_stderr, "printf a >&2" );
         ASSERT( r );
         ASSERT_EQ( r.out(), "" );
         ASSERT_EQ( r.err(), "a" );
     }
 
-    TEST( in_basic ) {
-        auto r = proc::spawnAndWait( proc::StdinString( "abcbd" ) | proc::CaptureStdout | proc::CaptureStderr,
+    TEST( in_basic )
+    {
+        auto r = brq::spawn_and_wait( brq::stdin_string( "abcbd" ) |
+                                      brq::capture_stdout | brq::capture_stderr,
                                      "sed", "s/b/x/g" );
         ASSERT( r );
         ASSERT_EQ( r.out(), "axcxd" );
         ASSERT_EQ( r.err(), "" );
     }
-    TEST( in_lined ) {
-        auto r = proc::spawnAndWait( proc::StdinString( "abcbd\nebfg\n" ) | proc::CaptureStdout | proc::CaptureStderr,
-                                     "sed", "s/b/x/g" );
+
+    TEST( in_lined )
+    {
+        auto r = brq::spawn_and_wait( brq::stdin_string( "abcbd\nebfg\n" ) |
+                                      brq::capture_stdout | brq::capture_stderr,
+                                      "sed", "s/b/x/g" );
         ASSERT( r );
         ASSERT_EQ( r.out(), "axcxd\nexfg\n" );
         ASSERT_EQ( r.err(), "" );
     }
 };
 
-struct TestPipethrough {
+struct test_pipethrough
+{
     using strs = std::vector< std::string >;
-    TEST( lines ) {
+
+    TEST( lines )
+    {
         strs out;
-        proc::pipethrough( proc::feed( "foo\nbar\nbaz" ),
-                           proc::each_line( [&]( auto l ){ out.emplace_back( l ); }),
-                           "cat" );
+        brq::pipethrough( brq::pipe_feed( "foo\nbar\nbaz" ),
+                          brq::pipe_read_lines( [&]( auto l ){ out.emplace_back( l ); }),
+                          "cat" );
         ASSERT_EQ( out, strs{ "foo", "bar", "baz" } );
     }
-    TEST( noread ) {
+
+    TEST( noread )
+    {
         std::string out;
-        proc::pipethrough( []( int ){ return false; },
-                           proc::each_line( [&]( auto l ){ out = l; }),
+        brq::pipethrough( []( int ){ return false; },
+                           brq::pipe_read_lines( [&]( auto l ){ out = l; }),
                            "echo", "-e", "lorem ipsum\\nhello world" );
         ASSERT_EQ( out, "hello world" );
     }
-    TEST( empty ) {
+
+    TEST( empty )
+    {
         int n = 0;
-        proc::pipethrough( proc::feed( "this\ngets\ndiscarded" ),
-                           proc::each_line( [&]( auto ){ ++n; }),
+        brq::pipethrough( brq::pipe_feed( "this\ngets\ndiscarded" ),
+                           brq::pipe_read_lines( [&]( auto ){ ++n; }),
                            "sh", "-c", "> /dev/null" );
         ASSERT_EQ( n, 0 );
     }
-    TEST( retval ) {
+
+    TEST( retval )
+    {
         int n = 0;
-        int ret = proc::pipethrough( []( int ){ return false; },
-                                     proc::each_line( [&]( auto ){ ++n; }),
+        int ret = brq::pipethrough( []( int ){ return false; },
+                                     brq::pipe_read_lines( [&]( auto ){ ++n; }),
                                      "true" );
         ASSERT_EQ( ret, 0 );
         ASSERT_EQ( n, 0 );
-        ret = proc::pipethrough( []( int ){ return false; },
-                                 proc::each_line( [&]( auto ){ ++n; }),
+        ret = brq::pipethrough( []( int ){ return false; },
+                                 brq::pipe_read_lines( [&]( auto ){ ++n; }),
                                  "false" );
         ASSERT_LT( 0, ret );
         ASSERT_EQ( n, 0 );
 
         try {
-            ret = proc::pipethrough( []( int ){ return false; },
-                                     proc::each_line( [&]( auto ){ ++n; }),
+            ret = brq::pipethrough( []( int ){ return false; },
+                                     brq::pipe_read_lines( [&]( auto ){ ++n; }),
                                      "/dev/null" );
         } catch ( ... ) {
             // this only happens in the child
@@ -753,9 +793,6 @@ struct TestPipethrough {
         ASSERT_EQ( n, 0 );
     }
 };
-
-};
-
 }
 
 // vim: syntax=cpp tabstop=4 shiftwidth=4 expandtab ft=cpp

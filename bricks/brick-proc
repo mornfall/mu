@@ -532,9 +532,9 @@ struct pipe_read_lines
             yield( _line_buffer );
     }
 
-    bool operator()( int fd )
+    bool operator()( const brq::fd &fd )
     {
-        int res = read( fd, _buffer, BUFFER_SIZE - 1 );
+        int res = read( fd.number(), _buffer, BUFFER_SIZE - 1 );
         if ( res == -1 )
         {
             if ( errno == EAGAIN || errno == EWOULDBLOCK )
@@ -556,8 +556,9 @@ struct pipe_read_lines
 
 inline auto pipe_feed( std::string_view data )
 {
-    return [data] ( int fd ) mutable -> bool {
-        int res = write( fd, data.data(), data.length() );
+    return [data] ( const brq::fd &fd ) mutable -> bool
+    {
+        int res = write( fd.number(), data.data(), data.length() );
         if ( res == -1 )
         {
             if ( errno == EPIPE )
@@ -768,9 +769,9 @@ struct test_pipethrough
     TEST( noread )
     {
         std::string out;
-        brq::pipethrough( []( int ){ return false; },
-                           brq::pipe_read_lines( [&]( auto l ){ out = l; }),
-                           "echo", "-e", "lorem ipsum\\nhello world" );
+        brq::pipethrough( []( const brq::fd & ){ return false; },
+                          brq::pipe_read_lines( [&]( auto l ){ out = l; }),
+                          "echo", "-e", "lorem ipsum\\nhello world" );
         ASSERT_EQ( out, "hello world" );
     }
 
@@ -778,29 +779,29 @@ struct test_pipethrough
     {
         int n = 0;
         brq::pipethrough( brq::pipe_feed( "this\ngets\ndiscarded" ),
-                           brq::pipe_read_lines( [&]( auto ){ ++n; }),
-                           "sh", "-c", "> /dev/null" );
+                          brq::pipe_read_lines( [&]( auto ){ ++n; }),
+                          "sh", "-c", "> /dev/null" );
         ASSERT_EQ( n, 0 );
     }
 
     TEST( retval )
     {
         int n = 0;
-        int ret = brq::pipethrough( []( int ){ return false; },
-                                     brq::pipe_read_lines( [&]( auto ){ ++n; }),
-                                     "true" );
+        int ret = brq::pipethrough( []( const brq::fd & ){ return false; },
+                                    brq::pipe_read_lines( [&]( auto ){ ++n; }),
+                                    "true" );
         ASSERT_EQ( ret, 0 );
         ASSERT_EQ( n, 0 );
-        ret = brq::pipethrough( []( int ){ return false; },
-                                 brq::pipe_read_lines( [&]( auto ){ ++n; }),
-                                 "false" );
+        ret = brq::pipethrough( []( const brq::fd & ){ return false; },
+                                brq::pipe_read_lines( [&]( auto ){ ++n; }),
+                                "false" );
         ASSERT_LT( 0, ret );
         ASSERT_EQ( n, 0 );
 
         try {
-            ret = brq::pipethrough( []( int ){ return false; },
-                                     brq::pipe_read_lines( [&]( auto ){ ++n; }),
-                                     "/dev/null" );
+            ret = brq::pipethrough( []( brq::fd & ){ return false; },
+                                    brq::pipe_read_lines( [&]( auto ){ ++n; }),
+                                    "/dev/null" );
         } catch ( ... ) {
             // this only happens in the child
             abort();

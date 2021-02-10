@@ -381,35 +381,51 @@ namespace brq
 #ifdef __unix__
     struct spawn
     {
-        pid_t _pid;
-        pipe _from_child, _to_child;
-        int _status = 0;
+        struct
+        {
+            pid_t pid = -1;
+            pipe from_child, to_child;
+            int status = 0;
+        } _d;
 
-        const fd &read_fd() const { return _from_child.read(); }
-        const fd &write_fd() const { return _to_child.write(); }
-        fd take_read_fd()  { return std::move( _from_child._in ); }
-        fd take_write_fd() { return std::move( _to_child._out ); }
+        const fd &read_fd() const { return _d.from_child.read(); }
+        const fd &write_fd() const { return _d.to_child.write(); }
+        fd take_read_fd()  { return std::move( _d.from_child._in ); }
+        fd take_write_fd() { return std::move( _d.to_child._out ); }
+
+        spawn( spawn &&o ) : _d( std::move( o._d ) )
+        {
+            o._d.pid = -1;
+        }
+
+        spawn &operator=( spawn &&o )
+        {
+            close();
+            _d = std::move( o._d );
+            o._d.pid = -1;
+            return *this;
+        }
 
         template< typename exec_t >
         spawn( exec_t exec, std::enable_if_t< std::is_invocable_v< exec_t >, int > = 0 )
         {
-            _pid = ::fork();
+            _d.pid = ::fork();
 
-            if ( _pid == 0 ) /* child */
+            if ( _d.pid == 0 ) /* child */
             {
-                _to_child.attach_stdin();
-                _from_child.attach_stdout();
-                _to_child.close();
-                _from_child.close();
+                _d.to_child.attach_stdin();
+                _d.from_child.attach_stdout();
+                _d.to_child.close();
+                _d.from_child.close();
 
                 exec();
                 throw brq::system_error( "spawn: exec didn't, in fact, exec" );
             }
 
-            else if ( _pid > 0 ) /* parent */
+            else if ( _d.pid > 0 ) /* parent */
             {
-                _to_child.close_read();
-                _from_child.close_write();
+                _d.to_child.close_read();
+                _d.from_child.close_write();
             }
 
             else
@@ -433,32 +449,35 @@ namespace brq
             : spawn( execvp( args ) )
         {}
 
-        template< typename... Args >
-        spawn( Args &&... args ) :
-            spawn( std::vector{ std::string( args )... } )
+        template< typename... args_t,
+                  typename = decltype( std::vector{ std::string( std::declval< args_t >() )... } ) >
+        spawn( args_t &&... args  )
+            : spawn( std::vector{ std::string( args )... } )
         {}
+
+        spawn() = default;
 
         int close()
         {
-            if ( _pid < 0 )
-                return _status;
+            if ( _d.pid < 0 )
+                return _d.status;
 
-            pid_t pid = _pid;
-            _pid = -1;
+            DEBUG( "spawn::close()", _d.pid );
+            pid_t pid = _d.pid;
+            _d.pid = -1;
             int wst;
 
             if ( waitpid( pid, &wst, 0 ) < 0 )
                 throw brq::system_error( "spawn: wait" );
 
             if ( WIFEXITED( wst ) )
-                _status = WEXITSTATUS( wst );
+                _d.status = WEXITSTATUS( wst );
             if ( WIFSIGNALED( wst ) )
-                _status = -WTERMSIG( wst );
+                _d.status = -WTERMSIG( wst );
 
-            return _status;
+            return _d.status;
         }
 
-        spawn &operator=( spawn && ) = default;
         ~spawn() { close(); }
     };
 #endif

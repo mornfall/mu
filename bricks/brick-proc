@@ -490,8 +490,10 @@ namespace brq
      *   its argument and returns whether to continue. See ‹pipe_read_lines›
      *   for a handy wrapper. */
 
+    enum class io_result { done, ready, blocked };
+
     template < typename write_t, typename read_t >
-    void communicate( fd fd_out, fd fd_in, write_t do_write, read_t do_read )
+    void communicate( fd fd_out, fd fd_in, const write_t &do_write, const read_t &do_read )
     {
         ::fcntl( fd_out.number(), F_SETFL, O_NONBLOCK );
         ::fcntl( fd_in.number(),  F_SETFL, O_NONBLOCK );
@@ -511,20 +513,28 @@ namespace brq
             }
 
             if ( res == 0 )
-                throw std::runtime_error( "pipethrough: poll timed out" );
+                throw std::runtime_error( "communicate: poll timed out" );
 
-            if ( ( fdset[0].revents & POLLERR ) ||
-                 ( fdset[0].revents & POLLOUT ) && !do_write( fd_out ) )
+            if ( ( fdset[0].revents & POLLERR ) || ( fdset[0].revents & POLLOUT ) )
             {
-                fd_out.close();
-                fdset[0].fd = -1;
+                if ( auto result = do_write( fd_out ); result == io_result::done )
+                {
+                    fd_out.close();
+                    fdset[0].fd = -1;
+                }
+                else
+                    fdset[ 0 ].events = result == io_result::ready ? POLLOUT : 0;
             }
 
-            if ( ( fdset[1].revents & POLLERR ) ||
-                 ( fdset[1].revents & ( POLLIN | POLLHUP ) ) && !do_read( fd_in ) )
+            if ( ( fdset[1].revents & POLLERR ) || ( fdset[1].revents & ( POLLIN | POLLHUP ) ) )
             {
-                fd_in.close();
-                break;
+                if ( do_read( fd_in ) )
+                    fdset[ 0 ].events = POLLOUT;
+                else
+                {
+                    fd_in.close();
+                    break;
+                }
             }
         }
     }
@@ -551,19 +561,13 @@ namespace brq
     template< typename Yield, unsigned BUFFER_SIZE = 512 >
     struct pipe_read_lines
     {
-        char _buffer[ BUFFER_SIZE ];
-        std::string _line_buffer;
+        mutable char _buffer[ BUFFER_SIZE ];
+        mutable std::string _line_buffer;
         Yield yield;
 
         pipe_read_lines( Yield y ) : yield( y ) {}
-        ~pipe_read_lines()
-        {
-            // in case the last line doesn't end with LF
-            if ( ! _line_buffer.empty() )
-                yield( _line_buffer );
-        }
 
-        bool operator()( const brq::fd &fd )
+        bool operator()( const brq::fd &fd ) const
         {
             int res = read( fd.number(), _buffer, BUFFER_SIZE - 1 );
             if ( res == -1 )
@@ -585,23 +589,60 @@ namespace brq
         }
     };
 
-    inline auto pipe_feed( std::string_view data )
+    struct pipe_feed
     {
-        return [data] ( const brq::fd &fd ) mutable -> bool
+        mutable string_builder _buffer_1, _buffer_2;
+        mutable bool _closed = true;
+        mutable std::string_view _todo;
+        mutable std::function< void() > _callback;
+
+        pipe_feed( std::string_view data ) : _todo( data ) {}
+        pipe_feed( std::function< void() > cb = {} ) : _closed( false ), _callback( cb ) {}
+
+        void set_callback( std::function< void() > cb ) { _callback = cb; }
+        void close() { _closed = true; }
+
+        template< typename arg_t >
+        auto operator<<( const arg_t &arg ) -> decltype( _buffer_2 << arg, *this )
         {
-            int res = write( fd.number(), data.data(), data.length() );
-            if ( res == -1 )
+            return _buffer_2 << arg, *this;
+        }
+
+        void shift_buffers() const
+        {
+            if ( _todo.empty() )
+            {
+                _buffer_1 = std::move( _buffer_2 );
+                _buffer_2.clear();
+                _todo = _buffer_1.data();
+                if ( _callback )
+                    _callback();
+            }
+        }
+
+        io_result operator()( const brq::fd &fd ) const
+        {
+            shift_buffers();
+            int bytes = write( fd.number(), _todo.data(), _todo.length() );
+
+            if ( bytes == -1 )
             {
                 if ( errno == EPIPE )
-                    return false;
+                    return io_result::done;
                 if ( errno == EAGAIN || errno == EWOULDBLOCK )
-                    return true;
-                throw brq::system_error( "feed: write" );
+                    return io_result::ready;
+                raise< system_error >() << "pipe_feed: error writing " << _todo.length() << " bytes";
             }
-            data.remove_prefix( res );
-            return !data.empty();
-        };
-    }
+
+            _todo.remove_prefix( bytes );
+            shift_buffers();
+
+            if ( _todo.empty() )
+                return _closed ? io_result::done : io_result::blocked;
+            else
+                return io_result::ready;
+        }
+    };
 
     struct xterm
     {

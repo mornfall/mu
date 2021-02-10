@@ -513,12 +513,15 @@ namespace brq::sql
         txn.exec( s.buffer() );
     }
 
+    enum class lifetime { persistent, session, transaction };
+
     template< typename txn_t, typename table >
-    std::enable_if_t< table::is_table > create( txn_t &txn, table, bool temp = false )
+    std::enable_if_t< table::is_table > create( txn_t &txn, table, lifetime l = lifetime::persistent )
     {
         auto tabname = get_name( table() );
-        txn.exec() << "create " << ( temp ? "temp " : "" )
-                   << "table if not exists \"" << tabname << "\" ();";
+        txn.exec() << "create " << ( l == lifetime::persistent ? "" : "temp " )
+                   << "table if not exists \"" << tabname << "\" () "
+                   << ( l == lifetime::transaction ? " on commit drop;" : ";" );
         int c_num = 0;
         auto alter = [&] { return std::move( txn.exec() << "alter table \"" << tabname << "\" " ); };
         auto constraint = [&]
@@ -564,7 +567,7 @@ namespace brq::sql
                 if constexpr ( col.is_foreign )
                 {
                     auto foreign_col = typename col_t::column();
-                    if ( !temp )
+                    if ( l == lifetime::persistent )
                         constraint()
                             << "foreign key ( " << colname << " )"
                             << " references \"" << get_name( typename col_t::table() )

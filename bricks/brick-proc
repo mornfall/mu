@@ -419,7 +419,8 @@ namespace brq
                 _d.from_child.close();
 
                 exec();
-                throw brq::system_error( "spawn: exec didn't, in fact, exec" );
+                std::cerr << "spawn: exec didn't, in fact, exec" << std::endl;
+                abort();
             }
 
             else if ( _d.pid > 0 ) /* parent */

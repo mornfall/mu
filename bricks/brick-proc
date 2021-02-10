@@ -137,12 +137,27 @@ namespace brq
         int _number = -1;
         int number() const { return _number; }
 
-        template< typename... args_t >
-        void open( args_t... args )
+        static fd from_raw( int n )
         {
-            _number = ::open( args... );
-            if ( _number < 0 )
+            fd r;
+            r._number = n;
+            return r;
+        }
+
+        template< typename... args_t >
+        static fd open( args_t... args )
+        {
+            int raw = ::open( args... );
+
+            if ( raw < 0 )
                 raise< system_error >() << "error opening file" << brq::format( args... );
+            else
+                return from_raw( raw );
+        }
+
+        static fd dup( int n )
+        {
+            return from_raw( ::dup( n ) );
         }
 
         void close()
@@ -157,9 +172,6 @@ namespace brq
             close();
             _number = n;
         }
-
-        template< typename... args_t >
-        fd( args_t... args ) { open( args... ); }
 
         fd() = default;
         fd( const fd & ) = delete;

@@ -645,7 +645,7 @@ namespace brq::sql
             txn_base &_txn;
             autoexec( autoexec && ) = default;
             autoexec( txn_base &t ) : _txn( t ) {}
-            ~autoexec() { if ( _buffer ) _txn.exec( _buffer ); }
+            ~autoexec() { if ( _d.buffer ) _txn.exec( _d.buffer ); }
 
             template< typename T >
             autoexec &operator<<( const T &x )

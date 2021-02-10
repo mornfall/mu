@@ -44,75 +44,86 @@ namespace brq
 
     struct string_builder
     {
-        char *_buffer = nullptr;
-        int32_t _capacity:30, _offset:30;
-        bool _hex:1, _oom:1;
+        struct _data
+        {
+            char *buffer = nullptr;
+            int32_t capacity:30, offset:30;
+            bool hex:1, oom:1;
+
+            _data() : capacity( 0 ), offset( 0 ), hex( false ), oom( false ) {}
+
+            auto reset()
+            {
+                auto rv = *this;
+                *this = _data();
+                return rv;
+            }
+        } _d;
 
         string_builder( const string_builder & ) = delete;
-        string_builder( string_builder &&o )
-            : _buffer( o._buffer ), _capacity( o._capacity ), _offset( o._offset ),
-              _hex( o._hex ), _oom( o._oom )
+        string_builder( string_builder &&o ) : _d( o._d.reset() ) {}
+        string_builder &operator=( string_builder &&rhs )
         {
-            o._buffer = nullptr;
-            o._capacity = 0;
-            o._offset = 0;
+            std::free( _d.buffer );
+            _d = rhs._d.reset();
+            return *this;
         }
 
-        string_builder() noexcept : _capacity( 0 ), _offset( 0 ), _hex( false ), _oom( false ) {}
-        ~string_builder() noexcept { std::free( _buffer ); }
+        string_builder() noexcept = default;
+        ~string_builder() noexcept { std::free( _d.buffer ); }
 
-        char *pointer() noexcept { return _buffer + _offset; }
-        char *buffer_end() noexcept { return _buffer + _capacity - 1; }
-        const char *buffer() const noexcept { return _buffer ? _buffer : ""; }
-        std::string_view data() const noexcept { return std::string_view( _buffer, _offset ); }
+        char *pointer() noexcept { return _d.buffer + _d.offset; }
+        char *buffer_end() noexcept { return _d.buffer + _d.capacity - 1; }
+        const char *buffer() const noexcept { return _d.buffer ? _d.buffer : ""; }
+        std::string_view data() const noexcept { return std::string_view( _d.buffer, _d.offset ); }
         operator std::string_view() const noexcept { return data(); }
-        int size() const noexcept { return _offset; }
-        int rewind( int x ) noexcept { int rv = _offset; _offset = x; return rv; }
-        bool truncated() const noexcept { return _oom; }
-        void kill() { clear(); _oom = true; }
+        int size() const noexcept { return _d.offset; }
+        int rewind( int x ) noexcept { int rv = _d.offset; _d.offset = x; return rv; }
+        bool truncated() const noexcept { return _d.oom; }
+        void kill() { clear(); _d.oom = true; }
 
-        string_builder &hex( bool h = true ) { _hex = h; return *this; }
-        string_builder &dec() { _hex = false; return *this; }
+        string_builder &hex( bool h = true ) { _d.hex = h; return *this; }
+        string_builder &dec() { _d.hex = false; return *this; }
 
         void clear()
         {
-            std::free( _buffer );
-            _buffer = nullptr;
-            _capacity = _offset = 0;
-            _hex = _oom = false;
+            std::free( _d.buffer );
+            _d.reset();
         }
 
         bool _make_space( int sz ) noexcept
         {
-            if ( _oom )
+            if ( _d.oom )
                 return false;
-            if ( _offset + sz < _capacity )
+            if ( _d.offset + sz < _d.capacity )
                 return true;
 
-            int new_capacity = _capacity + std::max( _capacity / 2, sz + 1 );
-            void *mem = std::realloc( _buffer, new_capacity );
+            int new_capacity = _d.capacity + std::max( _d.capacity / 2, sz + 1 );
+            void *mem = std::realloc( _d.buffer, new_capacity );
             if ( mem )
             {
-                _buffer = static_cast< char * >( mem );
-                _capacity = new_capacity;
+                _d.buffer = static_cast< char * >( mem );
+                _d.capacity = new_capacity;
             }
             else
-                _oom = true;
+                _d.oom = true;
 
-            return !_oom;
+            return !_d.oom;
         }
 
         string_builder &operator<<( std::string_view str ) noexcept
         {
             if ( !_make_space( str.size() ) ) return *this;
             std::copy( str.begin(), str.end(), pointer() );
-            _offset += str.size();
-            _buffer[ _offset ] = 0;
+            _d.offset += str.size();
+            _d.buffer[ _d.offset ] = 0;
             return *this;
         }
 
         string_builder &operator<<( std::u32string_view us ) noexcept
         {
+            auto to_uint8_t = []( auto x ) -> uint8_t { return x; };
+
             while ( !us.empty() )
             {
                 if ( !_make_space( 4 ) ) return *this;
@@ -124,25 +135,25 @@ namespace brq
 
                 if ( wc < 0x000080 )
                 {
-                    _buffer[ _offset++ ] = static_cast< uint8_t >( wc ); 
+                    _d.buffer[ _d.offset++ ] = to_uint8_t( wc ); 
                 }
                 else if ( wc < 0x000800 )
                 {
-                    _buffer[ _offset++ ] = static_cast< uint8_t >( 0xC0 | ( wc >> 6 ) );
-                    _buffer[ _offset++ ] = static_cast< uint8_t >( 0x80 | ( wc & 0x03F ) );
+                    _d.buffer[ _d.offset++ ] = to_uint8_t( 0xC0 | ( wc >> 6 ) );
+                    _d.buffer[ _d.offset++ ] = to_uint8_t( 0x80 | ( wc & 0x03F ) );
                 }
                 else if ( wc < 0x010000 )
                 {
-                    _buffer[ _offset++ ] = static_cast< uint8_t >( 0xE0 |   ( wc >> 12 ) );
-                    _buffer[ _offset++ ] = static_cast< uint8_t >( 0x80 | ( ( wc & 0x0FC0 ) >> 6 ) );
-                    _buffer[ _offset++ ] = static_cast< uint8_t >( 0x80 |   ( wc & 0x003F ) );
+                    _d.buffer[ _d.offset++ ] = to_uint8_t( 0xE0 |   ( wc >> 12 ) );
+                    _d.buffer[ _d.offset++ ] = to_uint8_t( 0x80 | ( ( wc & 0x0FC0 ) >> 6 ) );
+                    _d.buffer[ _d.offset++ ] = to_uint8_t( 0x80 |   ( wc & 0x003F ) );
                 }
                 else // if (wc < 0x110000)
                 {
-                    _buffer[ _offset++ ] = static_cast< uint8_t >( 0xF0 |   ( wc >> 18 ) );
-                    _buffer[ _offset++ ] = static_cast< uint8_t >( 0x80 | ( ( wc & 0x03F000 ) >> 12 ) );
-                    _buffer[ _offset++ ] = static_cast< uint8_t >( 0x80 | ( ( wc & 0x000FC0 ) >> 6 ) );
-                    _buffer[ _offset++ ] = static_cast< uint8_t >( 0x80 |   ( wc & 0x00003F ) );
+                    _d.buffer[ _d.offset++ ] = to_uint8_t( 0xF0 |   ( wc >> 18 ) );
+                    _d.buffer[ _d.offset++ ] = to_uint8_t( 0x80 | ( ( wc & 0x03F000 ) >> 12 ) );
+                    _d.buffer[ _d.offset++ ] = to_uint8_t( 0x80 | ( ( wc & 0x000FC0 ) >> 6 ) );
+                    _d.buffer[ _d.offset++ ] = to_uint8_t( 0x80 |   ( wc & 0x00003F ) );
                 }
 
                 us.remove_prefix( 1 );
@@ -157,20 +168,20 @@ namespace brq
             if ( std::isprint( c ) )
             {
                 if ( !_make_space( 3 ) ) return *this;
-                _buffer[ _offset++ ] = '\'';
-                _buffer[ _offset++ ] = c;
-                _buffer[ _offset++ ] = '\'';
-                _buffer[ _offset ] = 0;
+                _d.buffer[ _d.offset++ ] = '\'';
+                _d.buffer[ _d.offset++ ] = c;
+                _d.buffer[ _d.offset++ ] = '\'';
+                _d.buffer[ _d.offset ] = 0;
             }
             return *this;
         }
 
         string_builder &operator<<( const void *ptr ) noexcept
         {
-            auto was_hex = _hex;
-            _hex = true;
+            auto was_hex = _d.hex;
+            _d.hex = true;
             (*this) << uintptr_t( ptr );
-            _hex = was_hex;
+            _d.hex = was_hex;
             return *this;
         }
 
@@ -220,21 +231,21 @@ namespace brq
 
         template< typename V >
         auto operator<<( const V &val ) noexcept
-            -> decltype( std::to_chars( _buffer, _buffer, val ), *this )
+            -> decltype( std::to_chars( _d.buffer, _d.buffer, val ), *this )
         {
             int cap = 16;
             std::to_chars_result result;
             do {
                 if ( !_make_space( cap ) ) return *this;
                 if constexpr ( std::is_integral< V >::value )
-                    result = std::to_chars( pointer(), buffer_end(), val, _hex ? 16 : 10 );
+                    result = std::to_chars( pointer(), buffer_end(), val, _d.hex ? 16 : 10 );
                 else
                     result = std::to_chars( pointer(), buffer_end(), val );
                 cap *= 2;
             } while ( result.ec == std::errc::value_too_large );
 
-            _offset = result.ptr - _buffer;
-            _buffer[ _offset ] = 0;
+            _d.offset = result.ptr - _d.buffer;
+            _d.buffer[ _d.offset ] = 0;
             return *this;
         }
     };

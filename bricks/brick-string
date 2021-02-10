@@ -73,9 +73,9 @@ namespace brq
     static string_builder &operator<<( string_builder &b, decltype( std::hex ) manip ) noexcept
     {
         if ( manip == std::hex )
-            b._hex = true;
+            b._d.hex = true;
         if ( manip == std::dec )
-            b._hex = false;
+            b._d.hex = false;
         return b;
     }
 
@@ -85,7 +85,7 @@ namespace brq
         int32_t mark;
 
         mark_t() = default;
-        explicit mark_t( string_builder &b ) : b( &b ), mark( b._offset ) {}
+        explicit mark_t( string_builder &b ) : b( &b ), mark( b._d.offset ) {}
         template< typename T > mark_t operator<<( T &&v ) { *b << std::forward< T >( v ); return *this; }
     };
 
@@ -100,15 +100,15 @@ namespace brq
         template< typename T > pad operator<<( T &&v ) { mark << std::forward< T >( v ); return *this; }
         static string_builder &write( string_builder &b, int width, int from, char ch, bool left )
         {
-            int output_width = b._offset - from;
+            int output_width = b._d.offset - from;
             if ( int pad = width - output_width; pad > 0 && b._make_space( pad ) )
             {
                 if ( left )
-                    std::memmove( b._buffer + from + pad, b._buffer + from, output_width + 1 );
+                    std::memmove( b._d.buffer + from + pad, b._d.buffer + from, output_width + 1 );
                 else
-                    b._buffer[ b._offset + pad ] = 0;
-                std::memset( b._buffer + ( left ? from : b._offset ), ch, pad );
-                b._offset += pad;
+                    b._d.buffer[ b._d.offset + pad ] = 0;
+                std::memset( b._d.buffer + ( left ? from : b._d.offset ), ch, pad );
+                b._d.offset += pad;
             }
             return b;
         }

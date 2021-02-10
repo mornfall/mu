@@ -381,8 +381,9 @@ namespace brq::sql
 #define BRICK_SQL_OP(op) BRICK_SQL_OP_(operator op, #op)
 
 BRICK_SQL_OP_( operator ==, "=" )
-BRICK_SQL_OP_( operator %=, "like" )
-BRICK_SQL_OP_( operator ^=, "~" )
+BRICK_SQL_OP_( like, "like" )
+BRICK_SQL_OP_( re, "~" )
+BRICK_SQL_OP_( re_i, "~*" )
 BRICK_SQL_OP_( operator &&, "and" )
 BRICK_SQL_OP_( operator ||, "or" )
 BRICK_SQL_OP_( operator ^, "#" )

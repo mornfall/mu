@@ -193,15 +193,27 @@ namespace brq::sql
         auto &get() { return get< col, columns_t >( _values ); }
     };
 
-    template< typename cols >
-    struct iterator
+    template< typename... cols >
+    struct iterator : with_columns< cols... >
     {
-        PGresult *_result;
+        using columns_t = typename with_columns< cols... >::columns;
+
+        PGresult *_result = nullptr;
         int _row = 0, _col = 0;
+
+        template< typename rhs_t >
+        std::enable_if_t< std::is_same_v< columns_t, typename rhs_t::columns_t >, iterator & >
+        operator=( const rhs_t &rhs )
+        {
+            _result = rhs._result;
+            _row = rhs._row;
+            _col = rhs._cols;
+        }
 
         bool operator==( const iterator &o ) const { return o._result == _result && o._row == _row; }
         bool operator!=( const iterator &o ) const { return !( *this == o ); }
 
+        iterator() = default;
         iterator( PGresult *res, int row ) : _result( res ), _row( row ) {}
         iterator &operator++() { ++_row; _col = 0; return *this; }
         iterator operator++( int ) { auto r = *this; ++ (*this); return r; }
@@ -256,9 +268,9 @@ namespace brq::sql
                 opt = T(), fetch_one( *opt );
         }
 
-        row< cols > operator*()
+        row< columns_t > operator*()
         {
-            row< cols > r;
+            row< columns_t > r;
             r._values.each( [&]( auto &v ) { fetch_one( v ); ++ _col; } );
             return r;
         }
@@ -383,64 +395,66 @@ namespace brq::sql
 
     struct stmt_base : binder< stmt_base >
     {
-        conn &_conn;
-        brq::string_builder _query, _debug;
+        struct
+        {
+            sql::conn *conn = nullptr;
+            brq::string_builder query, debug;
 
-        std::vector< std::unique_ptr< char[] > > _memory;
-        std::vector< const char * > _params;
-        std::vector< int > _lengths;
-        PGresult *_result = nullptr;
+            std::vector< std::unique_ptr< char[] > > memory;
+            std::vector< const char * > params;
+            std::vector< int > lengths;
+            PGresult *result = nullptr;
 
-        int size() const { return PQntuples( _result ); }
+            auto reset() { auto r = std::move( *this ); *this = {}; return r; }
+        } _d;
+
+        int size() const { return PQntuples( _d.result ); }
 
         void bind_mem( const char *data, int size )
         {
-            _lengths.push_back( size );
-            _memory.emplace_back( new char[ size ] );
-            std::memcpy( _memory.back().get(), data, size );
-            _params.push_back( _memory.back().get() );
+            _d.lengths.push_back( size );
+            _d.memory.emplace_back( new char[ size ] );
+            std::memcpy( _d.memory.back().get(), data, size );
+            _d.params.push_back( _d.memory.back().get() );
         }
 
         void bind_null()
         {
-            _lengths.push_back( 0 );
-            _params.push_back( nullptr );
+            _d.lengths.push_back( 0 );
+            _d.params.push_back( nullptr );
         }
 
         template< typename T >
-        stmt_base( conn &c, const T &t ) : _conn( c )
+        stmt_base( conn &c, const T &t )
         {
-            _query << t;
-            _debug << "where";
+            _d.conn = &c;
+            _d.query << t;
+            _d.debug << "where";
         }
 
+        stmt_base() = default;
         stmt_base( const stmt_base & ) = delete;
-        stmt_base( stmt_base &&o )
-            : _conn( o._conn ), _query( std::move( o._query ) ), _debug( std::move( o._debug ) ),
-              _memory( std::move( o._memory ) ), _params( o._params ),
-              _lengths( o._lengths ), _result( o._result )
-        {
-            o._result = nullptr;
-        }
+        stmt_base( stmt_base &&o ) : _d( o._d.reset() ) {}
+        stmt_base &operator=( stmt_base &&o ) { _d = o._d.reset(); return *this; }
 
         ~stmt_base()
         {
-            if ( _result )
-                PQclear( _result );
+            if ( _d.result )
+                PQclear( _d.result );
         }
 
         void exec()
         {
-            std::vector< int > formats( _params.size(), 1 );
+            std::vector< int > formats( _d.params.size(), 1 );
 
-            DEBUG( _query.buffer(), _params.size() ? _debug.buffer() : "" );
-            _conn._notices.clear();
-            _result = PQexecParams( _conn.handle(), _query.buffer(), _params.size(), nullptr,
-                                    _params.data(), _lengths.data(), formats.data(), 1 );
+            DEBUG( _d.query.buffer(), _d.params.size() ? _d.debug.buffer() : "" );
+            _d.conn->_notices.clear();
+            _d.result = PQexecParams( _d.conn->handle(), _d.query.buffer(), _d.params.size(), nullptr,
+                                      _d.params.data(), _d.lengths.data(), formats.data(), 1 );
 
-            auto r = PQresultStatus( _result );
+            auto r = PQresultStatus( _d.result );
             if ( r != PGRES_COMMAND_OK && r != PGRES_TUPLES_OK && r != PGRES_COPY_IN )
-                raise< error >() << "executing " << _query.buffer() << ": " << _conn.errmsg();
+                raise< error >() << "executing " << _d.query.buffer() << ": " << _d.conn->errmsg();
         }
 
         template< typename list_t >
@@ -448,11 +462,11 @@ namespace brq::sql
         {
             int count = 0;
             list.each( [&]( auto ) { ++count; } );
-            _params.reserve( _params.size() + count );
-            _memory.reserve( _memory.size() + count );
+            _d.params.reserve( _d.params.size() + count );
+            _d.memory.reserve( _d.memory.size() + count );
 
-            int i = _params.size();
-            list.each( [&]( auto &v ) { _debug << " $" << ++i << " = '" << v << "'"; } );
+            int i = _d.params.size();
+            list.each( [&]( auto &v ) { _d.debug << " $" << ++i << " = '" << v << "'"; } );
             list.each( [&]( auto &v ) { bind_one( v ); } );
         }
 
@@ -467,16 +481,23 @@ namespace brq::sql
     struct stmt : stmt_base, with_columns< cols... >
     {
         using stmt_base::stmt_base;
-        using typename with_columns< cols... >::columns;
-        using result_t = row< columns >;
+        using columns_t = typename with_columns< cols... >::columns;
+        using result_t = row< columns_t >;
 
-        using iterator = sql::iterator< columns >;
-        iterator begin() { return iterator( _result, 0 ); }
-        iterator end()   { return iterator( _result, size() ); }
+        using iterator = sql::iterator< cols... >;
+        iterator begin() { return iterator( _d.result, 0 ); }
+        iterator end()   { return iterator( _d.result, size() ); }
 
-        row< columns > result()
+        template< typename rhs_t >
+        std::enable_if_t< std::is_same_v< columns_t, typename rhs_t::columns_t >, stmt & >
+        operator=( const rhs_t &rhs )
         {
-            ASSERT_EQ( PQntuples( _result ), 1 );
+            return *this;
+        }
+
+        row< columns_t > result()
+        {
+            ASSERT_EQ( PQntuples( _d.result ), 1 );
             return *begin();
         }
 

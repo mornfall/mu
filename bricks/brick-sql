@@ -807,7 +807,7 @@ BRICK_SQL_OP( | )
         using stmt = sql::stmt< cols... >;
         sql::txn *_txn;
         sql::txn &txn() { return *_txn; }
-        conn &conn();
+        sql::conn &conn();
 
         query_head( sql::txn &t ) : _txn( &t ) {}
         query_head() : _txn( nullptr ) {}

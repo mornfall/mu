@@ -492,10 +492,10 @@ namespace brq::sql
     template< typename txn_t, typename view >
     std::enable_if_t< view::is_view > drop( txn_t &t, view v, bool cascade = false )
     {
-        for ( auto _ : t.select< viewname >().template from< pg_views >()
+        for ( auto _ : t.template select< viewname >().template from< pg_views >()
                         .where( viewname() == get_name( v ) ).exec() )
             t.exec() << "drop view \"" << get_name( v ) << ( cascade ? "\" cascade" : "\"" );
-        for ( auto _ : t.select< matviewname >().template from< pg_matviews >()
+        for ( auto _ : t.template select< matviewname >().template from< pg_matviews >()
                         .where( matviewname() == get_name( v ) ).exec() )
             t.exec() << "drop materialized view \"" << get_name( v ) << ( cascade ? "\" cascade" : "\"" );
     };
@@ -590,7 +590,7 @@ namespace brq::sql
         q.set_skip_select();
         q.print( q_str, id );
 
-        auto [ schema ] = txn.select< current_schema >().exec().result();
+        auto [ schema ] = txn.template select< current_schema >().exec().result();
 
         auto token   = format( get_name( v ), "_token" ),
              refresh = format( get_name( v ), "_refresh" );
@@ -686,7 +686,7 @@ namespace brq::sql
     void init_refresh( txn_t &txn, schema_t s )
     {
         string_builder b;
-        auto [ schema ] = txn.select< current_schema >().exec().result();
+        auto [ schema ] = txn.template select< current_schema >().exec().result();
 
         b << "create or replace procedure refresh_materialized_views() language sql "
              "security definer set search_path to " << schema << " as $$\n";

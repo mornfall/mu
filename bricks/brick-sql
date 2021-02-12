@@ -204,6 +204,8 @@ namespace brq::sql
     template< typename... cols > struct n : endomorphism< cols... > \
     { explicit n( cols... cs ) : endomorphism< cols... >( cs... ) {} n() = default; }
 
+    BRICK_SQL_ENDO( bool_and );
+    BRICK_SQL_ENDO( bool_or );
     BRICK_SQL_ENDO( min );
     BRICK_SQL_ENDO( max );
     BRICK_SQL_ENDO( sum );

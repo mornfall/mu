@@ -873,7 +873,7 @@ BRICK_SQL_OP( | )
         {
             if ( !_skip_select )
                 s << "select ";
-            sql::print( s, _cols, id );
+            sql::print< true >( s, _cols, id );
         }
 
         template< typename stmt >

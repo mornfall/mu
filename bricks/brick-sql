@@ -169,6 +169,7 @@ namespace brq::sql
         using args_t = brq::cons_list_t< args... >;
         using bare = typename args_t::car_t;
         args_t _args;
+        bool _print_type = true;
 
         function( args... ts ) : _args( ts... ) {}
         function() = default;
@@ -179,8 +180,9 @@ namespace brq::sql
             s << "( ";
             sql::print< true >( s, _args, id );
             s << " )";
-            if constexpr ( !std::is_same_v< type, void > )
-                s << "::" << sql_type< type >();
+            if ( _print_type )
+                if constexpr ( !std::is_same_v< type, void > )
+                    s << "::" << sql_type< type >();
         }
 
         template< typename stmt >
@@ -299,6 +301,12 @@ namespace brq::sql
     }
 
     template< typename T >
+    auto set_nested( T &t, brq::primary_t ) -> decltype( t._print_type )
+    {
+        return t._print_type = false;
+    }
+
+    template< typename T >
     void set_nested( T &, brq::fallback ) {}
 
 #define BRICK_SQL_OP_(op, sql)                                                                    \
@@ -339,6 +347,7 @@ BRICK_SQL_OP( | )
     {
         where_expr window{ where_operator( "partition by" ), partition,
                            where_operator( "order by" ), order };
+        set_nested( function, primary );
         set_nested( window, primary );
         return where_expr{ function, where_operator( "over" ), window };
     }

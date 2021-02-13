@@ -595,6 +595,8 @@ BRICK_SQL_OP( | )
         template< typename we_t >
         auto where( we_t we ) { return sql::where_clause( this->_query, _expr && we ); }
 
+        sql::raw_sql< where_clause > raw_sql( std::string_view sv ) { return { *this, sv }; }
+
         auto exec() { return this->_exec( this ); }
     };
 
@@ -1216,6 +1218,8 @@ BRICK_SQL_OP( | )
         {
             return { *this, cons_list_t( v... ) };
         }
+
+        sql::raw_sql< update > raw_sql( std::string_view sv ) { return { *this, sv }; }
     };
 
     template< typename table >

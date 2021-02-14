@@ -50,7 +50,7 @@ namespace brq
             int32_t capacity:30, offset:30;
             bool hex:1, oom:1;
 
-            _data() : capacity( 0 ), offset( 0 ), hex( false ), oom( false ) {}
+            _data() noexcept : capacity( 0 ), offset( 0 ), hex( false ), oom( false ) {}
 
             auto reset()
             {

@@ -544,7 +544,7 @@ namespace brq::sql
             else
             {
                 using type = typename col_t::base_type;
-                bool use_serial = col.is_primary && std::is_same_v< type, int >;
+                bool use_serial = col.is_primary && std::is_integral_v< type > && !col.is_foreign;
                 auto typestr = sql_type< type >();
                 auto seqname = std::string( tabname ) + "_pkey_seq";
                 auto colname = col.column_name( col );

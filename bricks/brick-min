@@ -336,7 +336,7 @@ namespace brq
 
     static inline bool ends_with( std::string_view s, std::string_view t )
     {
-        return starts_with< char >( s, t );
+        return ends_with< char >( s, t );
     }
 
     static inline bool starts_with( std::u32string_view s, std::u32string_view t )
@@ -346,6 +346,6 @@ namespace brq
 
     static inline bool ends_with( std::u32string_view s, std::u32string_view t )
     {
-        return starts_with< char32_t >( s, t );
+        return ends_with< char32_t >( s, t );
     }
 }

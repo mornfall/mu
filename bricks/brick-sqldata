@@ -521,7 +521,7 @@ namespace brq::sql
         auto tabname = get_name( table() );
         txn.exec() << "create " << ( l == lifetime::persistent ? "" : "temp " )
                    << "table if not exists \"" << tabname << "\" () "
-                   << ( l == lifetime::transaction ? " on commit drop;" : ";" );
+                   << ( l == lifetime::transaction ? " on commit delete rows;" : ";" );
         int c_num = 0;
         auto alter = [&] { return std::move( txn.exec() << "alter table \"" << tabname << "\" " ); };
         auto constraint = [&]

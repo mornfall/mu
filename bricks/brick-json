@@ -112,12 +112,24 @@ namespace brq
         virtual void array_item() {}
         virtual void array_end() {}
 
-        virtual void boolean( bool ) {}
+        using value_var_t = std::variant< bool, int64_t, double, std::string >;
+
+        struct value_t : value_var_t
+        {
+            using value_var_t::value_var_t;
+            bool        b() const { return std::get< bool >( *this ); }
+            int64_t     i() const { return std::get< int64_t >( *this ); }
+            double      f() const { return std::get< double >( *this ); }
+            std::string s() const { return std::get< std::string >( *this ); }
+        };
+
+        virtual void value( value_t ) {}
+        virtual void boolean( bool b ) { value( b ); }
         virtual void null() {}
         virtual void string( std::vector< std::string_view > v ) { string( decode( v ) ); }
-        virtual void string( std::string ) {}
-        virtual void number( int64_t ) {}
-        virtual void number( double ) {}
+        virtual void string( std::string s ) { value( s ); }
+        virtual void number( int64_t i ) { value( i ); }
+        virtual void number( double f ) { value( f ); }
         virtual void number( bool integer, std::vector< std::string_view > v )
         {
             if ( integer )

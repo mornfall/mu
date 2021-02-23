@@ -691,18 +691,36 @@ namespace brq::sql
         string_builder b;
         auto [ schema ] = txn.template select< current_schema >().exec().result();
 
-        b << "create or replace procedure refresh_materialized_views() language sql "
-             "security definer set search_path to " << schema << " as $$\n";
-
-        auto out = [&]( auto v )
+        auto hdr = [ &b, schema = schema ]( auto name )
         {
-            if constexpr ( v.is_view )
-                if constexpr ( v.is_materialized )
-                    b << "call " << get_name( v ) << "_refresh();\n";
+            b << "create or replace procedure " << name << "() language sql "
+                 "security definer set search_path to " << schema << " as $$\n";
         };
 
-        s.each( out );
+        auto if_materialized = [&]( auto p )
+        {
+            return [ p ]( auto v )
+            {
+                if constexpr ( v.is_view )
+                    if constexpr ( v.is_materialized )
+                        return p( v );
+            };
+        };
 
+        auto call_refresh = [&]( auto v ) { b << "call " << get_name( v ) << "_refresh();\n"; };
+        auto force_refresh = [&]( auto v )
+        {
+            b << "refresh materialized view \"" << get_name( v ) << "\";\n";
+        };
+
+        hdr( "refresh_materialized_views" );
+        s.each( if_materialized( call_refresh ) );
+        b << "$$";
+        txn.exec( b.data() );
+        b.clear();
+
+        hdr( "rebuild_materialized_views" );
+        s.each( if_materialized( force_refresh ) );
         b << "$$";
         txn.exec( b.data() );
     }

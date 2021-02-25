@@ -415,7 +415,7 @@ namespace brq
             brq::raise< system_error >() << "changing directory";
 #else
         if ( ::chdir( dir.c_str() ) != 0 )
-            brq::raise< system_error >() << "changing directory";
+            brq::raise< system_error >() << "changing directory to " << dir;
 #endif
     }
 

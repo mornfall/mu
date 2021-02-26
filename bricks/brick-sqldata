@@ -99,6 +99,7 @@ namespace brq::sql
         std::int64_t fract = 0;
 
         static timestamp from_unix( time_t t ) { return { ( int64_t( t ) - 946684800 ) * 1000000 }; }
+        static timestamp future() { return from_unix( 365 * 24 * 3600 * 200L ); };
         time_t to_unix() const { return fract / 1000000 + 946684800; }
         bool operator<( timestamp o ) const { return fract < o.fract; }
         bool operator==( timestamp o ) const { return fract == o.fract; }

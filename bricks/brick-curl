@@ -126,9 +126,11 @@ namespace brq
 
         curl &run()
         {
-            curl_easy_setopt( _curl, CURLOPT_CURLU, _url );
+            char *url;
+            curl_url_get( _url, CURLUPART_URL, &url, 0 );
+            DEBUG( "request", url );
 
-            DEBUG( "request", info< string >( CURLINFO_EFFECTIVE_URL ) );
+            curl_easy_setopt( _curl, CURLOPT_CURLU, _url );
 
             if ( auto err = curl_easy_perform( _curl ) )
                 brq::raise() << "curl error: " << curl_easy_strerror( err );

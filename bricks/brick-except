@@ -37,6 +37,8 @@ namespace brq
         error( std::string err, int exit = 1 )
             : std::runtime_error( err ), _exit( exit )
         {}
+
+        std::string_view message() const { return what(); }
     };
 
     template< typename exc, typename... args_t >

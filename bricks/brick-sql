@@ -389,6 +389,7 @@ BRICK_SQL_OP_( operator ||, "or" )
 BRICK_SQL_OP_( operator ^, "#" )
 BRICK_SQL_OP_( pow, "^" )
 BRICK_SQL_OP_( in, "in" )
+BRICK_SQL_OP_( cat, "||" )
 
 BRICK_SQL_OP( < )
 BRICK_SQL_OP( > )

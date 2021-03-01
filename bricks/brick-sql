@@ -729,6 +729,13 @@ BRICK_SQL_OP( | )
                 sql::print( s, _join_on, id );
         }
 
+        template< typename stmt >
+        void bind( stmt &s ) const
+        {
+            this->_query.bind( s );
+            sql::bind( s, _join_on );
+        }
+
         template< typename expr_t >
         select_join< select, tab, expr_t > on( expr_t e ) { return { this->_query, _type, e }; }
 

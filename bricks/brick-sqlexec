@@ -517,11 +517,27 @@ namespace brq::sql
 
     struct txn_base
     {
+        enum isolation { read_committed, repeatable_read, serializable };
+
         sql::conn *_conn = nullptr;
         bool _closed = true;
+        bool _writable = true;
+        isolation _isolation = read_committed;
 
         explicit txn_base( sql::conn &conn ) : _conn( &conn ) {}
         txn_base() = default;
+
+        void set_isolation( isolation i )
+        {
+            ASSERT( _closed );
+            _isolation = i;
+        }
+
+        void set_writable( bool w )
+        {
+            ASSERT( _closed );
+            _writable = w;
+        }
 
         virtual bool open()
         {
@@ -529,8 +545,15 @@ namespace brq::sql
             {
                 _closed = false;
                 exec( "begin transaction" );
+                exec() << "set transaction isolation level "
+                       << ( _isolation == read_committed  ? "read committed"  :
+                            _isolation == repeatable_read ? "repeatable read" :
+                            _isolation == serializable    ? "serializable" : "error" )
+                       << " "
+                       << ( _writable ? "read write" : "read only" );
                 return true;
             }
+
             return false;
         }
 

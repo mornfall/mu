@@ -404,14 +404,23 @@ BRICK_SQL_OP( % )
 BRICK_SQL_OP( & )
 BRICK_SQL_OP( | )
 
-    template< typename F, typename P, typename O >
-    auto over( F function, P partition, O order )
+    template< typename P, typename O >
+    auto window( P partition, O order )
     {
-        where_expr window{ where_operator( "partition by" ), partition,
-                           where_operator( "order by" ), order };
+        if constexpr ( std::is_same_v< O, brq::unit > )
+            return where_expr{ where_operator( "partition by" ), partition };
+        else
+            return where_expr{ where_operator( "partition by" ), partition,
+                               where_operator( "order by" ), order };
+    }
+
+    template< typename F, typename P, typename O = brq::unit >
+    auto over( F function, P partition, O order = O() )
+    {
+        auto w = window( partition, order );
         set_nested( function, primary );
-        set_nested( window, primary );
-        return where_expr{ function, where_operator( "over" ), window };
+        set_nested( w, primary );
+        return where_expr{ function, where_operator( "over" ), w };
     }
 
 #undef BRICK_SQL_OP

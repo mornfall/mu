@@ -250,6 +250,8 @@ namespace brq
         }
     };
 
+    struct unit {};
+
     struct fallback
     {
         template< typename T >

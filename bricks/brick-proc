@@ -492,18 +492,22 @@ namespace brq
 
     enum class io_result { done, ready, blocked };
 
-    template < typename write_t, typename read_t >
-    void communicate( fd fd_out, fd fd_in, const write_t &do_write, const read_t &do_read )
+    template < typename write_t, typename read_t, typename eof_t = void() >
+    void communicate( fd fd_out, fd fd_in, const write_t &do_write, const read_t &do_read,
+                      eof_t eof = []{} )
     {
         ::fcntl( fd_out.number(), F_SETFL, O_NONBLOCK );
         ::fcntl( fd_in.number(),  F_SETFL, O_NONBLOCK );
 
-        pollfd fdset[2] = { { fd_out.number(), POLLOUT, 0 },
-                            { fd_in.number(),  POLLIN,  0 } };
+        pollfd fdset[ 2 ] = { { fd_out.number(), POLLOUT, 0 },
+                              { fd_in.number(),  POLLIN,  0 } };
 
-        while ( true )
+        int res = 0;
+
+        while ( fdset[ 0 ].fd >= 0 || fdset[ 1 ].fd >= 0 )
         {
-            int res = poll( fdset, 2, 10 * 1000 );
+            if ( !res )
+                res = poll( fdset, 2, 30 * 1000 );
 
             if ( res == -1 )
             {
@@ -515,27 +519,34 @@ namespace brq
             if ( res == 0 )
                 throw std::runtime_error( "communicate: poll timed out" );
 
-            if ( ( fdset[0].revents & POLLERR ) || ( fdset[0].revents & POLLOUT ) )
+            res = 0;
+
+            if ( ( fdset[ 0 ].revents & POLLERR ) || ( fdset[ 0 ].revents & POLLOUT ) ||
+                 ( fdset[ 0 ].events == 0 ) /* was previously blocked */ )
             {
                 if ( auto result = do_write( fd_out ); result == io_result::done )
                 {
                     fd_out.close();
-                    fdset[0].fd = -1;
+                    fdset[ 0 ].fd = -1;
                 }
                 else
                     fdset[ 0 ].events = result == io_result::ready ? POLLOUT : 0;
             }
 
-            if ( ( fdset[1].revents & POLLERR ) || ( fdset[1].revents & ( POLLIN | POLLHUP ) ) )
+            if ( ( fdset[ 1 ].revents & POLLERR ) || ( fdset[ 1 ].revents & ( POLLIN | POLLHUP ) ) )
             {
                 if ( do_read( fd_in ) )
                     fdset[ 0 ].events = POLLOUT;
                 else
                 {
                     fd_in.close();
-                    break;
+                    fdset[ 1 ].fd = -1;
+                    res = 1;
+                    eof();
                 }
             }
+
+            fdset[ 0 ].revents = fdset[ 1 ].revents = 0;
         }
     }
 
@@ -569,23 +580,36 @@ namespace brq
 
         bool operator()( const brq::fd &fd ) const
         {
-            int res = read( fd.number(), _buffer, BUFFER_SIZE - 1 );
-            if ( res == -1 )
+            int bytes = read( fd.number(), _buffer, BUFFER_SIZE - 1 );
+            bool result = bytes > 0;
+
+            if ( bytes == -1 )
             {
                 if ( errno == EAGAIN || errno == EWOULDBLOCK )
                     return true;
                 throw brq::system_error( "pipe_read_lines: read" );
             }
 
-            _buffer[ res ] = '\0';
+            _buffer[ bytes ] = '\0';
             _line_buffer.append( _buffer );
+
             for ( int lf; ( lf = _line_buffer.find( '\n' ) ) != std::string::npos; )
             {
-                yield( _line_buffer.substr( 0, lf ) ); // don't include the newline
+                auto line = _line_buffer.substr( 0, lf ); // don't include the newline
+
+                if constexpr ( std::is_same_v< decltype( yield( "" ) ), void > )
+                    yield( line );
+                else
+                    if ( !yield( line ) )
+                    {
+                        result = false;
+                        break;
+                    }
+
                 _line_buffer.erase( 0, lf + 1 );
             }
 
-            return res > 0;
+            return result;
         }
     };
 

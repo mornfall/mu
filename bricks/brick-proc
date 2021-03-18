@@ -494,7 +494,7 @@ namespace brq
 
     template < typename write_t, typename read_t, typename eof_t = void() >
     void communicate( fd fd_out, fd fd_in, const write_t &do_write, const read_t &do_read,
-                      eof_t eof = []{} )
+                      eof_t eof = []{}, int timeout = 60'000 )
     {
         ::fcntl( fd_out.number(), F_SETFL, O_NONBLOCK );
         ::fcntl( fd_in.number(),  F_SETFL, O_NONBLOCK );
@@ -506,8 +506,8 @@ namespace brq
 
         while ( fdset[ 0 ].fd >= 0 || fdset[ 1 ].fd >= 0 )
         {
-            if ( !res )
-                res = poll( fdset, 2, 30 * 1000 );
+            if ( res == 0 )
+                res = poll( fdset, 2, timeout );
 
             if ( res == -1 )
             {

@@ -1276,6 +1276,13 @@ BRICK_SQL_OP( | )
             };
             qs.each( one );
         }
+
+        template< typename stmt >
+        void bind( stmt &s ) const
+        {
+            qs.each( [&]( auto &v ) { sql::bind( s, v ); } );
+        }
+
     };
 
     template< typename stream, typename query >

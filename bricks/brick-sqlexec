@@ -289,8 +289,8 @@ namespace brq::sql
         void bind_one( interval &i )
         {
             i.seconds = htobe64( i.seconds );
-            i.days = htobe64( i.days );
-            i.months = htobe64( i.months );
+            i.days = htobe32( i.days );
+            i.months = htobe32( i.months );
             bind_raw( i );
         }
 

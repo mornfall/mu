@@ -181,6 +181,20 @@ namespace brq::sql
         }
     };
 
+    template< typename from, typename to >
+    struct rename : to
+    {
+        static_assert( std::is_same_v< typename from::columns, typename to::columns > );
+
+        template< typename self_t >
+        static std::string_view declare( const self_t & )
+        {
+            static std::string name( format( "\"", from::get_name( from() ), "\" as \"",
+                                             to::get_name( to() ), "\"" ).data() );
+            return name;
+        }
+    };
+
     template< typename... cols >
     struct tuple
     {

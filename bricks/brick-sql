@@ -581,7 +581,7 @@ BRICK_SQL_OP( | )
 
         sql::raw_sql< order_clause > raw_sql( std::string_view sv ) { return { *this, sv }; }
 
-        template< typename... ct, typename... et >
+        template< typename... ct, typename... et > [[nodiscard]]
         order_clause< query, cols..., ct..., et... > order_by( et... ex )
         {
             return { this->_query, _cols.cat( brq::cons_list( ex... ) ) };
@@ -612,13 +612,13 @@ BRICK_SQL_OP( | )
             sql::bind( s, _expr );
         }
 
-        template< typename... group_cols >
+        template< typename... group_cols > [[nodiscard]]
         group_by< where_clause, group_cols... > group_by() { return { *this }; }
 
-        template< typename... ct, typename... et >
+        template< typename... ct, typename... et > [[nodiscard]]
         order_clause< where_clause, ct..., et... > order_by( et... ex ) { return { *this, ex... }; }
 
-        template< typename we_t >
+        template< typename we_t > [[nodiscard]]
         auto where( we_t we ) { return sql::where_clause( this->_query, _expr && we ); }
 
         sql::raw_sql< where_clause > raw_sql( std::string_view sv ) { return { *this, sv }; }
@@ -640,10 +640,10 @@ BRICK_SQL_OP( | )
             print_columns( s, cons_list( cols()... ) );
         }
 
-        template< typename we_t >
+        template< typename we_t > [[nodiscard]]
         where_clause< group_by, we_t > having( const we_t &we ) { return { *this, we, "having" }; }
 
-        template< typename... ct, typename... et >
+        template< typename... ct, typename... et > [[nodiscard]]
         order_clause< group_by, ct..., et... > order_by( et... ex ) { return { *this, ex... }; }
     };
 
@@ -764,25 +764,25 @@ BRICK_SQL_OP( | )
             sql::bind( s, _join_on );
         }
 
-        template< typename expr_t >
+        template< typename expr_t > [[nodiscard]]
         select_join< select, tab, expr_t > on( expr_t e ) { return { this->_query, _type, e }; }
 
-        template< typename we_t >
+        template< typename we_t > [[nodiscard]]
         where_clause< select_join, we_t > where( const we_t &we ) { return { *this, we }; }
 
-        template< typename table >
+        template< typename table > [[nodiscard]]
         select_join< select_join, table > join() const { return { *this }; }
 
-        template< typename table >
+        template< typename table > [[nodiscard]]
         select_join< select_join, table > left_join() const { return { *this, join_type::left }; }
 
-        template< typename table >
+        template< typename table > [[nodiscard]]
         select_join< select_join, table > right_join() const { return { *this, join_type::right }; }
 
-        template< typename... group_cols >
+        template< typename... group_cols > [[nodiscard]]
         group_by< select_join, group_cols... > group_by() { return { *this }; }
 
-        template< typename... ct, typename... et >
+        template< typename... ct, typename... et > [[nodiscard]]
         order_clause< select_join, ct..., et... > order_by( et... ex ) { return { *this, ex... }; }
 
         sql::raw_sql< select_join > raw_sql( std::string_view sv ) { return { *this, sv }; }
@@ -802,22 +802,22 @@ BRICK_SQL_OP( | )
             s << " " << _sql;
         }
 
-        template< typename table >
+        template< typename table > [[nodiscard]]
         select_join< raw_sql, table > join() const { return { *this }; }
 
-        template< typename table >
+        template< typename table > [[nodiscard]]
         select_join< raw_sql, table > left_join() const { return { *this, join_type::left }; }
 
-        template< typename table >
+        template< typename table > [[nodiscard]]
         select_join< raw_sql, table > right_join() const { return { *this, join_type::right }; }
 
-        template< typename... group_cols >
+        template< typename... group_cols > [[nodiscard]]
         group_by< raw_sql, group_cols... > group_by() { return { *this }; }
 
-        template< typename we_t >
+        template< typename we_t > [[nodiscard]]
         where_clause< raw_sql, we_t > where( const we_t &we ) { return { *this, we }; }
 
-        template< typename... ct, typename... et >
+        template< typename... ct, typename... et > [[nodiscard]]
         order_clause< raw_sql, ct..., et... > order_by( et... ex ) { return { *this, ex... }; }
     };
 
@@ -843,25 +843,25 @@ BRICK_SQL_OP( | )
             s << " from " << tab::declare( tab() );
         }
 
-        template< typename table, typename... joins >
+        template< typename table, typename... joins > [[nodiscard]]
         auto join() const { return sql_join< joins... >( select_join< select_tab, table >( *this ) ); }
 
-        template< typename table >
+        template< typename table > [[nodiscard]]
         select_join< select_tab, table > left_join() const { return { *this, join_type::left }; }
 
-        template< typename table >
+        template< typename table > [[nodiscard]]
         select_join< select_tab, table > right_join() const { return { *this, join_type::right }; }
 
-        template< typename... group_cols >
+        template< typename... group_cols > [[nodiscard]]
         sql::group_by< select_tab, group_cols... > group_by() { return { *this }; }
 
-        template< typename we_t >
+        template< typename we_t > [[nodiscard]]
         where_clause< select_tab, we_t > where( const we_t &we ) { return { *this, we }; }
 
-        template< typename... ct, typename... et >
+        template< typename... ct, typename... et > [[nodiscard]]
         order_clause< select_tab, ct..., et... > order_by( et... ex ) { return { *this, ex... }; }
 
-        sql::raw_sql< select_tab > raw_sql( std::string_view sv ) { return { *this, sv }; }
+        [[nodiscard]] sql::raw_sql< select_tab > raw_sql( std::string_view sv ) { return { *this, sv }; }
     };
 
     template< typename... > struct select;
@@ -890,7 +890,7 @@ BRICK_SQL_OP( | )
             this->_query.print( s, id );
         }
 
-        template< typename table, typename... joins >
+        template< typename table, typename... joins > [[nodiscard]]
         auto from() { return sql_join< joins... >( select_tab< select_with, table >( *this ) ); }
     };
 
@@ -919,10 +919,10 @@ BRICK_SQL_OP( | )
             this->_query.print( s, id );
         }
 
-        template< typename table, typename... joins >
+        template< typename table, typename... joins > [[nodiscard]]
         auto from() { return sql_join< joins... >( select_tab< select_distinct, table >( *this ) ); }
 
-        template< typename... ct, typename... et >
+        template< typename... ct, typename... et > [[nodiscard]]
         select_with< select_distinct, ct..., et... > with( et... e ) { return { *this, e... }; }
     };
 
@@ -960,13 +960,13 @@ BRICK_SQL_OP( | )
             return { this->_txn, _cols.cat( brq::cons_list( e... ) ) };
         }
 
-        template< typename table, typename... joins >
+        template< typename table, typename... joins > [[nodiscard]]
         auto from() { return sql_join< joins... >( select_tab< select, table >( *this ) ); }
 
-        template< typename we_t >
+        template< typename we_t > [[nodiscard]]
         where_clause< select, we_t > where( const we_t &we ) { return { *this, we }; }
 
-        template< typename... ct, typename... et >
+        template< typename... ct, typename... et > [[nodiscard]]
         select_distinct< select, ct..., et... > distinct( et... e )
         {
             auto s = *this;
@@ -974,7 +974,7 @@ BRICK_SQL_OP( | )
             return { s, e... };
         }
 
-        template< typename... ct, typename... et >
+        template< typename... ct, typename... et > [[nodiscard]]
         select_with< select, ct..., et... > with( et... e )
         {
             return { *this, e... };
@@ -1044,14 +1044,14 @@ BRICK_SQL_OP( | )
             return false;
         }
 
-        template< typename... cols, typename... et >
+        template< typename... cols, typename... et > [[nodiscard]]
         update_set< update_set, cons_list_t< cols... >, cons_list_t< et... > > set( et... e )
         {
             return { *this, cons_list_t( e... ) };
         }
 
         /* FIXME? this does not make sense after 'on conflict update' */
-        template< typename we_t >
+        template< typename we_t > [[nodiscard]]
         where_clause< update_set, we_t > where( const we_t &we ) { return { *this, we }; }
     };
 
@@ -1068,7 +1068,7 @@ BRICK_SQL_OP( | )
             return true;
         }
 
-        template< typename... cols, typename... et >
+        template< typename... cols, typename... et > [[nodiscard]]
         update_set< insert_update, cons_list_t< cols... >, cons_list_t< et... > > set( et... e )
         {
             return { *this, cons_list_t( e... ) };
@@ -1114,7 +1114,7 @@ BRICK_SQL_OP( | )
             s << " )";
         }
 
-        template< typename... ccols >
+        template< typename... ccols > [[nodiscard]]
         conflict_clause< insert_values, ccols... > on_conflict() { return { *this }; }
 
         template< typename stmt >
@@ -1168,7 +1168,7 @@ BRICK_SQL_OP( | )
             sql::print_columns( s, cons_list_t< cols_t... >(), "( ", " )" );
         }
 
-        template< typename... cols >
+        template< typename... cols > [[nodiscard]]
         auto values( to_view< const typename cols_t::type & >... v ) const
         {
             return insert_values< insert_columns, typename cols_t::type... >( *this, v... );
@@ -1223,13 +1223,13 @@ BRICK_SQL_OP( | )
             return insert_columns< insert, cols... >( *this );
         }
 
-        template< typename... cols >
+        template< typename... cols > [[nodiscard]]
         auto values( to_view< const typename cols::type & >... v ) const
         {
             return columns< cols... >().values( v... );
         }
 
-        template< typename query_t >
+        template< typename query_t > [[nodiscard]]
         auto query( query_t q ) const
         {
             return insert_query< insert, query_t >( *this, q );
@@ -1248,7 +1248,7 @@ BRICK_SQL_OP( | )
             return true;
         }
 
-        template< typename... cols_t, typename... args_t >
+        template< typename... cols_t, typename... args_t > [[nodiscard]]
         auto set( const args_t &... v ) ->
             update_set< update, cons_list_t< cols_t... >, cons_list_t< args_t... > >
         {
@@ -1270,7 +1270,7 @@ BRICK_SQL_OP( | )
             s << "delete from " << table::declare( table() );
         }
 
-        template< typename we_t >
+        template< typename we_t > [[nodiscard]]
         where_clause< delete_from, we_t > where( const we_t &we ) { return { *this, we }; }
     };
 
@@ -1316,19 +1316,19 @@ BRICK_SQL_OP( | )
     {
         using txn_base::txn_base;
 
-        template< typename... ct, typename... et >
+        template< typename... ct, typename... et > [[nodiscard]]
         sql::select< ct..., et... > select( et... e ) { open(); return { *this, ct()..., e... }; }
 
-        template< typename... args >
+        template< typename... args > [[nodiscard]]
         sql::select< args... > select_list( cons_list_t< args... > ) { open(); return { *this }; }
 
-        template< typename table >
+        template< typename table > [[nodiscard]]
         insert< table > insert_into() { open(); return insert< table >{ conn() }; }
 
-        template< typename table >
+        template< typename table > [[nodiscard]]
         update< table > update() { open(); return { *this }; }
 
-        template< typename table >
+        template< typename table > [[nodiscard]]
         delete_from< table > delete_from() { open(); return { *this }; }
     };
 

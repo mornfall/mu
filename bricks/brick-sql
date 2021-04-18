@@ -554,6 +554,32 @@ BRICK_SQL_OP( | )
         }
     };
 
+    template< typename query >
+    struct limit : extend< query >
+    {
+        int64_t _limit;
+
+        limit( query &q, int64_t l ) : extend< query >( q ), _limit( l ) {}
+
+        auto exec() { return this->_exec( this ); }
+
+        template< typename stream >
+        void print( stream &s, int &id ) const
+        {
+            this->_query.print( s, id );
+            s << " limit $" << id++;
+        }
+
+        template< typename stmt >
+        void bind( stmt &s ) const
+        {
+            this->_query.bind( s );
+            sql::bind( s, _limit );
+        }
+
+        sql::raw_sql< limit > raw_sql( std::string_view sv ) { return { *this, sv }; }
+    };
+
     template< typename select, typename... cols >
     struct group_by;
 
@@ -600,6 +626,8 @@ BRICK_SQL_OP( | )
         {
             return { this->_query, _cols.cat( brq::cons_list( ex... ) ) };
         }
+
+        limit< order_clause > limit( int l ) { return { *this, l }; }
     };
 
     template< typename query, typename expr >

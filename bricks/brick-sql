@@ -68,9 +68,9 @@ namespace brq::sql
             s << " ";
         }
         else if constexpr ( V::is_function )
-            s << get_name( v ), v.print( s, id );
+            s << v.get_name( v ), v.print( s, id );
         else if constexpr ( V::is_column )
-            s << v.column_name( v ) << "::" << sql_type< typename V::type >();
+            s << v.get_name( v ) << "::" << sql_type< typename V::type >();
         else if constexpr ( V::is_query )
         {
             if ( sub ) s << "( ";
@@ -78,7 +78,7 @@ namespace brq::sql
             if ( sub ) s << " )";
         }
         else if constexpr ( V::is_enum )
-            s << "'" << get_name( v ) << "'";
+            s << "'" << v.get_name( v ) << "'";
         else if constexpr ( V::is_expr )
             v.print( s, id );
         else
@@ -173,10 +173,10 @@ namespace brq::sql
         static constexpr bool is_qualified = true;
 
         template< typename CT >
-        static std::string_view column_name( const CT & )
+        static std::string_view get_name( const CT & )
         {
-            static auto name = "\"" + std::string( get_name( tab() ) ) +
-                               "\"." + std::string( col().column_name( col() ) );
+            static auto name = "\""  + std::string( tab::get_name( tab() ) ) +
+                               "\"." + std::string( col::get_name( col() ) );
             return name;
         }
     };
@@ -210,15 +210,15 @@ namespace brq::sql
     struct excluded : col
     {
         template< typename CT >
-        static std::string_view column_name( const CT & )
+        static std::string_view get_name( const CT & )
         {
-            static auto name = "excluded." + std::string( col().column_name( col() ) );
+            static auto name = "excluded." + std::string( col::get_name( col() ) );
             return name;
         }
     };
 
     template< typename type, typename... args >
-    struct function : column< type >
+    struct function : constant< type >
     {
         static constexpr bool is_qualified = true;
         static constexpr bool is_function  = true;
@@ -668,7 +668,7 @@ BRICK_SQL_OP( | )
                 using col = unqualify< decltype( t ) >;
                 if constexpr ( t.is_foreign )
                     if constexpr ( std::is_same_v< typename col::table, tab_left_u > )
-                        foreign_column = col().column_name( col() );
+                        foreign_column = col::get_name( col() );
             };
 
             auto find_foreign_right = [&]( auto t )
@@ -676,7 +676,7 @@ BRICK_SQL_OP( | )
                 using col = unqualify< decltype( t ) >;
                 if constexpr ( t.is_foreign )
                     if constexpr ( std::is_same_v< typename col::table, tab_right_u > )
-                        foreign_column = col().column_name( col() );
+                        foreign_column = col::get_name( col() );
             };
 
             auto find_primary = [&]( auto t )
@@ -686,10 +686,10 @@ BRICK_SQL_OP( | )
                     if constexpr ( t.is_qualified )
                     {
                         using bare = typename decltype( t )::bare;
-                        primary_column = bare().column_name( bare() );
+                        primary_column = bare::get_name( bare() );
                     }
                     else
-                        primary_column = t.column_name( t );
+                        primary_column = t.get_name( t );
                 }
             };
 
@@ -698,12 +698,15 @@ BRICK_SQL_OP( | )
             typename tab_right::columns().each( find_foreign_left );
             typename tab_left::columns().each( find_primary );
 
+            auto tab_r = tab_right::get_name( tab_right() ),
+                 tab_l = tab_left::get_name( tab_left() );
+
             if constexpr ( std::is_same_v< on_t, brq::nil > )
             {
                 if ( !foreign_column.empty() && !primary_column.empty() )
                 {
-                    cond << "\"" << get_name( tab_right() ) << "\"." << foreign_column
-                         << " = \"" << get_name( tab_left() ) << "\"." << primary_column;
+                    cond <<    "\"" << tab_r << "\"." << foreign_column
+                         << " = \"" << tab_l << "\"." << primary_column;
                 }
                 else
                 {
@@ -712,14 +715,13 @@ BRICK_SQL_OP( | )
                     typename tab_left::columns().each( find_foreign_right );
 
                     if ( !foreign_column.empty() && !primary_column.empty() )
-                        cond << "\"" << get_name( tab_left() ) << "\"." << foreign_column
-                             << " = \"" << get_name( tab_right() ) << "\"." << primary_column;
+                        cond << "\""    << tab_l << "\"." << foreign_column
+                             << " = \"" << tab_r << "\"." << primary_column;
                     else if constexpr ( !tabs_left::cdr_t::empty )
                         return print< stream, typename tabs_left::cdr_t >( s, id );
                     else
                         brq::raise< error >() << "could not find join key on "
-                                              << get_name( tab_left() ) << " x "
-                                              << get_name( tab_right() );
+                                              << tab_l << " x " << tab_r;
                 }
             }
 
@@ -732,7 +734,7 @@ BRICK_SQL_OP( | )
                 case join_type::right: s << " right"; break;
             }
 
-            s << " join \"" << get_name( tab_right() ) << "\" on ";
+            s << " join " << tab_right::declare( tab_right() ) << " on ";
             if constexpr ( std::is_same_v< on_t, brq::nil > )
                 s << cond.buffer();
             else
@@ -822,7 +824,7 @@ BRICK_SQL_OP( | )
         void print( stream &s, int &id ) const
         {
             this->_query.print( s, id );
-            s << " from \"" << get_name( tab() ) << "\"";
+            s << " from " << tab::declare( tab() );
         }
 
         template< typename table, typename... joins >
@@ -862,8 +864,8 @@ BRICK_SQL_OP( | )
             auto fmt = [&]( auto v )
             {
                 using view = decltype( v );
-                s << ( i++ ? ", \"" : "with recursive \"" );
-                s << get_name( v ) << "\" ";
+                s << ( i++ ? ", " : "with recursive " );
+                s << v.declare( v ) << " ";
                 print_columns( s, typename view::columns::template map_t< unqualify >(), "( ", " )" );
                 s << " as ";
                 sql::print< true >( s, v.construct(), id );
@@ -1017,7 +1019,7 @@ BRICK_SQL_OP( | )
             auto fmt_update = [&]( auto col, auto arg ) -> std::string
             {
                 string_builder b;
-                b << col.column_name( col ) << " = ";
+                b << col.get_name( col ) << " = ";
                 sql::print( b, arg, id );
                 return b.buffer();
             };
@@ -1181,7 +1183,8 @@ BRICK_SQL_OP( | )
 
         void print( string_builder &s, int & ) const
         {
-            s << "insert into \"" << get_name( typename insert::table() ) << "\"";
+            typename insert::table tab;
+            s << "insert into " << tab.declare( tab );
         }
 
         void print_tail( string_builder &s, int & ) const
@@ -1192,7 +1195,7 @@ BRICK_SQL_OP( | )
             if constexpr ( !std::is_same_v< typename insert::primary_l, brq::nil > )
             {
                 using primary = unqualify< typename insert::primary_l::car_t >;
-                s << " returning " << primary().column_name( primary() );
+                s << " returning " << primary::get_name( primary() );
             }
         }
 
@@ -1225,7 +1228,7 @@ BRICK_SQL_OP( | )
         template< typename stream >
         bool print( stream &s, int & ) const
         {
-            s << "update \"" << get_name( table() ) << "\"";
+            s << "update " << table::declare( table() );
             return true;
         }
 
@@ -1248,7 +1251,7 @@ BRICK_SQL_OP( | )
         template< typename stream >
         void print( stream &s, int & ) const
         {
-            s << "delete from \"" << get_name( table() ) << "\"";
+            s << "delete from " << table::declare( table() );
         }
 
         template< typename we_t >

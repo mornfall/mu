@@ -604,9 +604,9 @@ namespace brq::sql
             txn_base *_txn;
             std::string _name;
 
-            savepoint( txn_base *t, std::string_view name ) : _txn( t ), _name( name )
+            savepoint( txn_base *t, std::string_view get_name ) : _txn( t ), _name( get_name )
             {
-                _txn->exec( brq::format( "savepoint ", name ).buffer() );
+                _txn->exec( brq::format( "savepoint ", get_name ).buffer() );
             }
 
             ~savepoint()
@@ -654,10 +654,10 @@ namespace brq::sql
         sql::copy_in< typename tab::columns > copy_in()
         {
             string_builder b;
-            b <<  "COPY " << get_name( tab() ) << " ( ";
+            b <<  "COPY " << tab::get_name( tab() ) << " ( ";
             using cols = typename tab::columns;
             int i = 0;
-            cols().each( [&]( const auto &c ) { b << ( i++ ? ", " : "" ) << c.column_name( c ); } );
+            cols().each( [&]( const auto &c ) { b << ( i++ ? ", " : "" ) << c.get_name( c ); } );
             b << " ) FROM STDIN BINARY";
             exec( b.data() );
             return { conn() };
@@ -681,15 +681,15 @@ namespace brq::sql
         autoexec exec() { return { *this }; }
 
         template< typename t >
-        std::enable_if_t< t::is_table > notify() { notify( get_name( t() ) ); }
+        std::enable_if_t< t::is_table > notify() { notify( t::get_name( t() ) ); }
 
         template< typename t >
-        std::enable_if_t< t::is_table > listen() { exec() << "listen " << get_name( t() ); }
+        std::enable_if_t< t::is_table > listen() { exec() << "listen " << t::get_name( t() ); }
 
         template< typename t >
         std::enable_if_t< t::is_table || t::is_view > lock( std::string_view mode )
         {
-            exec() << "lock " << get_name( t() ) << " in " << mode << " mode";
+            exec() << "lock " << t::get_name( t() ) << " in " << mode << " mode";
         }
 
         void notify( std::string_view ch, std::string_view p = "" )

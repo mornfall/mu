@@ -212,6 +212,9 @@ namespace brq::sql
         static constexpr bool is_table    = false;
         static constexpr bool is_view     = false;
         static constexpr bool is_function = false;
+
+        template< typename self_t >
+        static std::string_view get_name( const self_t &self ) { return sql::get_name( self ); }
     };
 
     struct column_flags : category_flags
@@ -245,7 +248,7 @@ namespace brq::sql
 
         friend string_builder &operator<<( string_builder &s, const enum_type &v )
         {
-            return s << *v._value.match( []( const auto &d ) { return get_name( d ); } );
+            return s << *v._value.match( []( const auto &d ) { return d.get_name( d ); } );
         }
     };
 
@@ -322,8 +325,8 @@ namespace brq::sql
     template< typename T, bool _nullable = false >
     struct column : column_flags
     {
-        template< typename CT >
-        static std::string_view column_name( const CT &ct ) { return get_name( ct, '"' ); }
+        template< typename self_t >
+        static std::string_view get_name( const self_t &self ) { return sql::get_name( self, '"' ); }
 
         using type = std::conditional_t< _nullable, std::optional< T >, T >;
         using base_type = T;
@@ -340,6 +343,9 @@ namespace brq::sql
     struct constant : column< T, false >
     {
         static constexpr const bool is_function = true;
+
+        template< typename self_t >
+        static std::string_view get_name( const self_t &self ) { return sql::get_name( self ); }
 
         template< typename stream >
         void print( stream &s, int & ) const
@@ -379,7 +385,7 @@ namespace brq::sql
     struct primary_key : col
     {
         template< typename CT >
-        static std::string_view column_name( const CT & ) { return col().column_name( col() ); }
+        static std::string_view get_name( const CT & ) { return col::get_name( col() ); }
 
         using base = col;
         static constexpr bool is_primary = true;
@@ -408,6 +414,7 @@ namespace brq::sql
         using all         = std::conditional_t< is_list_v< col >, col, cons_list_t< col, cols... > >;
         using columns     = typename all::template filter_t< not_constraint >;
         using constraints = typename all::template filter_t< is_constraint >;
+
     };
 
     template<> struct with_columns<>
@@ -417,7 +424,18 @@ namespace brq::sql
         using constraints = all;
     };
 
-    template< typename... cols > struct table : with_columns< cols... >, category_flags
+    template< typename... cols >
+    struct relation : with_columns< cols... >
+    {
+        template< typename self_t >
+        static std::string_view declare( const self_t &self )
+        {
+            static std::string decl( format( "\"", sql::get_name( self ), "\"" ).data() );
+            return decl;
+        }
+    };
+
+    template< typename... cols > struct table : relation< cols... >, category_flags
     {
         static constexpr bool is_table = true;
     };
@@ -425,7 +443,7 @@ namespace brq::sql
     template< typename... > struct select;
 
     template< typename... cols >
-    struct view : with_columns< cols... >, category_flags
+    struct view : relation< cols... >, category_flags
     {
         static constexpr bool is_view         = true;
         static constexpr bool is_updatable    = false;
@@ -462,7 +480,7 @@ namespace brq::sql
     template< typename stream, typename list >
     void print_columns( stream &s, list l, const char *start = "", const char *end = "" )
     {
-        print_list( s, l.map( [&]( auto c ) { return c.column_name( c ); } ), ", ", start, end );
+        print_list( s, l.map( [&]( auto c ) { return c.get_name( c ); } ), ", ", start, end );
     }
 
     template< typename T, typename X = void >
@@ -477,13 +495,13 @@ namespace brq::sql
     template< typename txn_t, typename table >
     std::enable_if_t< table::is_table > drop( txn_t &t, table )
     {
-        t.exec() << "drop table if exists \"" << get_name( table() ) << "\" cascade";
+        t.exec() << "drop table if exists \"" << table::get_name( table() ) << "\" cascade";
     };
 
     template< typename txn_t, typename enum_t >
     std::enable_if_t< enum_t::is_enum > drop( txn_t &t, enum_t )
     {
-        t.exec() << "drop type if exists \"" << get_name( enum_t(), 0 ) << "\" cascade";
+        t.exec() << "drop type if exists \"" << enum_t::get_name( enum_t() ) << "\" cascade";
     };
 
     struct pg_views : table<> {};
@@ -495,11 +513,12 @@ namespace brq::sql
     std::enable_if_t< view::is_view > drop( txn_t &t, view v, bool cascade = false )
     {
         for ( auto _ : t.template select< viewname >().template from< pg_views >()
-                        .where( viewname() == get_name( v ) ).exec() )
-            t.exec() << "drop view \"" << get_name( v ) << ( cascade ? "\" cascade" : "\"" );
+                        .where( viewname() == v.get_name( v ) ).exec() )
+            t.exec() << "drop view \"" << v.get_name( v ) << ( cascade ? "\" cascade" : "\"" );
         for ( auto _ : t.template select< matviewname >().template from< pg_matviews >()
-                        .where( matviewname() == get_name( v ) ).exec() )
-            t.exec() << "drop materialized view \"" << get_name( v ) << ( cascade ? "\" cascade" : "\"" );
+                        .where( matviewname() == v.get_name( v ) ).exec() )
+            t.exec() << "drop materialized view \"" << v.get_name( v )
+                     << ( cascade ? "\" cascade" : "\"" );
     };
 
     template< typename txn_t, typename enum_t >
@@ -507,9 +526,9 @@ namespace brq::sql
     {
         string_builder s;
         s << "do $$ begin if not exists (select * from pg_type where pg_type.typname = '"
-          << get_name( enum_t() ) << "') then create type \""
-          << get_name( enum_t() ) << "\" as enum ";
-        print_list( s, typename enum_t::values().map( [&]( auto c ) { return get_name( c ); } ),
+          << enum_t::get_name( enum_t() ) << "') then create type \""
+          << enum_t::get_name( enum_t() ) << "\" as enum ";
+        print_list( s, typename enum_t::values().map( [&]( auto c ) { return c.get_name( c ); } ),
                     "', '", "('", "')" );
         s << "; end if; end; $$";
         txn.exec( s.buffer() );
@@ -520,7 +539,7 @@ namespace brq::sql
     template< typename txn_t, typename table >
     std::enable_if_t< table::is_table > create( txn_t &txn, table, lifetime l = lifetime::persistent )
     {
-        auto tabname = get_name( table() );
+        auto tabname = table::get_name( table() );
         txn.exec() << "create " << ( l == lifetime::persistent ? "" : "temp " )
                    << "table if not exists \"" << tabname << "\" () "
                    << ( l == lifetime::transaction ? " on commit delete rows;" : ";" );
@@ -549,7 +568,7 @@ namespace brq::sql
                 bool use_serial = col.is_primary && std::is_integral_v< type > && !col.is_foreign;
                 auto typestr = sql_type< type >();
                 auto seqname = std::string( tabname ) + "_pkey_seq";
-                auto colname = col.column_name( col );
+                auto colname = col.get_name( col );
 
                 alter() << "add column if not exists " << colname << " " << typestr
                         << " default '" << type() << "'"; /* TODO make configurable! */
@@ -569,11 +588,12 @@ namespace brq::sql
                 if constexpr ( col.is_foreign )
                 {
                     auto foreign_col = typename col_t::column();
+                    auto foreign_tab = typename col_t::table();
                     if ( l == lifetime::persistent )
                         constraint()
                             << "foreign key ( " << colname << " )"
-                            << " references \"" << get_name( typename col_t::table() )
-                            << "\" ( " << foreign_col.column_name( foreign_col ) << " )";
+                            << " references \"" << foreign_tab.get_name( foreign_tab )
+                            << "\" ( " << foreign_col.get_name( foreign_col ) << " )";
                 }
 
                 alter() << "alter column " << colname << " "
@@ -597,8 +617,8 @@ namespace brq::sql
 
         auto [ schema ] = txn.template select< current_schema >().exec().result();
 
-        auto token   = format( get_name( v ), "_token" ),
-             refresh = format( get_name( v ), "_refresh" );
+        auto token   = format( v.get_name( v ), "_token" ),
+             refresh = format( v.get_name( v ), "_refresh" );
 
         txn.exec() << "drop table if exists " << token;
         txn.exec() << "create table " << token << " ( token ) as select " << q_str;
@@ -612,7 +632,7 @@ namespace brq::sql
                    << "      select into strict _previous_ * from " << token << "; "
                    << " if _updated_ != _previous_ then "
                    << "  update " << token << " set token = _updated_.token ; "
-                   << "  refresh materialized view \"" << get_name( v ) << "\"; "
+                   << "  refresh materialized view \"" << v.get_name( v ) << "\"; "
                    << " end if; end; $$";
 
         int i = 0;
@@ -622,8 +642,8 @@ namespace brq::sql
             if constexpr ( decltype( c )::is_constraint )
             {
                 string_builder b;
-                b << "create unique index " << get_name( v ) << "_c" << i++
-                  << " on \"" << get_name( v ) << "\" ";
+                b << "create unique index " << v.get_name( v ) << "_c" << i++
+                  << " on \"" << v.get_name( v ) << "\" ";
                 print_columns( b, typename decltype( c )::columns(), "( ", " )" );
                 txn.exec( b.data() );
             }
@@ -641,7 +661,7 @@ namespace brq::sql
         int id = -1;
         s << ( view::is_materialized ? "create materialized view " :
                              as_temp ? "create temp table " : "create view " )
-          << "\"" << get_name( v ) << "\" ";
+          << "\"" << v.get_name( v ) << "\" ";
 
         using cols = typename view::columns::template map_t< unqualify >;
         if ( !cols::empty )
@@ -675,8 +695,8 @@ namespace brq::sql
     template< typename txn_t, typename view >
     std::enable_if_t< view::is_view > materialize( txn_t &txn, view v )
     {
-        std::string name( get_name( v ) );
-        txn.exec( "create temp table \"" + name + "\" on commit drop as select * from " + name );
+        std::string get_name( v.get_name( v ) );
+        txn.exec( "create temp table \"" + get_name + "\" on commit drop as select * from " + get_name );
     }
 
     template< typename txn_t, typename schema >
@@ -693,9 +713,9 @@ namespace brq::sql
         string_builder b;
         auto [ schema ] = txn.template select< current_schema >().exec().result();
 
-        auto hdr = [ &b, schema = schema ]( auto name )
+        auto hdr = [ &b, schema = schema ]( auto get_name )
         {
-            b << "create or replace procedure " << name << "() language sql "
+            b << "create or replace procedure " << get_name << "() language sql "
                  "security definer set search_path to " << schema << " as $$\n";
         };
 
@@ -709,10 +729,10 @@ namespace brq::sql
             };
         };
 
-        auto call_refresh = [&]( auto v ) { b << "call " << get_name( v ) << "_refresh();\n"; };
+        auto call_refresh = [&]( auto v ) { b << "call " << v.get_name( v ) << "_refresh();\n"; };
         auto force_refresh = [&]( auto v )
         {
-            b << "refresh materialized view \"" << get_name( v ) << "\";\n";
+            b << "refresh materialized view \"" << v.get_name( v ) << "\";\n";
         };
 
         hdr( "refresh_materialized_views" );

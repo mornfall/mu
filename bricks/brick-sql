@@ -266,6 +266,7 @@ namespace brq::sql
     BRICK_SQL_ENDO( min );
     BRICK_SQL_ENDO( max );
     BRICK_SQL_ENDO( sum );
+    BRICK_SQL_ENDO( avg );
     BRICK_SQL_ENDO( greatest );
     BRICK_SQL_ENDO( least );
     BRICK_SQL_ENDO( distinct );
@@ -319,6 +320,21 @@ namespace brq::sql
             s << "( ";
             sql::print( s, this->_args, id );
             s << " from '" << _pat << "' )::" << sql_type< typename col::type >();
+        }
+    };
+
+    template< typename col >
+    struct percentile_disc : endomorphism< col >
+    {
+        int _frac;
+        percentile_disc( const col &c, double p ) : endomorphism< col >( c ), _frac( p ) {}
+
+        template< typename stream >
+        void print( stream &s, int &id ) const
+        {
+            s << "( " << _frac << " / 100.0 ) within group ( order by ";
+            sql::print( s, this->_args, id );
+            s << " )::" << sql_type< typename col::type >();
         }
     };
 

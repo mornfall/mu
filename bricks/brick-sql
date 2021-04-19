@@ -1002,12 +1002,14 @@ BRICK_SQL_OP( | )
         using query_head< cols... >::query_head;
         select( sql::txn &t, cols... e ) : query_head< cols... >( t ), _cols( e... ) {}
         select( cols... e ) : _cols( e... ) {}
+        template < typename list >
+        select( sql::txn &t, list cs ) : query_head< cols... >( t ), _cols( cs ) {}
         select( brq::cons_list_t< cols... > cs ) : _cols( cs ) {}
 
         template< typename... ct, typename... et >
         select< cols..., ct..., et... > columns( et... e )
         {
-            return { this->_txn, _cols.cat( brq::cons_list( e... ) ) };
+            return { *this->_txn, _cols.cat( brq::cons_list( e... ) ) };
         }
 
         template< typename table, typename... joins > [[nodiscard]]

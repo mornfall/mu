@@ -882,7 +882,7 @@ BRICK_SQL_OP( | )
         void print( stream &s, int &id ) const
         {
             this->_query.print( s, id );
-            s << " from " << tab::declare( tab() );
+            s << " from \"" << get_name( tab() ) << "\"";
         }
 
         template< typename table, typename... joins > [[nodiscard]]
@@ -913,6 +913,7 @@ BRICK_SQL_OP( | )
     {
         brq::cons_list_t< views... > _views;
         using extend< select >::extend;
+        select_with( const select &q, const views &... vs ) : extend< select >( q ), _views( vs... ) {}
         auto exec() { return this->_exec( this ); }
 
         template< typename stream >
@@ -930,6 +931,13 @@ BRICK_SQL_OP( | )
             };
             _views.each( fmt );
             this->_query.print( s, id );
+        }
+
+        template< typename stmt >
+        void bind( stmt &s ) const
+        {
+            _views.each( [&]( const auto &v ) { sql::bind( s, v.construct() ); } );
+            this->_query.bind( s );
         }
 
         template< typename table, typename... joins > [[nodiscard]]

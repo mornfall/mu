@@ -425,6 +425,7 @@ BRICK_SQL_OP_( operator ==, "=" )
 BRICK_SQL_OP_( like, "like" )
 BRICK_SQL_OP_( re, "~" )
 BRICK_SQL_OP_( re_i, "~*" )
+BRICK_SQL_OP_( similar, "similar to" )
 BRICK_SQL_OP_( operator &&, "and" )
 BRICK_SQL_OP_( operator ||, "or" )
 BRICK_SQL_OP_( operator ^, "#" )
@@ -466,10 +467,28 @@ BRICK_SQL_OP( | )
         return where_expr{ function, where_operator( "over" ), w };
     }
 
-    template< typename A > op_t< A, w_op > is_null( A &&a )   { return { a, "is null" }; }
-    template< typename A > op_t< A, w_op > desc( A &&a )      { return { a, "desc" }; }
-    template< typename A > op_t< A, w_op > asc( A &&a )       { return { a, "asc" }; }
-    template< typename A > op_t< w_op, A > operator!( A &&a ) { return { "not", a }; }
+#undef BRICK_SQL_OP
+
+    template< typename A >
+    auto is_null( A &&a ) -> std::enable_if_t< is_expr_v< std::decay_t< A > >,
+                                               where_expr< std::decay_t< A >, where_operator > >
+    {
+        return { a, where_operator{ "is null" } };
+    }
+
+    template< typename A >
+    auto desc( A &&a ) -> std::enable_if_t< is_expr_v< std::decay_t< A > >,
+                                            where_expr< std::decay_t< A >, where_operator > >
+    {
+        return { a, where_operator{ "desc" } };
+    }
+
+    template< typename A >
+    auto operator!( A &&a ) -> std::enable_if_t< is_expr_v< std::decay_t< A > >,
+                                                 where_expr< where_operator, std::decay_t< A > > >
+    {
+        return { where_operator{ "not" }, a };
+    }
 
     template< typename C, typename T, typename E >
     op_t< w_op, C, w_op, T, w_op, E, w_op > when( C c, T t, E e )

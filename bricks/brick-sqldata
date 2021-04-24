@@ -414,14 +414,15 @@ namespace brq::sql
         using all         = std::conditional_t< is_list_v< col >, col, cons_list_t< col, cols... > >;
         using columns     = typename all::template filter_t< not_constraint >;
         using constraints = typename all::template filter_t< is_constraint >;
-
+        using columns_t   = columns;
     };
 
     template<> struct with_columns<>
     {
-        using all = cons_list_t<>;
-        using columns = all;
+        using all         = cons_list_t<>;
+        using columns     = all;
         using constraints = all;
+        using columns_t   = columns;
     };
 
     template< typename... cols >

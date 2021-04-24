@@ -522,7 +522,9 @@ BRICK_SQL_OP( | )
     template< typename query >
     struct extend : query_base
     {
-        using stmt = typename query::stmt;
+        using stmt      = typename query::stmt;
+        using columns_t = typename query::columns_t;
+
         query _query;
         sql::conn &conn() { return _query.conn(); }
         sql::txn &txn() { return _query.txn(); }

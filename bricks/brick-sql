@@ -445,6 +445,8 @@ BRICK_SQL_OP( % )
 BRICK_SQL_OP( & )
 BRICK_SQL_OP( | )
 
+#undef BRICK_SQL_OP
+
     template< typename P, typename O >
     auto window( P partition, O order )
     {

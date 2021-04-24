@@ -301,19 +301,21 @@ namespace brq::sql
         return brq::sql::type_map< T >::name();
     }
 
-    template< typename T > struct is_array : std::false_type {};
-    template< typename T, size_t s > struct is_array< std::array< T, s > > : std::true_type {};
+    template< typename T >           struct is_array                          : std::false_type {};
+    template< typename T >           struct is_set                            : std::false_type {};
+    template< typename T >           struct is_optional                       : std::false_type {};
+    template< typename T >           struct is_fixnum                         : std::false_type {};
+    template< typename T, typename > struct is_expr                           : std::false_type {};
 
-    template< typename T > struct is_set : std::false_type {};
-    template< typename T > struct is_set< std::set< T > > : std::true_type {};
+    template< typename T, size_t s > struct is_array< std::array< T, s > >    : std::true_type {};
+    template< typename T >           struct is_set< std::set< T > >           : std::true_type {};
+    template< typename T >           struct is_optional< std::optional< T > > : std::true_type {};
+    template< typename T, int i >    struct is_fixnum< fixnum< i, T > >       : std::true_type {};
 
-    template< typename T > struct is_optional : std::false_type {};
-    template< typename T > struct is_optional< std::optional< T > > : std::true_type {};
-
-    template< typename T, typename = void > struct is_expr : std::false_type {};
     template< typename T > struct is_expr< T, std::enable_if_t< T::is_expr > > : std::true_type {};
     template< typename T > struct is_expr< T, std::enable_if_t< T::is_enum > > : std::true_type {};
-    template< typename T > constexpr bool is_expr_v = is_expr< T >::value;
+
+    template< typename T > constexpr bool is_expr_v = is_expr< T, void >::value;
     struct where_operator { const char *sql; where_operator( const char *s = "" ) : sql( s ) {} };
 
     template< typename T >
@@ -322,6 +324,7 @@ namespace brq::sql
                                        std::is_convertible_v< T, timestamp > ||
                                        std::is_convertible_v< T, interval > ||
                                        is_array< T >::value ||
+                                       is_fixnum< T >::value ||
                                        std::is_convertible_v< T, int > ) && !is_list_v< T >;
 
     template< typename T, bool _nullable = false >

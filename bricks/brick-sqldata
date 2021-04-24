@@ -201,6 +201,8 @@ namespace brq::sql
         fixnum operator+( fixnum n ) const { return fixnum( value + n.value, scale ); }
         fixnum operator*( int n ) const { return fixnum( value * n, scale ); }
         fixnum operator/( int n ) const { return fixnum( value / n, scale ); }
+        fixnum operator/( fixnum n ) const { return fixnum( value * scale / n.value, scale ); }
+        int round() const { return value / scale + ( value % scale >= scale / 2 ? 1 : 0 ); }
     };
 
     struct category_flags

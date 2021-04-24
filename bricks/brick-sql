@@ -398,16 +398,27 @@ namespace brq::sql
     template< typename T >
     void set_nested( T &, brq::fallback ) {}
 
-#define BRICK_SQL_OP_(op, sql)                                                                    \
-    template< typename A, typename B >                                                            \
-    auto op( A &&a, B &&b )                                                                       \
-        -> std::enable_if_t< is_expr_v< std::decay_t< A > > || is_expr_v< std::decay_t< B > >,    \
-                             where_expr< std::decay_t< A >, where_operator, std::decay_t< B > > > \
-    {                                                                                             \
-        set_nested( a, primary ); set_nested( b, primary );                                       \
-        return { a, where_operator{ sql }, b };                                                   \
-    }
+    template< typename... args_t >
+    struct where_expr_nested : where_expr< args_t... >
+    {
+        where_expr_nested( args_t... args ) : where_expr< args_t... >( args... )
+        {
+            this->_args.each( [&]( auto &v ) { set_nested( v, primary ); } );
+        }
+    };
 
+    template< template< typename... > class expr_t, typename... args_t >
+    using op_t_ = std::enable_if_t< ( is_expr_v< std::decay_t< args_t > > || ... ),
+                                    expr_t< std::decay_t< args_t > ... > >;
+
+    template< typename... args_t > using op_t   = op_t_< where_expr, args_t... >;
+    template< typename... args_t > using nest_t = op_t_< where_expr_nested, args_t... >;
+
+    using w_op = where_operator;
+
+
+#define BRICK_SQL_OP_(op, sql) \
+    template< typename A, typename B > nest_t< A, w_op, B > op( A &&a, B &&b ) { return { a, sql, b }; }
 #define BRICK_SQL_OP(op) BRICK_SQL_OP_(operator op, #op)
 
 BRICK_SQL_OP_( operator ==, "=" )
@@ -453,32 +464,13 @@ BRICK_SQL_OP( | )
         return where_expr{ function, where_operator( "over" ), w };
     }
 
-#undef BRICK_SQL_OP
-
-    template< typename A >
-    auto is_null( A &&a ) -> std::enable_if_t< is_expr_v< std::decay_t< A > >,
-                                               where_expr< std::decay_t< A >, where_operator > >
-    {
-        return { a, where_operator{ "is null" } };
-    }
-
-    template< typename A >
-    auto desc( A &&a ) -> std::enable_if_t< is_expr_v< std::decay_t< A > >,
-                                            where_expr< std::decay_t< A >, where_operator > >
-    {
-        return { a, where_operator{ "desc" } };
-    }
-
-    template< typename A >
-    auto operator!( A &&a ) -> std::enable_if_t< is_expr_v< std::decay_t< A > >,
-                                                 where_expr< where_operator, std::decay_t< A > > >
-    {
-        return { where_operator{ "not" }, a };
-    }
+    template< typename A > op_t< A, w_op > is_null( A &&a )   { return { a, "is null" }; }
+    template< typename A > op_t< A, w_op > desc( A &&a )      { return { a, "desc" }; }
+    template< typename A > op_t< A, w_op > asc( A &&a )       { return { a, "asc" }; }
+    template< typename A > op_t< w_op, A > operator!( A &&a ) { return { "not", a }; }
 
     template< typename C, typename T, typename E >
-    where_expr< where_operator, C, where_operator, T, where_operator, E, where_operator >
-    when( C c, T t, E e )
+    op_t< w_op, C, w_op, T, w_op, E, w_op > when( C c, T t, E e )
     {
         return { "case", c, "when true then", t, "else", e, "end" };
     }

@@ -209,6 +209,7 @@ namespace brq::sql
     {
         static constexpr bool is_column   = false;
         static constexpr bool is_enum     = false;
+        static constexpr bool is_enum_val = false;
         static constexpr bool is_expr     = false;
         static constexpr bool is_query    = false;
         static constexpr bool is_table    = false;
@@ -234,11 +235,19 @@ namespace brq::sql
     {
         using type = T;
         static constexpr bool is_enum = true;
+        static constexpr bool is_enum_val = true;
+
+        template< typename self_t >
+        friend string_builder &operator<<( string_builder &s, const self_t &v )
+        {
+            return s << v.get_name( v );
+        }
     };
 
     template< typename... vals >
     struct enum_type : category_flags
     {
+        using type = enum_type;
         using values = cons_list_t< vals... >;
         static constexpr bool is_enum  = true;
         static constexpr bool is_expr  = true;
@@ -288,12 +297,13 @@ namespace brq::sql
 
     template< typename T > struct type_map< T, std::enable_if_t< T::is_enum > >
     {
-        static auto name() { return get_name( T() ); }
-    };
-
-    template< typename T > struct type_map< T, std::enable_if_t< T::type::is_enum > >
-    {
-        static auto name() { return get_name( typename T::type() ); }
+        static auto name()
+        {
+            if constexpr ( T::is_enum_val )
+                return T::type::get_name( typename T::type() );
+            else
+                return T::get_name( T() );
+        }
     };
 
     template< typename T > auto sql_type()
@@ -306,6 +316,7 @@ namespace brq::sql
     template< typename T >           struct is_optional                       : std::false_type {};
     template< typename T >           struct is_fixnum                         : std::false_type {};
     template< typename T, typename > struct is_expr                           : std::false_type {};
+    template< typename T, typename > struct is_enum                           : std::false_type {};
 
     template< typename T, size_t s > struct is_array< std::array< T, s > >    : std::true_type {};
     template< typename T >           struct is_set< std::set< T > >           : std::true_type {};
@@ -314,6 +325,7 @@ namespace brq::sql
 
     template< typename T > struct is_expr< T, std::enable_if_t< T::is_expr > > : std::true_type {};
     template< typename T > struct is_expr< T, std::enable_if_t< T::is_enum > > : std::true_type {};
+    template< typename T > struct is_enum< T, std::enable_if_t< T::is_enum > > : std::true_type {};
 
     template< typename T > constexpr bool is_expr_v = is_expr< T, void >::value;
     struct where_operator { const char *sql; where_operator( const char *s = "" ) : sql( s ) {} };
@@ -325,6 +337,7 @@ namespace brq::sql
                                        std::is_convertible_v< T, interval > ||
                                        is_array< T >::value ||
                                        is_fixnum< T >::value ||
+                                       is_enum< T, void >::value ||
                                        std::is_convertible_v< T, int > ) && !is_list_v< T >;
 
     template< typename T, bool _nullable = false >

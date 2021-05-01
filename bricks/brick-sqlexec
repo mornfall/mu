@@ -314,7 +314,13 @@ namespace brq::sql
         void bind_one( const std::array< uint8_t, n > &s ) { bind_mem( s.begin(), s.size() ); }
 
         template< typename T >
-        std::enable_if_t< T::is_enum > bind_one( T v )
+        std::enable_if_t< T::is_enum_val > bind_one( T v )
+        {
+            bind_one( std::string( get_name( v, 0 ) ) );
+        }
+
+        template< typename T >
+        std::enable_if_t< T::is_enum && ! T::is_enum_val > bind_one( T v )
         {
             v._value.match( [&]( auto x ) { bind_one( std::string( get_name( x, 0 ) ) ); } );
         }

@@ -237,12 +237,13 @@ namespace brq::sql
         static constexpr bool is_enum = true;
         static constexpr bool is_enum_val = true;
 
-        template< typename self_t >
-        friend string_builder &operator<<( string_builder &s, const self_t &v )
-        {
-            return s << v.get_name( v );
-        }
     };
+
+    template< typename self_t, typename = std::enable_if_t< self_t::is_enum_val > >
+    inline string_builder &operator<<( string_builder &s, const self_t &v )
+    {
+        return s << v.get_name( v );
+    }
 
     template< typename... vals >
     struct enum_type : category_flags
@@ -323,8 +324,8 @@ namespace brq::sql
     template< typename T >           struct is_optional< std::optional< T > > : std::true_type {};
     template< typename T, int i >    struct is_fixnum< fixnum< i, T > >       : std::true_type {};
 
-    template< typename T > struct is_expr< T, std::enable_if_t< T::is_expr > > : std::true_type {};
-    template< typename T > struct is_expr< T, std::enable_if_t< T::is_enum > > : std::true_type {};
+    template< typename T > struct is_expr< T, std::enable_if_t< T::is_expr || T::is_enum > >
+            : std::true_type {};
     template< typename T > struct is_enum< T, std::enable_if_t< T::is_enum > > : std::true_type {};
 
     template< typename T > constexpr bool is_expr_v = is_expr< T, void >::value;

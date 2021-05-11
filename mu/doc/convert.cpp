@@ -72,8 +72,8 @@ namespace umd::doc
         {
             if ( lstr.empty() ) return 0;
             if ( std::isdigit( lstr[ 0 ] ) ) return stoi( lstr );
-            if ( std::isalpha( lstr[ 0 ] ) ) return int( lstr[ 0 ] - U'a' );
-            return int( lstr[ 0 ] - U'α' );
+            if ( std::isalpha( lstr[ 0 ] ) ) return int( lstr[ 0 ] - U'a' + 1 );
+            return int( lstr[ 0 ] - U'α' + 1 );
         };
 
         while ( !todo.empty() )

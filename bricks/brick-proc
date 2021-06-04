@@ -499,15 +499,15 @@ namespace brq
         ::fcntl( fd_out.number(), F_SETFL, O_NONBLOCK );
         ::fcntl( fd_in.number(),  F_SETFL, O_NONBLOCK );
 
-        pollfd fdset[ 2 ] = { { fd_out.number(), POLLOUT, 0 },
-                              { fd_in.number(),  POLLIN,  0 } };
+        std::array< pollfd, 2 > fdset{ { { fd_out.number(), POLLOUT, 0 },
+                                         { fd_in.number(),  POLLIN,  0 } } };
 
         int res = 0;
 
         while ( fdset[ 0 ].fd >= 0 || fdset[ 1 ].fd >= 0 )
         {
             if ( res == 0 )
-                res = poll( fdset, 2, timeout );
+                res = poll( fdset.begin(), fdset.size(), timeout );
 
             if ( res == -1 )
             {
@@ -521,10 +521,11 @@ namespace brq
 
             res = 0;
 
-            if ( ( fdset[ 0 ].revents & POLLERR ) || ( fdset[ 0 ].revents & POLLOUT ) ||
-                 ( fdset[ 0 ].events == 0 ) /* was previously blocked */ )
+            if ( fdset[ 0 ].revents & ( POLLERR | POLLOUT | POLLHUP ) ||
+                 fdset[ 0 ].events == 0 /* was previously blocked */ )
             {
-                if ( auto result = do_write( fd_out ); result == io_result::done )
+                auto result = do_write( fd_out );
+                if ( result == io_result::done || fdset[ 0 ].revents & ( POLLHUP | POLLERR ) )
                 {
                     fd_out.close();
                     fdset[ 0 ].fd = -1;
@@ -533,17 +534,17 @@ namespace brq
                     fdset[ 0 ].events = result == io_result::ready ? POLLOUT : 0;
             }
 
-            if ( ( fdset[ 1 ].revents & POLLERR ) || ( fdset[ 1 ].revents & ( POLLIN | POLLHUP ) ) )
+            if ( fdset[ 1 ].revents & ( POLLERR | POLLIN | POLLHUP ) )
             {
-                if ( do_read( fd_in ) )
-                    fdset[ 0 ].events = POLLOUT;
-                else
+                if ( !do_read( fd_in ) || fdset[ 1 ].revents & ( POLLERR | POLLHUP ) )
                 {
                     fd_in.close();
                     fdset[ 1 ].fd = -1;
-                    res = 1;
+                    res = 1; /* skip next poll */
                     eof();
                 }
+                else
+                    fdset[ 0 ].events = POLLOUT;
             }
 
             fdset[ 0 ].revents = fdset[ 1 ].revents = 0;

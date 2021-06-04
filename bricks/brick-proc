@@ -633,7 +633,7 @@ namespace brq
             return _buffer_2 << arg, *this;
         }
 
-        void shift_buffers() const
+        bool shift_buffers() const
         {
             if ( _todo.empty() )
             {
@@ -643,12 +643,18 @@ namespace brq
                 if ( _callback )
                     _callback();
             }
+
+            return !_todo.empty();
         }
 
         io_result operator()( const brq::fd &fd ) const
         {
-            shift_buffers();
+            if ( !shift_buffers() )
+                return _closed ? io_result::done : io_result::blocked;
+
             int bytes = write( fd.number(), _todo.data(), _todo.length() );
+            if ( _todo.length() && bytes == 0 )
+                return io_result::done;
 
             if ( bytes == -1 )
             {
@@ -660,9 +666,8 @@ namespace brq
             }
 
             _todo.remove_prefix( bytes );
-            shift_buffers();
 
-            if ( _todo.empty() )
+            if ( !shift_buffers() )
                 return _closed ? io_result::done : io_result::blocked;
             else
                 return io_result::ready;

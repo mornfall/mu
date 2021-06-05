@@ -905,6 +905,21 @@ namespace brq
             return buffer;
         }
 
+        std::string read_file( std::istream &in )
+        {
+            std::string out;
+            int pos = 0;
+
+            while ( in )
+            {
+                out.resize( pos + 1024 );
+                in.read( out.data() + pos, 1024 );
+                out.resize( pos += in.gcount() );
+            }
+
+            return out;
+        }
+
         std::string read_file( std::string_view file,
                                size_t length = std::numeric_limits< size_t >::max() )
         {

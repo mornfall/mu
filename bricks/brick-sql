@@ -144,14 +144,18 @@ namespace brq::sql
 
         void print_tail( string_builder &, int & ) const {}
 
-        void print( string_builder &b, int &id, const char *join ) const
+        void print( string_builder &b, int &id, const char *join, const char *empty ) const
         {
             int i = 0;
+
             for ( const auto &o : _vec )
             {
                 if ( i++ ) b << " " << join << " ";
                 o->print( b, id );
             }
+
+            if ( _vec.empty() )
+                b << empty;
         }
 
         template< typename stmt > void bind( stmt &s ) const
@@ -482,7 +486,7 @@ BRICK_SQL_OP( | )
         using opaque_vec::opaque_vec;
         void print( string_builder &b, int &id ) const
         {
-            opaque_vec::print( b, id, "and" );
+            opaque_vec::print( b, id, "and", "true" );
         }
     };
 
@@ -491,7 +495,7 @@ BRICK_SQL_OP( | )
         using opaque_vec::opaque_vec;
         void print( string_builder &b, int &id ) const
         {
-            opaque_vec::print( b, id, "or" );
+            opaque_vec::print( b, id, "or", "false" );
         }
     };
 

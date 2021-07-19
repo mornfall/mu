@@ -492,35 +492,87 @@ namespace brq
 
     enum class io_result { done, ready, blocked };
 
-    template < typename write_t, typename read_t, typename eof_t = void() >
-    void communicate( fd fd_out, fd fd_in, const write_t &do_write, const read_t &do_read,
-                      eof_t eof = []{}, int timeout = 60'000 )
+    struct communicate_base
     {
-        ::fcntl( fd_out.number(), F_SETFL, O_NONBLOCK );
-        ::fcntl( fd_in.number(),  F_SETFL, O_NONBLOCK );
+        virtual void forever() = 0;
+        virtual void poll( int = 0 ) = 0;
+        virtual void poll_in( int = 0 ) = 0;
+        virtual void poll_out( int = 0 ) = 0;
+        virtual ~communicate_base() = default;
+    };
 
-        std::array< pollfd, 2 > fdset{ { { fd_out.number(), POLLOUT, 0 },
-                                         { fd_in.number(),  POLLIN,  0 } } };
-
+    template < typename write_t, typename read_t, typename eof_t = void(*)() >
+    struct communicate : communicate_base
+    {
+        fd fd_out, fd_in;
+        const write_t &do_write;
+        const read_t &do_read;
+        eof_t eof;
+        std::array< pollfd, 2 > fdset;
         int res = 0;
 
-        while ( fdset[ 0 ].fd >= 0 || fdset[ 1 ].fd >= 0 )
+        communicate( fd out, fd in, const write_t &w, const read_t &r, eof_t eof = []{} )
+            : fd_out( std::move( out ) ), fd_in( std::move( in ) ),
+              do_write( w ), do_read( r ), eof( eof )
         {
+            ::fcntl( fd_out.number(), F_SETFL, O_NONBLOCK );
+            ::fcntl( fd_in.number(),  F_SETFL, O_NONBLOCK );
+
+            fdset[ 0 ] = { fd_out.number(), POLLOUT, 0 };
+            fdset[ 1 ] = { fd_in.number(),  POLLIN,  0 };
+        }
+
+        void forever() override
+        {
+            while ( fdset[ 0 ].fd >= 0 || fdset[ 1 ].fd >= 0 )
+                poll();
+        }
+
+        void poll( int timeout = -1 ) override
+        {
+            _poll( timeout );
+            _poll_out();
+            _poll_in();
+        }
+
+        void _poll_partial( int timeout, int which )
+        {
+            auto backup = fdset[ which ].events;
+            brq::finally _cleanup( [&]{ fdset[ which ].events = backup; } );
+            fdset[ which ].events = 0; /* ignore */
+            _poll( timeout );
+
+            if ( which == 0 )
+                _poll_out();
+            else
+                _poll_in();
+        }
+
+        void poll_in( int timeout = 0 )  override { _poll_partial( timeout, 1 ); }
+        void poll_out( int timeout = 0 ) override { _poll_partial( timeout, 0 ); }
+
+        void _poll( int timeout )
+        {
+            fdset[ 0 ].revents = fdset[ 1 ].revents = 0;
+
             if ( res == 0 )
-                res = poll( fdset.begin(), fdset.size(), timeout );
+                res = ::poll( fdset.begin(), fdset.size(), timeout );
 
             if ( res == -1 )
             {
                 if ( errno == EINTR )
-                    continue;
+                    return poll( timeout );
                 throw brq::system_error( "communicate: poll" );
             }
 
-            if ( res == 0 )
+            if ( res == 0 && timeout )
                 throw std::runtime_error( "communicate: poll timed out" );
 
             res = 0;
+        }
 
+        void _poll_out()
+        {
             if ( fdset[ 0 ].revents & ( POLLERR | POLLOUT | POLLHUP ) ||
                  fdset[ 0 ].events == 0 /* was previously blocked */ )
             {
@@ -533,7 +585,10 @@ namespace brq
                 else
                     fdset[ 0 ].events = result == io_result::ready ? POLLOUT : 0;
             }
+        }
 
+        void _poll_in()
+        {
             if ( fdset[ 1 ].revents & ( POLLERR | POLLIN | POLLHUP ) )
             {
                 if ( !do_read( fd_in ) || fdset[ 1 ].revents & ( POLLERR | POLLHUP ) )
@@ -546,10 +601,8 @@ namespace brq
                 else
                     fdset[ 0 ].events = POLLOUT;
             }
-
-            fdset[ 0 ].revents = fdset[ 1 ].revents = 0;
         }
-    }
+    };
 
     /* Pipethrough for filtering data through a subprocess.
      *

@@ -112,17 +112,25 @@ namespace brq::sql
             return tm;
         }
 
-        std::string to_string( const char *fmt = "%Y-%m-%d %H:%M %Z" ) const
+        struct tm to_gmtime() const
+        {
+            struct tm tm;
+            auto t = to_unix();
+            gmtime_r( &t, &tm );
+            return tm;
+        }
+
+        std::string to_string( const char *fmt = "%Y-%m-%d %H:%M %Z", bool utc = false ) const
         {
             char buf[200];
-            auto tm = to_localtime();
+            auto tm = utc ? to_gmtime() : to_localtime();
             strftime( buf, 200, fmt, &tm );
             return buf;
         }
 
         friend auto &operator<<( brq::string_builder &s, timestamp ts )
         {
-            return s << ts.to_string();
+            return s << ts.to_string( "%Y-%m-%d %H:%M:%S %Z", true );
         }
     };
 

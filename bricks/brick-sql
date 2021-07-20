@@ -273,6 +273,11 @@ namespace brq::sql
         explicit count( const col &c = col() ) : function< int32_t, col >( c ) {}
     };
 
+    template< typename col > struct length : function< int32_t, col >
+    {
+        explicit length( const col &c = col() ) : function< int32_t, col >( c ) {}
+    };
+
 #define BRICK_SQL_ENDO(n) \
     template< typename... cols > struct n : endomorphism< cols... > \
     { explicit n( cols... cs ) : endomorphism< cols... >( cs... ) {} n() = default; }

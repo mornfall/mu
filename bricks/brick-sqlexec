@@ -641,7 +641,7 @@ namespace brq::sql
         }
 
         template< typename... v >
-        void exec( std::string q, v... vals )
+        void exec( std::string_view q, v... vals )
         {
             open();
             stmt<> s( conn(), q );

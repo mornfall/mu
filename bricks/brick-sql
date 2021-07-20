@@ -483,6 +483,7 @@ BRICK_SQL_OP( | )
 
     struct all_of : opaque_vec
     {
+        using type = bool;
         using opaque_vec::opaque_vec;
         void print( string_builder &b, int &id ) const
         {
@@ -492,6 +493,7 @@ BRICK_SQL_OP( | )
 
     struct any_of : opaque_vec
     {
+        using type = bool;
         using opaque_vec::opaque_vec;
         void print( string_builder &b, int &id ) const
         {

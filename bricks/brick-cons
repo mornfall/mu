@@ -19,6 +19,7 @@
 #pragma once
 
 #include <brick-trace>
+#include <brick-assert>
 #include <type_traits>
 #include <optional>
 #include <memory>
@@ -167,6 +168,8 @@ namespace brq
         }
 
         cons( const car_t &car, const cdr_t &cdr ) : cdr_t( cdr ), _car( car ) {}
+        template< typename ucar_t, typename ucdr_t >
+        cons( ucar_t && car, ucdr_t && cdr ) : cdr_t( std::forward< ucdr_t >( cdr ) ), _car( std::forward< ucar_t >( car ) ) {}
         cons( const car_t &car ) : _car( car ) {}
 
         template< typename T, typename U, typename... Us >
@@ -204,7 +207,7 @@ namespace brq
     auto cons_list_ref( T &&t, Ts &&... ts )
     {
         auto tail = cons_list_ref( std::forward< Ts >( ts )... );
-        return cons< T, decltype( tail ) >( std::forward< T >( t ), tail );
+        return cons< T, decltype( tail ) >( std::forward< T >( t ), std::move( tail ) );
     }
 
     template< typename T, typename... Ts >

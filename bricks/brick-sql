@@ -551,11 +551,11 @@ BRICK_SQL_OP( | )
     };
 
     template< typename query >
-    struct limit : extend< query >
+    struct limit_clause : extend< query >
     {
         int64_t _limit;
 
-        limit( query &q, int64_t l ) : extend< query >( q ), _limit( l ) {}
+        limit_clause( query &q, int64_t l ) : extend< query >( q ), _limit( l ) {}
 
         auto exec() { return this->_exec( this ); }
 
@@ -573,7 +573,7 @@ BRICK_SQL_OP( | )
             sql::bind( s, _limit );
         }
 
-        sql::raw_sql< limit > raw_sql( std::string_view sv ) { return { *this, sv }; }
+        sql::raw_sql< limit_clause > raw_sql( std::string_view sv ) { return { *this, sv }; }
     };
 
     template< typename select, typename... cols >
@@ -623,7 +623,7 @@ BRICK_SQL_OP( | )
             return { this->_query, _cols.cat( brq::cons_list( ex... ) ) };
         }
 
-        limit< order_clause > limit( int l ) { return { *this, l }; }
+        limit_clause< order_clause > limit( int l ) { return { *this, l }; }
     };
 
     template< typename query, typename expr >
@@ -658,6 +658,8 @@ BRICK_SQL_OP( | )
 
         template< typename we_t > [[nodiscard]]
         auto where( we_t we ) { return sql::where_clause( this->_query, _expr && we ); }
+
+        limit_clause< where_clause > limit( int l ) { return { *this, l }; }
 
         sql::raw_sql< where_clause > raw_sql( std::string_view sv ) { return { *this, sv }; }
 

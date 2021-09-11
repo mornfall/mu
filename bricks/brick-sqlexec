@@ -711,6 +711,20 @@ namespace brq::sql
             return conn().wait( deadline );
         }
 
+        template< typename... ts >
+        std::enable_if_t<( ts::is_table && ... )> truncate()
+        {
+            brq::string_builder b;
+            b << "truncate ";
+            int count = 0;
+            auto print_one = [&]( auto &t )
+            {
+                b << ( count++ ? ", " : "" ) << t.get_name( t );
+            };
+            brq::cons_list_t< ts... >().each( print_one );
+            exec( b.data() );
+        }
+
         ~txn_base() noexcept { if ( !_closed ) rollback(); }
     };
 }

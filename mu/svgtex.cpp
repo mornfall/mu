@@ -196,6 +196,8 @@ void process()
 
     int mp = open( "tosvg.tex", O_WRONLY | O_CREAT, 0666 );
     write_sv( mp, "\\input{prelude-typescript.tex}\n" );
+    write_sv( mp, "\\newif\\ifbw\\newif\\ifslides\\newif\\ifnotes\\notestrue\n" );
+    write_sv( mp, "\\input{prelude-style.tex}\n" );
     write_sv( mp, "\\starttext" );
 
     while ( !w.empty() )

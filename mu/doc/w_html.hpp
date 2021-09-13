@@ -264,6 +264,9 @@ namespace umd::doc
         void small_start() override {}
         void small_stop()  override {}
 
+        void footnote_start() override { out.emit( "<!--" ); }
+        void footnote_stop() override { out.emit( "-->" ); }
+
         void paragraph() override { out.emit( "</div><div>\n" ); }
     };
 

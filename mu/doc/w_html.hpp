@@ -124,8 +124,8 @@ namespace umd::doc
         }
 
         /* spans ; may be also called within mpost btex/etex */
-        void em_start()   override { out.emit( "<em>" ); }
-        void em_stop()    override { out.emit( "</em>" ); }
+        void em_start()   override { out.emit( _in_mpost ? "{\\em{}" : "<em>" ); }
+        void em_stop()    override { out.emit( _in_mpost ? "}" : "</em>" ); }
         void tt_start()   override { out.emit( _in_mpost ? "{\\tt{}" : "<code>" ); }
         void tt_stop()    override { out.emit( _in_mpost ? "}" : "</code>" ); }
 
@@ -147,14 +147,20 @@ namespace umd::doc
         void math_start() override
         {
             _in_math = true;
-            out.emit( "<tex>\\startMPpage[instance=mathfun]\npicture p; p := btex \\math{" );
+            if ( _in_mpost )
+                out.emit( "\\math{" );
+            else
+                out.emit( "<tex>\\startMPpage[instance=mathfun]\npicture p; p := btex \\math{" );
         }
 
         void math_stop()  override
         {
             _in_math = false;
-            out.emit( "} etex; write decimal ypart llcorner p to \"yshift.txt\";",
-                      " draw p;\n\\stopMPpage</tex>" );
+            if ( _in_mpost )
+                out.emit( "}" );
+            else
+                out.emit( "} etex; write decimal ypart llcorner p to \"yshift.txt\";",
+                          " draw p;\n\\stopMPpage</tex>" );
         }
 
         void mpost_start() override

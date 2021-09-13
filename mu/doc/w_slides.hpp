@@ -145,7 +145,7 @@ namespace umd::doc
             for ( auto c : ci )
                 out.emit( "\\setupTABLE[c][", std::to_string( ++i ), "][", setup( c ), "]\n" );
 
-            out.emit( "\\bTABLE[toffset=-1pt,boffset=-1pt,loffset=2pt,roffset=2pt]\\bTR",
+            out.emit( "\\bTABLE[toffset=0pt,boffset=0pt,loffset=2pt,roffset=2pt]\\bTR",
                       table_rules ? "[bottomframe=on]" : "" );
         }
 
@@ -154,7 +154,7 @@ namespace umd::doc
             if ( ++table_cells > 1 )
                 out.emit( "\\eTD " );
             out.emit( "\\bTD[nc=", std::to_string( span ), span > 1 ? ",align={center}" : "",
-                      table_rules ? ",topframe=on" : "", "]" );
+                      table_rules ? ",topframe=on" : ",toffset=-3pt", "]" );
         }
 
         virtual void table_new_row( bool rule = false )

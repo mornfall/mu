@@ -532,7 +532,7 @@ namespace umd::doc
                 case U'┄': break;
                 case U'│': case U'┼': case U'┤':
                     if ( finished == int( cols.size() ) )
-                        cols.push_back( next_rule ? '[' : 'l' );
+                        cols.push_back( next_rule ? '|' : 'c' );
                     else if ( cols.back() == 'l' && next_rule )
                         cols.back() = '[';
                     next_rule = sep[ i ] == U'│';

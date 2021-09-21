@@ -177,7 +177,7 @@ namespace umd::pic::convert
             for ( int i = 0; i < int( c.size() ); ++i )
                 obj->set_dashed( i, dashed[ i ] );
 
-            std::u32string txt;
+            std::vector< std::pair< int, std::u32string > > txt;
             int last_x = p.x(), last_y = 0;
 
             for ( auto p = ne; p != se; p = p + reader::point( 0, 1 ) )
@@ -209,11 +209,18 @@ namespace umd::pic::convert
                         obj->set_shaded( grid[ p ].shade() );
                     else if ( grid[ p ].text() )
                     {
-                        if ( y != last_y && !txt.empty() )
-                            txt += U"\\break ";
-                        if ( x != last_x + 1 && !txt.empty() )
-                            txt += ' ';
-                        txt += grid[ p ].character();
+                        if ( txt.empty() )
+                            txt.emplace_back( txt.size(), U"" );
+
+                        if ( y != last_y && !txt.empty() && !txt.back().second.empty() )
+                            txt.emplace_back( txt.size(), U"" );
+
+                        auto &t = txt.back().second;
+
+                        if ( x != last_x + 1 && !t.empty() )
+                            t += ' ';
+
+                        t += grid[ p ].character();
                         last_x = x, last_y = y;
                     }
 
@@ -221,9 +228,14 @@ namespace umd::pic::convert
                     processed.emplace( x, y );
                 }
 
-            if ( !txt.empty() )
+            for ( auto [ y, t ] : txt )
+            {
+                double baseline_shift = txt.size() > 1 ? 0 : 0.08;
+                double center_offset = - baseline_shift - h / 2;
+                double line_offset = ( txt.size() - 1 ) / 2.0 - y;
                 group.add< pic::label >( xpitch * (   p.x() + w / 2 ),
-                                         ypitch * ( - p.y() - 1.08 * h / 2 ), txt );
+                                         ypitch * ( - p.y() + center_offset + line_offset ), t );
+            }
 
             return obj;
         }

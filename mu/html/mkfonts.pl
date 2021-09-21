@@ -4,7 +4,7 @@ use MIME::Base64;
 sub font($$)
 {
     my ( $file, $family ) = @_;
-    open FILE, $file;
+    open FILE, $file or die "could not read $file";
     my ( $b64, $buf );
     while ( read( FILE, $buf, 57 ) )
     {

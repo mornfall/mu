@@ -39,7 +39,7 @@ namespace umd::doc
 
             out.emit( "<!DOCTYPE html>" );
             out.emit( "<html lang=\"", _meta[ U"lang" ], "\"><head>" );
-            out.emit( "<meta charset=\"UTF-8\">" );
+            out.emit( "<meta charset=\"UTF-8\"><!-- ‹really› -->" );
             out.emit( "<title>", _meta[ U"title" ], "</title>" );
             auto css = to_utf8( _meta[ U"doctype" ] ) + ".css";
 

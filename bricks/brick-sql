@@ -273,6 +273,17 @@ namespace brq::sql
         explicit count( const col &c = col() ) : function< int32_t, col >( c ) {}
     };
 
+    template< typename col > struct convert_from : function< std::u32string, col >
+    {
+        explicit convert_from( const col &c = col() ) : function< std::u32string, col >( c ) {}
+        template< typename stream > void print( stream &s, int &id ) const
+        {
+            s << "( ";
+            sql::print( s, this->_args, id );
+            s << ", 'utf8' )";
+        }
+    };
+
     template< typename col > struct length : function< int32_t, col >
     {
         explicit length( const col &c = col() ) : function< int32_t, col >( c ) {}

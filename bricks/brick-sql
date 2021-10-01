@@ -375,6 +375,9 @@ namespace brq::sql
         where_expr( args... as ) : _args( as... ) {}
         where_expr() = default;
 
+        template< typename T >
+        cast_to< where_expr, T > as() const { return { *this }; }
+
         template< typename stream >
         stream &print( stream &s, int &id ) const
         {

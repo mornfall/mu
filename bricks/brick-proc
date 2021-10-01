@@ -498,6 +498,7 @@ namespace brq
         virtual void poll( int = 0 ) = 0;
         virtual void poll_in( int = 0 ) = 0;
         virtual void poll_out( int = 0 ) = 0;
+        virtual string_builder read( int bytes ) = 0;
         virtual ~communicate_base() = default;
     };
 
@@ -550,6 +551,33 @@ namespace brq
 
         void poll_in( int timeout = 0 )  override { _poll_partial( timeout, 1 ); }
         void poll_out( int timeout = 0 ) override { _poll_partial( timeout, 0 ); }
+
+        string_builder read( int to_read ) override
+        {
+            string_builder out;
+            char buffer[ 512 ];
+
+            while ( to_read )
+            {
+                int bytes = ::read( fd_in.number(), buffer, std::min( to_read, 512 ) );
+
+                if ( bytes > 0 )
+                {
+                    out << std::string_view( buffer, bytes );
+                    to_read -= bytes;
+                }
+                else if ( bytes < 0 )
+                {
+                    if ( errno == EAGAIN || errno == EINTR )
+                        continue;
+                    throw brq::system_error( "fd::read" );
+                }
+                else
+                    break;
+            }
+
+            return out;
+        }
 
         void _poll( int timeout )
         {

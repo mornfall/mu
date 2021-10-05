@@ -244,6 +244,26 @@ namespace brq
         return generator( [=]( auto s ) { return split( s, d, reverse ); }, s );
     }
 
+    static auto replace( std::string_view str, std::string_view find, std::string_view repl )
+    {
+        string_builder b;
+
+        while ( !str.empty() )
+        {
+            auto pos = str.find( find );
+            b << str.substr( 0, pos );
+            if ( pos != str.npos )
+            {
+                b << repl;
+                str.remove_prefix( pos + find.size() );
+            }
+            else
+                str = "";
+        }
+
+        return std::string( b.data() );
+    }
+
     template< typename char_t >
     std::basic_string< char_t > tabulate( std::basic_string_view< char_t > s )
     {
@@ -464,6 +484,16 @@ namespace t_brq
             auto o = brq::tabulate( in );
             ASSERT_EQ( o, "hello war   again\n"
                           "sad   world prevails\n" );
+        }
+    };
+
+    struct replace
+    {
+        TEST( sanity )
+        {
+            ASSERT_EQ( brq::replace( "foobar", "o", "xx" ), "fxxxxbar" );
+            ASSERT_EQ( brq::replace( "foobar", "ar", "x" ), "foobx" );
+            ASSERT_EQ( brq::replace( "xx", "x", "xx" ), "xxxx" );
         }
     };
 }

@@ -151,7 +151,8 @@ namespace brq
 
         bool _backslash = false;
         bool _integer = true;
-        enum state_t { read_value, read_name, read_name_str, read_colon, read_comma,
+        enum state_t { read_value, read_comma_or_name, read_comma_or_value,
+                       read_name, read_name_str, read_colon, read_comma,
                        read_bareword, read_string, read_number, read_digits, read_digits_tail,
                        read_decimal, read_exponent, read_exponent_digits } _state = read_value;
 
@@ -165,6 +166,8 @@ namespace brq
                 case read_name_str: return out << "read_name_str";
                 case read_colon: return out << "read_colon";
                 case read_comma: return out << "read_comma";
+                case read_comma_or_name: return out << "read_comma_or_name";
+                case read_comma_or_value: return out << "read_comma_or_value";
                 case read_bareword: return out << "read_bareword";
                 case read_string: return out << "read_string";
                 case read_number: return out << "read_number";
@@ -188,15 +191,17 @@ namespace brq
                 case read_decimal:
                 case read_exponent:
                 case read_exponent_digits:
-                case read_number:   number(); break;
-                case read_string:   string(); break;
+                case read_number:         number(); break;
+                case read_string:         string(); break;
 
                 case read_colon:
                 case read_name_str:
-                case read_name:     name( false ); break;
-                case read_comma:    comma(); break;
-                case read_value:    value(); break;
-                case read_bareword: bareword(); break;
+                case read_name:           name( false ); break;
+                case read_comma:          comma(); break;
+                case read_comma_or_name:  comma_or_name(); break;
+                case read_comma_or_value: comma_or_value(); break;
+                case read_value:          value(); break;
+                case read_bareword:       bareword(); break;
             }
 
             if ( !_stack.empty() && !_chunk.empty() )
@@ -419,6 +424,28 @@ namespace brq
                 return value();
         }
 
+        void comma_or_name()
+        {
+            if ( !next_state( read_comma_or_name, false ) )
+                return;
+
+            if ( next() == '}' )
+                comma();
+            else
+                name( true );
+        }
+
+        void comma_or_value()
+        {
+            if ( !next_state( read_comma_or_value, false ) )
+                return;
+
+            if ( next() == ']' )
+                comma();
+            else
+                value();
+        }
+
         void bareword()
         {
             next_state( read_bareword, false );
@@ -453,19 +480,13 @@ namespace brq
                     chomp();
                     _stack.push_back( true );
                     _l.object_start();
-                    if ( next() == '}' )
-                        comma();
-                    else
-                        name( true );
+                    comma_or_name();
                     break;
                 case '[':
                     chomp();
                     _stack.push_back( false );
                     _l.array_start();
-                    if ( next() == ']' )
-                        comma();
-                    else
-                        value();
+                    comma_or_value();
                     break;
                 case '"':
                     _chunk.remove_prefix( 1 );

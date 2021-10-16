@@ -1223,6 +1223,12 @@ BRICK_SQL_OP( | )
         {
             return insert_values< insert_columns, typename cols_t::type... >( *this, v... );
         }
+
+        template< typename query_t > [[nodiscard]]
+        auto query( query_t q ) const
+        {
+            return insert_query< insert_columns, query_t >( *this, q );
+        }
     };
 
     template< typename tbl >

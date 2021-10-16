@@ -269,15 +269,24 @@ namespace brq
      * doesn't care about the trace output). */
 
     template< typename stream, typename T >
-    auto format_nofail( stream &acc, const T &t ) noexcept -> decltype( acc << t, void(0) )
+    auto format_nofail( stream &acc, const T &t ) noexcept -> decltype( acc << t )
     {
-        acc << t;
+        return acc << t;
     }
 
     template< typename stream >
-    void format_nofail( stream &acc, fallback ) noexcept
+    decltype( auto ) format_nofail( stream &acc, fallback ) noexcept
     {
-        acc << "<unknown>";
+        return acc << "<unknown>";
+    }
+
+    template< bool nofail, typename stream, typename arg_t >
+    decltype( auto ) format_arg( stream &acc, const arg_t &arg ) noexcept
+    {
+        if constexpr ( nofail )
+            return format_nofail( acc, arg );
+        else
+            return acc << arg;
     }
 
     template< bool nofail = false, typename stream >
@@ -287,14 +296,12 @@ namespace brq
     void format_args( const char *sep, stream &acc, const A &a, const Args & ... as ) noexcept
     {
         int mark = acc.size();
-        if constexpr ( nofail )
-            format_nofail( acc, a );
-        else
-            acc << a;
+        decltype( auto ) acc_ = format_arg< nofail >( acc, a );
 
         if ( mark != acc.size() )
-            acc << sep;
-        format_args< nofail >( sep, acc, as... );
+            acc_ << sep;
+
+        format_args< nofail >( sep, acc_, as... );
     }
 
     template< typename char_t >

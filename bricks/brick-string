@@ -87,6 +87,7 @@ namespace brq
         mark_t() = default;
         explicit mark_t( string_builder &b ) : b( &b ), mark( b._d.offset ) {}
         template< typename T > mark_t operator<<( T &&v ) { *b << std::forward< T >( v ); return *this; }
+        auto size() const { return b->size(); }
     };
 
     struct pad
@@ -97,6 +98,7 @@ namespace brq
         pad( int w, char ch = ' ' ) : width( w ), ch( ch ) {}
         pad( string_builder &b, pad p ) : mark( b ), width( p.width ), ch( p.ch ) {}
 
+        auto size() const { return mark.size(); }
         template< typename T > pad operator<<( T &&v ) { mark << std::forward< T >( v ); return *this; }
         static string_builder &write( string_builder &b, int width, int from, char ch, bool left )
         {
@@ -484,6 +486,15 @@ namespace t_brq
             auto o = brq::tabulate( in );
             ASSERT_EQ( o, "hello war   again\n"
                           "sad   world prevails\n" );
+        }
+    };
+
+    struct format
+    {
+        TEST( pad )
+        {
+            ASSERT_EQ( brq::format( std::hex, brq::pad( 4, '0' ), 16, brq::mark ).data(),
+                       "0010" );
         }
     };
 

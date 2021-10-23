@@ -1345,8 +1345,9 @@ BRICK_SQL_OP( | )
             bool first = true;
             auto one = [&]( const auto &q )
             {
-                if ( !first ) s << " union " << ( all ? "all " : "" );
+                if ( !first ) s << " union " << ( all ? "all " : "" ) << "( ";
                 q.print( s, id );
+                if ( !first ) s << " )";
                 first = false;
             };
             qs.each( one );

@@ -741,15 +741,15 @@ BRICK_SQL_OP( | )
             using tab_left_u  = underlying< tab_left >;
             using tab_right_u = underlying< tab_right >;
 
-            std::string foreign_column;
-            std::string primary_column;
+            std::vector< std::string > foreign_column;
+            std::vector< std::string > primary_column;
 
             auto find_foreign_left = [&]( auto t )
             {
                 using col = unqualify< decltype( t ) >;
                 if constexpr ( t.is_foreign )
                     if constexpr ( std::is_same_v< typename col::table, tab_left_u > )
-                        foreign_column = col::get_name( col() );
+                        foreign_column.emplace_back( col::get_name( col() ) );
             };
 
             auto find_foreign_right = [&]( auto t )
@@ -757,7 +757,7 @@ BRICK_SQL_OP( | )
                 using col = unqualify< decltype( t ) >;
                 if constexpr ( t.is_foreign )
                     if constexpr ( std::is_same_v< typename col::table, tab_right_u > )
-                        foreign_column = col::get_name( col() );
+                        foreign_column.emplace_back( col::get_name( col() ) );
             };
 
             auto find_primary = [&]( auto t )
@@ -767,37 +767,45 @@ BRICK_SQL_OP( | )
                     if constexpr ( t.is_qualified )
                     {
                         using bare = typename decltype( t )::bare;
-                        primary_column = bare::get_name( bare() );
+                        primary_column.emplace_back( bare::get_name( bare() ) );
                     }
                     else
-                        primary_column = t.get_name( t );
+                        primary_column.emplace_back( t.get_name( t ) );
                 }
             };
 
             brq::string_builder cond;
 
-            typename tab_right::columns().each( find_foreign_left );
-            typename tab_left::columns().each( find_primary );
-
             auto tab_r = tab_right::get_name( tab_right() ),
                  tab_l = tab_left::get_name( tab_left() );
 
+            auto emit_join = [&]( auto tab_p, auto tab_f )
+            {
+                ASSERT_EQ( primary_column.size(), foreign_column.size(),
+                           primary_column, foreign_column );
+
+                for ( int i = 0; i < primary_column.size(); ++ i )
+                    cond <<    "\"" << tab_f << "\"." << foreign_column[ i ]
+                         << " = \"" << tab_p << "\"." << primary_column[ i ]
+                         << ( i < primary_column.size() - 1 ? " and " : "" );
+            };
+
             if constexpr ( std::is_same_v< on_t, brq::nil > )
             {
+                typename tab_right::columns().each( find_foreign_left );
+                typename tab_left::columns().each( find_primary );
+
                 if ( !foreign_column.empty() && !primary_column.empty() )
-                {
-                    cond <<    "\"" << tab_r << "\"." << foreign_column
-                         << " = \"" << tab_l << "\"." << primary_column;
-                }
+                    emit_join( tab_l, tab_r );
                 else
                 {
-                    primary_column = foreign_column = "";
+                    primary_column.clear();
+                    foreign_column.clear();
                     typename tab_right::columns().each( find_primary );
                     typename tab_left::columns().each( find_foreign_right );
 
                     if ( !foreign_column.empty() && !primary_column.empty() )
-                        cond << "\""    << tab_l << "\"." << foreign_column
-                             << " = \"" << tab_r << "\"." << primary_column;
+                        emit_join( tab_r, tab_l );
                     else if constexpr ( !tabs_left::cdr_t::empty )
                         return print< stream, typename tabs_left::cdr_t >( s, id );
                     else

@@ -302,6 +302,7 @@ namespace brq::sql
     BRICK_SQL_ENDO( bool_or );
     BRICK_SQL_ENDO( min );
     BRICK_SQL_ENDO( max );
+    BRICK_SQL_ENDO( string_agg );
     BRICK_SQL_ENDO( sum );
     BRICK_SQL_ENDO( avg );
     BRICK_SQL_ENDO( greatest );

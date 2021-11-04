@@ -330,6 +330,7 @@ namespace brq::sql
     template< typename T, size_t s > struct is_array< std::array< T, s > >    : std::true_type {};
     template< typename T >           struct is_set< std::set< T > >           : std::true_type {};
     template< typename T >           struct is_optional< std::optional< T > > : std::true_type {};
+    template<>                       struct is_optional< std::nullopt_t >     : std::true_type {};
     template< typename T, int i >    struct is_fixnum< fixnum< i, T > >       : std::true_type {};
 
     template< typename T > struct is_expr< T, std::enable_if_t< T::is_expr || T::is_enum > >

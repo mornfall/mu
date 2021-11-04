@@ -41,6 +41,8 @@ namespace brq::sql
         {
             if ( id >= 0 )
                 s << "$" << id++ << "::" << sql_type< V >();
+            else if constexpr ( std::is_same_v< V, std::nullopt_t > )
+                s << "null";
             else
                 s << "'" << v << "'::" << sql_type< V >();
         }
@@ -48,10 +50,11 @@ namespace brq::sql
             s << "null";
         else if constexpr ( is_optional< V >::value )
         {
-            if ( v.has_value() )
-                return print( s, *v, id );
-            else
-                s << "null::" << sql_type< V >();
+            if constexpr ( !std::is_same_v< V, std::nullopt_t > )
+                if ( v.has_value() )
+                    return print( s, *v, id );
+
+            s << "null::" << sql_type< V >();
         }
         else if constexpr ( std::is_same_v< V, where_operator > )
             s << v.sql;
@@ -81,6 +84,7 @@ namespace brq::sql
             v.print( s, id );
         else
             v.give_me_a_build_error();
+
         return s;
     }
 
@@ -93,8 +97,9 @@ namespace brq::sql
         else if constexpr ( is_value< V > ) s.bind( v ) ;
         else if constexpr ( is_optional< V >::value )
         {
-            if ( v.has_value() )
-                bind( s, *v );
+            if constexpr ( !std::is_same_v< V, std::nullopt_t > )
+                if ( v.has_value() )
+                    bind( s, *v );
         }
         else if constexpr ( std::is_same_v< V, where_operator > ) /* nothing */ ;
         else if constexpr ( is_list_v< V > ) /* nothing */ ;

@@ -646,7 +646,8 @@ namespace brq
     int pipethrough( Write do_write, Read do_read, Exec... exec )
     {
         spawn child( exec... );
-        communicate( child.take_write_fd(), child.take_read_fd(), do_write, do_read );
+        communicate comm( child.take_write_fd(), child.take_read_fd(), do_write, do_read );
+        comm.forever();
         return child.close();
     }
 #endif

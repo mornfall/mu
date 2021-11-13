@@ -25,6 +25,10 @@ namespace brq::sql
 {
     struct txn;
 
+    struct unknown_type {};
+    struct aggregate_type {};
+    struct expression_type {};
+
     template< bool sub = false, typename stream, typename V >
     static stream &print( stream &s, const V &v, int &id )
     {
@@ -259,7 +263,9 @@ namespace brq::sql
             sql::print< true >( s, _args, id );
             s << " )";
             if ( _print_type )
-                if constexpr ( !std::is_same_v< type, void > )
+                if constexpr ( !std::is_same_v< type, aggregate_type > &&
+                               !std::is_same_v< type, unknown_type > &&
+                               !std::is_same_v< type, expression_type > )
                     s << "::" << sql_type< type >();
         }
 
@@ -378,15 +384,23 @@ namespace brq::sql
 
     struct txn;
 
+    template< typename X > using to_void = void;
+    template< typename T, typename = void > struct type_of { using type = unknown_type; };
+    template< typename T >
+    struct type_of< T, to_void< typename T::type > > { using type = typename T::type; };
+
     template< typename... args >
     struct where_expr : column_flags
     {
         static constexpr bool is_expr = true;
         static constexpr bool is_asc  = true;
 
-        using type = void; /* we don't know :( */
+        using args_t = cons_list_t< args... >;
+        using type = std::conditional_t< sizeof...( args ) == 1,
+                                         typename type_of< typename args_t::car_t >::type,
+                                         expression_type >;
 
-        cons_list_t< args... > _args;
+        args_t _args;
         bool _parens = false;
 
         where_expr( args... as ) : _args( as... ) {}
@@ -533,7 +547,7 @@ BRICK_SQL_OP( | )
         static constexpr bool is_expr = true;
         static constexpr bool is_enum = false;
         static constexpr bool is_function = false;
-        using type = void; /* we don't know :( */
+        using type = unknown_type;
 
         template< typename stmt, typename T >
         stmt _exec( T *t )
@@ -557,6 +571,7 @@ BRICK_SQL_OP( | )
     {
         using stmt      = typename query::stmt;
         using columns_t = typename query::columns_t;
+        using type      = typename query::type;
 
         query _query;
         sql::conn &conn() { return _query.conn(); }
@@ -1035,6 +1050,9 @@ BRICK_SQL_OP( | )
     {
         typename query_head< cols...>::columns _cols;
         bool _skip_select = false;
+        using type = std::conditional_t< sizeof...( cols ) == 1,
+                                         typename type_of< typename columns_t::car_t >::type,
+                                         aggregate_type >;
 
         using query_head< cols... >::query_head;
         select( sql::txn &t, cols... e ) : query_head< cols... >( t ), _cols( e... ) {}

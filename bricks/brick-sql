@@ -1011,6 +1011,15 @@ BRICK_SQL_OP( | )
 
         template< typename... et >
         select_distinct( const select &q, et... e ) : extend< select >( q ), _cols( e... ) {}
+        select_distinct( brq::cons_list_t< cols... > cs ) : _cols( cs ) {}
+
+        template< typename... ct, typename... et >
+        auto columns( et... e )
+        {
+            auto ext_select = this->_query.template columns< ct..., et... >( e... );
+            ext_select._skip_select = true;
+            return select_distinct< decltype( ext_select ), cols... >( ext_select, _cols );
+        }
 
         template< typename stream >
         void print( stream &s, int &id ) const
@@ -1048,7 +1057,8 @@ BRICK_SQL_OP( | )
     template< typename... cols >
     struct select : query_head< cols... >
     {
-        typename query_head< cols...>::columns _cols;
+        using columns_t = typename query_head< cols...>::columns;
+        columns_t _cols;
         bool _skip_select = false;
         using type = std::conditional_t< sizeof...( cols ) == 1,
                                          typename type_of< typename columns_t::car_t >::type,
@@ -1064,7 +1074,7 @@ BRICK_SQL_OP( | )
         template< typename... ct, typename... et >
         select< cols..., ct..., et... > columns( et... e )
         {
-            return { *this->_txn, _cols.cat( brq::cons_list( e... ) ) };
+            return { *this->_txn, _cols.cat( brq::cons_list( ct()..., e... ) ) };
         }
 
         template< typename table, typename... joins > [[nodiscard]]

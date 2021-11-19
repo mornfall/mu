@@ -512,7 +512,12 @@ BRICK_SQL_OP( | )
     template< typename A > op_t< A, w_op > is_true( A &&a )   { return { a, "is true" }; }
     template< typename A > op_t< A, w_op > desc( A &&a )      { return { a, "desc" }; }
     template< typename A > op_t< A, w_op > asc( A &&a )       { return { a, "asc" }; }
-    template< typename A > op_t< w_op, A > operator!( A &&a ) { return { "not", a }; }
+
+    template< typename A > op_t< w_op, A > operator!( A &&a )
+    {
+        set_nested( a, primary );
+        return { "not", a };
+    }
 
     template< typename C, typename T, typename E >
     op_t< w_op, C, w_op, T, w_op, E, w_op > when( C c, T t, E e )

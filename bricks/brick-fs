@@ -604,6 +604,19 @@ namespace brq
             brq::raise< system_error >() << "cannot create symlink from " << a << " to " << b;
     }
 
+    inline std::string realpath( std::string_view a )
+    {
+        std::string buf;
+        size_t size = std::max( long( pathconf( ".", _PC_PATH_MAX ) ), long( PATH_MAX ) );
+        buf.resize( size );
+
+        if ( ::realpath( c_str( a ), &buf.front() ) == nullptr )
+            brq::raise< system_error >() << "calling realpath on " << a;
+
+        buf.resize( std::strlen( &buf.front() ) );
+        return buf;
+    }
+
     inline void rmdir( std::string dirname ) {
 #ifdef _WIN32
         if ( ::_rmdir( dirname.c_str() ) < 0 )

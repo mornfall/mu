@@ -564,6 +564,43 @@ namespace brq::sql
     }
 
     enum class lifetime { persistent, session, transaction };
+    enum class trigger_when { before_insert, after_insert, before_update, after_update };
+
+    template< typename tab_t, typename txn_t >
+    auto create_trigger( txn_t &txn, tab_t tab, std::string_view name, trigger_when when,
+                         std::string_view body )
+    {
+        auto tab_str = tab_t::get_name( tab_t() );
+        std::string when_str;
+
+        switch ( when )
+        {
+            case trigger_when::before_insert: when_str = "before insert"; break;
+            case trigger_when::before_update: when_str = "before update"; break;
+            case trigger_when::after_insert:  when_str = "after insert";  break;
+            case trigger_when::after_update:  when_str = "after update";  break;
+            default: UNREACHABLE( "impossible trigger_when value" );
+        }
+
+        txn.exec() << "create or replace function " << name <<  "_fun() returns trigger as $$ "
+                   << body << " ; $$ language plpgsql security definer volatile";
+
+        txn.exec() << "drop trigger if exists " << name << " on " << tab_str;
+        txn.exec() << "create trigger " << name << " " << when_str << " on " << tab_str << " "
+                   << "for each row execute function " << name << "_fun()";
+    };
+
+    template< typename txn_t, typename tab_t, typename query_t >
+    std::enable_if_t< query_t::is_query > create_trigger( txn_t &txn, tab_t tab, std::string name,
+                                                          trigger_when when, query_t q )
+    {
+        string_builder s;
+        int id = -1;
+        s << "begin ";
+        q.print( s, id );
+        s << "; return new; end";
+        return create_trigger( txn, tab, name, when, s.data() );
+    };
 
     template< typename txn_t, typename table >
     std::enable_if_t< table::is_table > create( txn_t &txn, table, lifetime l = lifetime::persistent )

@@ -153,6 +153,17 @@ namespace brq::sql
         }
     };
 
+    template< typename col >
+    struct new_row : col
+    {
+        template< typename CT >
+        static std::string_view get_name( const CT & )
+        {
+            static auto name = "new." + std::string( col::get_name( col() ) );
+            return name;
+        }
+    };
+
     template< typename type, typename... args >
     struct function : constant< type >
     {

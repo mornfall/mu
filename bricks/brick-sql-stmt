@@ -693,6 +693,14 @@ namespace brq::sql
         }
 
         insert_update< conflict_clause > update() { return { *this }; }
+
+        template< typename... cols_t > [[nodiscard]]
+        update_set< insert_update< conflict_clause >,
+                    cons_list_t< cols_t... >,
+                    cons_list_t< excluded< cols_t > ... > > set()
+        {
+            return { *this, cons_list_t< excluded< cols_t > ... >() };
+        }
     };
 
     template< typename insert, typename... vals_t >

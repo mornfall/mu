@@ -477,6 +477,7 @@ namespace brq::sql
         static constexpr bool is_view         = true;
         static constexpr bool is_updatable    = false;
         static constexpr bool is_materialized = false;
+        static constexpr bool is_trigger      = false;
 
         static auto select() { return sql::select< cols... >(); }
     };
@@ -491,6 +492,12 @@ namespace brq::sql
     struct materialized_view : view< cols... >
     {
         static constexpr bool is_materialized = true;
+    };
+
+    template< typename... cols >
+    struct trigger_view : view< cols... >
+    {
+        static constexpr bool is_trigger = true;
     };
 
     template< typename... tables_ >
@@ -563,7 +570,7 @@ namespace brq::sql
         txn.exec( s.buffer() );
     }
 
-    enum class lifetime { persistent, session, transaction };
+    enum class lifetime { persistent, session, transaction, view };
     enum class trigger_when { before_insert, after_insert, before_update, after_update };
 
     template< typename tab_t, typename txn_t >
@@ -603,10 +610,10 @@ namespace brq::sql
     };
 
     template< typename txn_t, typename table >
-    std::enable_if_t< table::is_table > create( txn_t &txn, table, lifetime l = lifetime::persistent )
+    void create_table( txn_t &txn, table, lifetime l )
     {
         auto tabname = table::get_name( table() );
-        txn.exec() << "create " << ( l == lifetime::persistent ? "" : "temp " )
+        txn.exec() << "create " << ( l == lifetime::persistent || l == lifetime::view ? "" : "temp " )
                    << "table if not exists \"" << tabname << "\" () "
                    << ( l == lifetime::transaction ? " on commit delete rows;" : ";" );
         int c_num = 0;
@@ -655,11 +662,12 @@ namespace brq::sql
                 {
                     auto foreign_col = typename col_t::column();
                     auto foreign_tab = typename col_t::table();
-                    if ( l == lifetime::persistent )
+                    if ( l == lifetime::persistent || l == lifetime::view )
                         constraint()
                             << "foreign key ( " << colname << " )"
                             << " references \"" << foreign_tab.get_name( foreign_tab )
-                            << "\" ( " << foreign_col.get_name( foreign_col ) << " )";
+                            << "\" ( " << foreign_col.get_name( foreign_col ) << " )"
+                            << ( l == lifetime::view ? " on delete cascade" : "" );
                 }
 
                 alter() << "alter column " << colname << " "
@@ -668,6 +676,12 @@ namespace brq::sql
         };
 
         typename table::all().each( print_col );
+    }
+
+    template< typename txn_t, typename table >
+    std::enable_if_t< table::is_table > create( txn_t &txn, table t, lifetime l = lifetime::persistent )
+    {
+        return create_table( txn, t, l );
     }
 
     struct current_schema : constant< std::string, true > {};
@@ -700,6 +714,40 @@ namespace brq::sql
                    << "  update " << token << " set token = _updated_.token ; "
                    << "  refresh materialized view \"" << v.get_name( v ) << "\"; "
                    << " end if; end; $$";
+    }
+
+    template< typename txn_t, typename view, typename query >
+    std::enable_if_t< view::is_view && query::is_query >
+    create( txn_t &txn, view v, query q, bool as_temp = false )
+    {
+        using cols = typename view::columns::template map_t< unqualify >;
+        string_builder s;
+        int id = -1;
+
+        if constexpr ( view::is_trigger )
+        {
+            create_table( txn, v, lifetime::view );
+            v.triggers( txn );
+        }
+        else
+        {
+            s << ( view::is_materialized ? "create materialized view " :
+                   as_temp               ? "create temp table " :
+                                           "create view " )
+              << "\"" << v.get_name( v ) << "\" ";
+
+            if ( !cols::empty )
+                print_columns( s, cols(), "( ", " )" );
+
+            s << ( view::is_materialized || view::is_trigger ? " as " :
+                   as_temp ? " on commit drop as " : " with ( security_barrier ) as " );
+
+            q.print( s, id );
+
+            if ( view::is_updatable )
+                s << " with check option";
+            txn.exec( s.buffer() );
+        }
 
         int i = 0;
 
@@ -715,34 +763,11 @@ namespace brq::sql
             }
         };
 
-        using cols = typename view::columns::template map_t< unqualify >;
-        cols().each( mkidx );
-    }
-
-    template< typename txn_t, typename view, typename query >
-    std::enable_if_t< view::is_view && query::is_query >
-    create( txn_t &txn, view v, query q, bool as_temp = false )
-    {
-        string_builder s;
-        int id = -1;
-        s << ( view::is_materialized ? "create materialized view " :
-                             as_temp ? "create temp table " : "create view " )
-          << "\"" << v.get_name( v ) << "\" ";
-
-        using cols = typename view::columns::template map_t< unqualify >;
-        if ( !cols::empty )
-            print_columns( s, cols(), "( ", " )" );
-        s << ( view::is_materialized ? " as " :
-               as_temp ? " on commit drop as " : " with ( security_barrier ) as " );
-
-        q.print( s, id );
-
-        if ( view::is_updatable )
-            s << " with check option";
-        txn.exec( s.buffer() );
-
         if constexpr ( view::is_materialized )
+        {
             create_refresh( txn, v );
+            cols().each( mkidx );
+        }
     }
 
     template< typename txn_t, typename view >

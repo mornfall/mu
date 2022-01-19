@@ -574,11 +574,12 @@ namespace brq::sql
     enum class trigger_when { before_insert, after_insert, before_update, after_update };
 
     template< typename tab_t, typename txn_t >
-    auto create_trigger( txn_t &txn, tab_t tab, std::string_view name, trigger_when when,
+    auto create_trigger( txn_t &txn, tab_t tab, std::string name, trigger_when when,
                          std::string_view body )
     {
-        auto tab_str = tab_t::get_name( tab_t() );
+        std::string tab_str( tab_t::get_name( tab_t() ) );
         std::string when_str;
+        name = tab_str + "_" + name;
 
         switch ( when )
         {

@@ -732,6 +732,7 @@ namespace brq::sql
         {
             create_table( txn, v, lifetime::view );
             v.triggers( txn );
+            txn.exec( v.insert( true ) );
         }
         else
         {

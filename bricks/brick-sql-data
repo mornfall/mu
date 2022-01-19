@@ -555,6 +555,9 @@ namespace brq::sql
                         .where( matviewname() == v.get_name( v ) ).exec() )
             t.exec() << "drop materialized view \"" << v.get_name( v )
                      << ( cascade ? "\" cascade" : "\"" );
+        if constexpr ( view::is_trigger )
+            t.exec() << "drop table if exists \"" << v.get_name( v )
+                     << ( cascade ? "\" cascade" : "\"" );
     };
 
     template< typename txn_t, typename enum_t >

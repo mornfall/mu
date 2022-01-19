@@ -799,18 +799,27 @@ namespace brq::sql
         }
     };
 
-    template< typename tbl >
-    struct insert : query_head<>
+
+    template< typename table >
+    struct insert_output_columns
+    {
+        using primary_l = typename table::columns::template filter_t< is_primary >;
+        static constexpr bool has_primary = !std::is_same_v< primary_l, brq::nil >;
+
+        using list = std::conditional_t< has_primary,
+                                         brq::cons_list_t< typename get_key< primary_l >::type >,
+                                         brq::nil >;
+    };
+
+    template< typename tab_t >
+    struct insert : query_head< typename insert_output_columns< tab_t >::list >
     {
         mutable bool _quiet = false;
-
-        using table = tbl;
-        using primary_l = typename table::columns::template filter_t< is_primary >;
-        using stmt = std::conditional_t< std::is_same_v< primary_l, brq::nil >, sql::stmt<>,
-                                         sql::stmt< typename get_key< primary_l >::type > >;
         using order_columns = brq::nil;
-
-        using query_head<>::query_head;
+        using table = tab_t;
+        using output_columns = insert_output_columns< table >;
+        using super = query_head< typename output_columns::list >;
+        using super::super;
 
         insert on_conflict_do_nothing() const
         {
@@ -830,9 +839,9 @@ namespace brq::sql
             if ( _quiet )
                 s << " on conflict do nothing";
 
-            if constexpr ( !std::is_same_v< typename insert::primary_l, brq::nil > )
+            if constexpr ( output_columns::has_primary )
             {
-                using primary = unqualify< typename insert::primary_l::car_t >;
+                using primary = unqualify< typename output_columns::primary_l::car_t >;
                 s << " returning " << primary::get_name( primary() );
             }
         }

@@ -652,8 +652,7 @@ namespace brq::sql
         template< typename query_t >
         std::enable_if_t< query_t::is_query, typename query_t::stmt > exec( query_t q )
         {
-            q._txn = this;
-            return q.exec();
+            return q.template _exec_query< typename query_t::stmt >( conn(), q );
         }
 
         template< typename tab >

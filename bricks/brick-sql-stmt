@@ -35,13 +35,19 @@ namespace brq::sql
         static constexpr bool is_function = false;
         using type = unknown_type;
 
-        template< typename stmt, typename T >
-        stmt _exec( T *t )
+        template< typename stmt, typename conn_t, typename query_t >
+        static stmt _exec_query( conn_t &conn, query_t &q )
         {
-            stmt s( t->conn(), *t );
-            t->bind( s );
+            stmt s( conn, q );
+            q.bind( s );
             s.exec();
             return s;
+        }
+
+        template< typename stmt, typename query_t >
+        stmt _exec_self( query_t *q )
+        {
+            return this->_exec_query< stmt >( q->txn()->conn(), *q );
         }
 
         void print_tail( string_builder &, int & ) const {}
@@ -61,12 +67,12 @@ namespace brq::sql
 
         query _query;
         sql::conn &conn() { return _query.conn(); }
-        sql::txn &txn() { return _query.txn(); }
+        sql::txn *txn() { return _query.txn(); }
         extend( query q ) : _query( q ) {}
 
         void set_skip_select() { _query.set_skip_select(); }
         auto order_columns() const { return _query.order_columns(); }
-        template< typename T > stmt _exec( T *t ) { return query_base::_exec< stmt >( t ); }
+        template< typename T > stmt _exec( T *t ) { return query_base::_exec_self< stmt >( t ); }
 
         template< typename stmt >
         void bind( stmt &s ) const { _query.bind( s ); }
@@ -528,16 +534,17 @@ namespace brq::sql
     {
         using stmt = sql::stmt< cols... >;
         sql::txn *_txn;
-        sql::txn &txn() { return *_txn; }
+        sql::txn *txn() { return _txn; }
         sql::conn &conn();
 
-        query_head( sql::txn &t ) : _txn( &t ) {}
-        query_head() : _txn( nullptr ) {}
+        query_head( sql::txn *t = nullptr ) : _txn( t ) {}
 
         brq::nil order_columns() const { return {}; }
 
         template< typename stmt >
         void bind( stmt & ) const {}
+
+        template< typename T > stmt _exec( T *t ) { return query_base::_exec_self< stmt >( t ); }
     };
 
     template< typename... cols >
@@ -551,16 +558,16 @@ namespace brq::sql
                                          aggregate_type >;
 
         using query_head< cols... >::query_head;
-        select( sql::txn &t, cols... e ) : query_head< cols... >( t ), _cols( e... ) {}
+        select( sql::txn *t, cols... e ) : query_head< cols... >( t ), _cols( e... ) {}
         select( cols... e ) : _cols( e... ) {}
         template < typename list >
-        select( sql::txn &t, list cs ) : query_head< cols... >( t ), _cols( cs ) {}
+        select( sql::txn *t, list cs ) : query_head< cols... >( t ), _cols( cs ) {}
         select( brq::cons_list_t< cols... > cs ) : _cols( cs ) {}
 
         template< typename... ct, typename... et >
         select< cols..., ct..., et... > columns( et... e )
         {
-            return { *this->_txn, _cols.cat( brq::cons_list( ct()..., e... ) ) };
+            return { this->txn(), _cols.cat( brq::cons_list( ct()..., e... ) ) };
         }
 
         template< typename table, typename... joins > [[nodiscard]]
@@ -600,7 +607,7 @@ namespace brq::sql
         }
 
         using typename query_head< cols... >::stmt;
-        stmt exec() { return query_base::_exec< stmt >( this ); }
+        stmt exec() { return query_base::_exec_self< stmt >( this ); }
         sql::raw_sql< select > raw_sql( std::string_view sv ) { return { *this, sv }; }
     };
 
@@ -795,7 +802,6 @@ namespace brq::sql
     template< typename tbl >
     struct insert : query_head<>
     {
-        sql::conn *_conn = nullptr;
         mutable bool _quiet = false;
 
         using table = tbl;
@@ -804,8 +810,7 @@ namespace brq::sql
                                          sql::stmt< typename get_key< primary_l >::type > >;
         using order_columns = brq::nil;
 
-        insert() = default;
-        explicit insert( sql::conn &c ) : _conn( &c ) {}
+        using query_head<>::query_head;
 
         insert on_conflict_do_nothing() const
         {
@@ -831,8 +836,6 @@ namespace brq::sql
                 s << " returning " << primary::get_name( primary() );
             }
         }
-
-        sql::conn &conn() { return *_conn; }
 
         template< typename... cols >
         auto columns() const

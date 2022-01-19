@@ -37,19 +37,19 @@ namespace brq::sql
         using txn_base::txn_base;
 
         template< typename... ct, typename... et > [[nodiscard]]
-        sql::select< ct..., et... > select( et... e ) { open(); return { *this, ct()..., e... }; }
+        sql::select< ct..., et... > select( et... e ) { open(); return { this, ct()..., e... }; }
 
         template< typename... args > [[nodiscard]]
-        sql::select< args... > select_list( cons_list_t< args... > ) { open(); return { *this }; }
+        sql::select< args... > select_list( cons_list_t< args... > ) { open(); return { this }; }
 
         template< typename table > [[nodiscard]]
-        insert< table > insert_into() { open(); return insert< table >{ conn() }; }
+        insert< table > insert_into() { open(); return { this }; }
 
         template< typename table > [[nodiscard]]
-        update< table > update() { open(); return { *this }; }
+        update< table > update() { open(); return { this }; }
 
         template< typename table > [[nodiscard]]
-        delete_from< table > delete_from() { open(); return { *this }; }
+        delete_from< table > delete_from() { open(); return { this }; }
     };
 
     template< typename... Ts >

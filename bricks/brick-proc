@@ -756,11 +756,7 @@ namespace brq
         }
     };
 
-    std::iostream &stream() { return *_d.stream; }
-
-    xterm() = default;
-    xterm( const xterm & ) = delete;
-    xterm( xterm &&o )
+    struct xterm
     {
         struct
         {
@@ -834,6 +830,7 @@ namespace brq
             _d.stream.reset( new std::iostream( _d.buf.get() ) );
         }
 
+        int fd() { return _d.masterfd; }
         std::iostream &stream() { return *_d.stream; }
 
         xterm() = default;

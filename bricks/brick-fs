@@ -202,7 +202,7 @@ namespace brq
         return split_extension( path ).first;
     }
 
-    inline std::string replace_extension( std::string path, std::string extension )
+    inline std::string replace_extension( std::string_view path, std::string_view extension )
     {
         if ( !extension.empty() && extension[0] == '.' )
             return format( drop_extension( path ), extension ).buffer();

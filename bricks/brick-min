@@ -30,13 +30,6 @@
 
 namespace brq
 {
-    template< typename B, typename T, typename = void > struct is_printable : std::false_type {};
-    template< typename B, typename T >
-    struct is_printable< B, T, decltype( B() << std::declval< const T & >(),
-                                         void( 0 ) ) > : std::true_type {};
-    template< typename B, typename T >
-    constexpr bool is_printable_v = is_printable< B, T >::value;
-
     /* A simple string builder, similar to std::stringstream but much lighter.
      * Only works with 8-bit characters (i.e. no wchar_t or char32_t). Provides
      * a basic selection of formatting operators. To provide formatting
@@ -320,18 +313,32 @@ namespace brq
         format_args< nofail >( sep, acc_, as... );
     }
 
-    using split_view = std::pair< std::string_view, std::string_view >;
+    template< typename char_t >
+    using split_view_t = std::pair< std::basic_string_view< char_t >, std::basic_string_view< char_t > >;
+    using split_view = split_view_t< char >; // std::pair< std::string_view, std::string_view >;
 
-    static inline split_view split( std::string_view p, char d, bool reverse = false )
+    template< typename char_t >
+    static inline split_view_t< char_t > split( std::basic_string_view< char_t > p,
+                                                char_t d, bool reverse = false ) noexcept
     {
         using view = std::basic_string_view< char_t >;
         auto s = reverse ? p.rfind( d ) : p.find( d );
         if ( s == p.npos )
             return reverse ? split_view_t< char_t >{ view(), p } : split_view_t< char_t >{ p, view() };
-        return { p.substr( 0, s ), p.substr( s + 1, p.npos ) };
+        auto q = p;
+        q.remove_prefix( s + 1 );
+        p.remove_suffix( p.size() - s );
+        return { p, q };
     }
 
-    static inline bool starts_with( std::string_view s, std::string_view t )
+    static inline split_view split( std::string_view p, char d, bool reverse = false ) noexcept
+    {
+        return split< char >( p, d, reverse );
+    }
+
+    template< typename char_t >
+    static inline bool starts_with( std::basic_string_view< char_t > s,
+                                    std::basic_string_view< char_t > t ) noexcept
     {
         if ( s.size() >= t.size() )
         {
@@ -342,8 +349,36 @@ namespace brq
             return false;
     }
 
-    static inline bool ends_with( std::string_view s, std::string_view t )
+    template< typename char_t >
+    static inline bool ends_with( std::basic_string_view< char_t > s,
+                                  std::basic_string_view< char_t > t ) noexcept
     {
-        return s.size() >= t.size() && s.compare( s.size() - t.size(), s.npos, t ) == 0;
+        if ( s.size() >= t.size() )
+        {
+            s.remove_prefix( s.size() - t.size() );
+            return s.compare( t ) == 0;
+        }
+        else
+            return false;
+    }
+
+    static inline bool starts_with( std::string_view s, std::string_view t ) noexcept
+    {
+        return starts_with< char >( s, t );
+    }
+
+    static inline bool ends_with( std::string_view s, std::string_view t ) noexcept
+    {
+        return ends_with< char >( s, t );
+    }
+
+    static inline bool starts_with( std::u32string_view s, std::u32string_view t ) noexcept
+    {
+        return starts_with< char32_t >( s, t );
+    }
+
+    static inline bool ends_with( std::u32string_view s, std::u32string_view t ) noexcept
+    {
+        return ends_with< char32_t >( s, t );
     }
 }

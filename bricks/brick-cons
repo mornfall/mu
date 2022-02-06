@@ -184,7 +184,7 @@ namespace brq
         cons() = default;
     };
 
-    template< typename F > auto zip( F f, nil, nil ) { return nil(); }
+    template< typename F > auto zip( F, nil, nil ) { return nil(); }
 
     template< typename F, typename A, typename B >
     auto zip( F f, A a, B b )

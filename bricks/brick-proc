@@ -676,7 +676,7 @@ namespace brq
             _buffer[ bytes ] = '\0';
             _line_buffer.append( _buffer );
 
-            for ( int lf; ( lf = _line_buffer.find( '\n' ) ) != std::string::npos; )
+            for ( size_t lf; ( lf = _line_buffer.find( '\n' ) ) != std::string::npos; )
             {
                 auto line = _line_buffer.substr( 0, lf ); // don't include the newline
 

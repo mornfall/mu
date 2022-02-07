@@ -692,6 +692,9 @@ namespace brq
                 _line_buffer.erase( 0, lf + 1 );
             }
 
+            if ( !result && !_line_buffer.empty() )
+                yield( _line_buffer );
+
             return result;
         }
     };

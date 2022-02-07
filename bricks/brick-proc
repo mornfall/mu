@@ -956,7 +956,7 @@ namespace t_brq
         TEST( noread )
         {
             std::string out;
-            brq::pipethrough( []( const brq::fd & ){ return false; },
+            brq::pipethrough( []( const brq::fd & ){ return brq::io_result::done; },
                               brq::pipe_read_lines( [&]( auto l ){ out = l; }),
                               "echo", "-e", "lorem ipsum\\nhello world" );
             ASSERT_EQ( out, "hello world" );
@@ -974,19 +974,19 @@ namespace t_brq
         TEST( retval )
         {
             int n = 0;
-            int ret = brq::pipethrough( []( const brq::fd & ){ return false; },
+            int ret = brq::pipethrough( []( const brq::fd & ){ return brq::io_result::done; },
                                         brq::pipe_read_lines( [&]( auto ){ ++n; }),
                                         "true" );
             ASSERT_EQ( ret, 0 );
             ASSERT_EQ( n, 0 );
-            ret = brq::pipethrough( []( const brq::fd & ){ return false; },
+            ret = brq::pipethrough( []( const brq::fd & ){ return brq::io_result::done; },
                                     brq::pipe_read_lines( [&]( auto ){ ++n; }),
                                     "false" );
             ASSERT_LT( 0, ret );
             ASSERT_EQ( n, 0 );
 
             try {
-                ret = brq::pipethrough( []( brq::fd & ){ return false; },
+                ret = brq::pipethrough( []( brq::fd & ){ return brq::io_result::done; },
                                         brq::pipe_read_lines( [&]( auto ){ ++n; }),
                                         "/dev/null" );
             } catch ( ... ) {

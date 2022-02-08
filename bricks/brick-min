@@ -202,8 +202,9 @@ namespace brq
         template< typename C >
         auto operator<<( const C &c ) noexcept
             -> std::enable_if_t< !std::is_convertible_v< C, std::string_view > &&
-                                 !std::is_convertible_v< C, std::u32string_view >,
-                                 decltype( c.has_value(), *this << *c ) >
+                                 !std::is_convertible_v< C, std::u32string_view > &&
+                                 static_cast< decltype( c.has_value() ) >( true ),
+                                 decltype( *this << *c ) >
         {
             if ( c.has_value() )
                 return *this << "[ " << *c << " ]";
@@ -240,7 +241,8 @@ namespace brq
 
         template< typename V >
         auto operator<<( const V &val ) noexcept
-            -> decltype( std::to_chars( _d.buffer, _d.buffer, val ), *this )
+            -> std::enable_if_t< std::is_arithmetic_v< V >,
+                                 decltype( std::to_chars( _d.buffer, _d.buffer, val ), *this ) >
         {
             int cap = 16;
             std::to_chars_result result;

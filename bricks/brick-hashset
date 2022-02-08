@@ -475,21 +475,21 @@ namespace brq::impl
 
         template< typename X, typename F >
         auto find_generic( const X &x, hash64_t h, F match )
-            -> std::pair< decltype( match( std::declval< Cell & >(), x, h ) ), LookupTag >
         {
+            using res_t = std::pair< decltype( match( std::declval< Cell & >(), x, h ) ), LookupTag >;
             const size_t mask = size() - 1;
 
             for ( size_t i = 0; i < max_chain; ++i )
             {
                 Cell &cell = data( index( h, i, mask ) );
                 if ( cell.invalid() )
-                    return { nullptr, Invalid };
+                    return res_t{ nullptr, Invalid };
                 if ( cell.empty() )
-                    return { nullptr, Empty };
+                    return res_t{ nullptr, Empty };
                 if ( auto v = match( cell, x, h ) )
-                    return { v, Found };
+                    return res_t{ v, Found };
             }
-            return { nullptr, Empty };
+            return res_t{ nullptr, Empty };
         }
 
         template< typename X, typename A >

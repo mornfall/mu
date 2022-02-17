@@ -22,7 +22,8 @@ typedef struct
     const char *srcdir;
 
     int outdir_fd,
-        logdir_fd;
+        logdir_fd,
+        faildir_fd;
     time_t started;
 
     cb_tree *nodes;
@@ -93,6 +94,8 @@ void queue_show_result( queue_t *q, node_t *n, job_t *j )
         for ( char *i = n->name; *i; ++p, ++i )
             *p = ( *i == ' ' || *i == '/' ) ? '_' : *i;
         strcpy( p, ".txt" );
+
+        linkat( s->logdir_fd, filename, s->faildir_fd, filename, 0 );
 
         reader_t log;
 

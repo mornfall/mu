@@ -21,7 +21,8 @@ typedef struct
 {
     const char *srcdir;
 
-    int outdir_fd;
+    int outdir_fd,
+        logdir_fd;
     time_t started;
 
     cb_tree *nodes;
@@ -88,15 +89,14 @@ void queue_show_result( queue_t *q, node_t *n, job_t *j )
     if ( !_signalled && n->failed || changed && j && j->warned )
     {
         fprintf( stderr, "\033[J" );
-        char path[ strlen( n->name ) + 13 ];
-        char *p = stpcpy( path, "_log/" );
+        char filename[ strlen( n->name ) + 5 ], *p = filename;
         for ( char *i = n->name; *i; ++p, ++i )
             *p = ( *i == ' ' || *i == '/' ) ? '_' : *i;
         strcpy( p, ".txt" );
 
         reader_t log;
 
-        if ( !reader_init( &log, q->outdir_fd, path ) )
+        if ( !reader_init( &log, s->outdir_fd, path ) )
             sys_error( "opening logfile %s", path );
 
         while ( read_line( &log ) )
@@ -135,10 +135,10 @@ bool queue_start_next( queue_t *q )
     q->job_next = j->next;
 
     cb_clear( &j->node->deps_dyn );
-    job_fork( j, q->outdir_fd );
+    job_fork( j, s->outdir_fd );
 
-    q->running_count ++;
-    q->queued_count --;
+    s->running_count ++;
+    s->queued_count --;
 
     assert( j->pipe_fd < MAX_FD );
     q->running[ j->pipe_fd ] = j;
@@ -372,6 +372,55 @@ void queue_init( queue_t *q, cb_tree *nodes, const char *srcdir )
 
 void queue_monitor( queue_t *q, bool endmsg )
 {
+    mkdir( s->outdir, 0777 ); /* ignore errors */
+    s->outdir_fd = open( s->outdir, O_DIRECTORY | O_CLOEXEC );
+
+    if ( s->outdir_fd < 0 )
+        sys_error( "opening the output directory '%s'", s->outdir );
+
+    if ( flock( s->outdir_fd, LOCK_EX | LOCK_NB ) == -1 )
+        sys_error( "locking the output directory '%s'", s->outdir );
+
+    int debug_fd = openat( s->outdir_fd, "debug", O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0666 );
+
+    if ( debug_fd < 0 )
+        sys_error( "opening %s/debug for writing", s->outdir );
+    else
+        s->debug = fdopen( debug_fd, "w" );
+}
+
+void state_load( state_t *s )
+{
+    var_t *jobs, *outdir;
+
+    load_rules( &s->nodes, &s->env, "gib.file" );
+
+    if ( ( outdir = env_get( &s->env, span_lit( "outdir" ) ) ) && outdir->list )
+        s->outdir = outdir->list->data;
+
+    state_setup_outputs( s );
+
+    if ( ( jobs = env_get( &s->env, span_lit( "jobs" ) ) ) && jobs->list )
+        s->running_max = atoi( jobs->list->data );
+
+    load_dynamic( &s->nodes, s->outdir_fd, "gib.dynamic" );
+    load_stamps( &s->nodes, s->outdir_fd, "gib.stamps" );
+}
+
+void state_save( state_t *s )
+{
+    write_stamps( &s->nodes, s->outdir_fd, "gib.stamps" );
+    save_dynamic( &s->nodes, s->outdir_fd, "gib.dynamic" );
+}
+
+void state_destroy( state_t *s )
+{
+    /* … */
+}
+
+void monitor( state_t *s )
+{
+    time_t started = time( NULL );
     time_t elapsed = 0;
 
     signal( SIGHUP, sighandler );

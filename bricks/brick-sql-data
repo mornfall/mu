@@ -647,20 +647,27 @@ namespace brq::sql
                 auto seqname = std::string( tabname ) + "_pkey_seq";
                 auto colname = col.get_name( col );
 
-                alter() << "add column if not exists " << colname << " " << typestr
-                        << " default '" << type() << "'"; /* TODO make configurable! */
-                alter() << "alter column " << colname << " drop default";
+                if ( use_serial )
+                {
+                    txn.exec() << "create sequence if not exists " << seqname;
+                    alter() << "add column if not exists " << colname << " " << typestr
+                            << " default nextval('" << seqname << "')";
+                }
+                else
+                {
+                    alter() << "add column if not exists " << colname << " " << typestr
+                            << " default '" << type() << "'"; /* TODO make configurable! */
+                }
+
+                if ( use_serial )
+                    alter() << "alter column " << colname << " set default nextval('" << seqname << "')";
+                else
+                    alter() << "alter column " << colname << " drop default";
+
                 alter() << "alter column " << colname << " type " << typestr;
 
                 if ( col.is_primary )
                     constraint() << "primary key ( " << colname << " )";
-
-                if ( use_serial )
-                {
-                    txn.exec() << "create sequence if not exists " << seqname << " owned by "
-                               << tabname << "." << colname;
-                    alter() << "alter column " << colname << " set default nextval('" << seqname << "')";
-                }
 
                 if constexpr ( col.is_foreign )
                 {

@@ -120,6 +120,11 @@ namespace brq
             return *this;
         }
 
+        string_builder &operator<<( const string_builder &str ) noexcept
+        {
+            return *this << str.data();
+        }
+
         string_builder &operator<<( std::u32string_view us ) noexcept
         {
             auto to_uint8_t = []( auto x ) -> uint8_t { return x; };

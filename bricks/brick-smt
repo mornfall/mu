@@ -203,7 +203,7 @@ namespace brq
                        smt_match_type< T, id >() )
             return id;
         else
-            return smt_match_op_f< t, T, smt_op( int( id ) + 1 ) >();
+            return smt_match_op_f< t, T, smt_op( static_cast< int >( id ) + 1 ) >();
     }
 
     template< smt_op_type t, typename T >

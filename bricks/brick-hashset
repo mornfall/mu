@@ -241,7 +241,7 @@ namespace brq::impl
     template< typename T >
     struct alignas( std::min( 16ul, sizeof( tagged< T > ) ) ) atomic_cell : cell_base< T >
     {
-        using tagged = tagged< T >;
+        using tagged = impl::tagged< T >;
         using bare_value = typename tagged::Type;
         using atomic_value = std::atomic< bare_value >;
         using pointer = const atomic_value *;
@@ -396,6 +396,11 @@ namespace brq::impl
             if ( !rv )
                 throw std::bad_alloc();
             return rv;
+        }
+
+        static void operator delete( void *v )
+        {
+            free( v );
         }
 
         hash_table( size_t size, ssize_t rehash )

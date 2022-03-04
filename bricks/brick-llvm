@@ -297,13 +297,15 @@ namespace llvm
 {
     template< typename stream, typename T >
     auto operator<<( stream &o, const T &v )
-        -> std::enable_if_t< !std::is_convertible_v< stream &, raw_ostream & >,
-                             decltype( v.print( std::declval< raw_ostream & >() ), o << "" ) >
+        -> std::enable_if_t< !std::is_convertible_v< stream &, raw_ostream & > &&
+                             !std::is_convertible_v< T, std::string >,
+                             decltype( v.print( std::declval< raw_ostream & >() ), o ) >
     {
         std::string s;
         raw_string_ostream lstream( s );
         lstream << v;
-        return o << lstream.str();
+        o << lstream.str();
+        return o;
     }
 }
 

@@ -542,8 +542,10 @@ namespace brq::sql
 
     struct pg_views : table<> {};
     struct pg_matviews : table<> {};
+    struct pg_tables : table<> {};
     struct viewname : column< std::string > {};
     struct matviewname : column< std::string > {};
+    struct tablename : column< std::string > {};
 
     template< typename txn_t, typename view >
     std::enable_if_t< view::is_view > drop( txn_t &t, view v, bool cascade = false )
@@ -551,14 +553,29 @@ namespace brq::sql
         for ( auto _ : t.template select< viewname >().template from< pg_views >()
                         .where( viewname() == v.get_name( v ) ).exec() )
             t.exec() << "drop view \"" << v.get_name( v ) << ( cascade ? "\" cascade" : "\"" );
+
         for ( auto _ : t.template select< matviewname >().template from< pg_matviews >()
                         .where( matviewname() == v.get_name( v ) ).exec() )
             t.exec() << "drop materialized view \"" << v.get_name( v )
                      << ( cascade ? "\" cascade" : "\"" );
+
         if constexpr ( view::is_trigger )
             t.exec() << "drop table if exists \"" << v.get_name( v )
                      << ( cascade ? "\" cascade" : "\"" );
-    };
+    }
+
+    template< typename txn_t, typename table >
+    void truncate( txn_t &txn, table tab, bool skip_nonexistent = false )
+    {
+        bool do_truncate = !skip_nonexistent;
+
+        for ( auto _ : txn.template select< tablename >().template from< pg_tables >()
+                          .where( tablename() == tab.get_name( tab ) ).exec() )
+            do_truncate = true;
+
+        if ( do_truncate )
+            txn.exec() << "truncate \"" << tab.get_name( tab ) << "\"";
+    }
 
     template< typename txn_t, typename enum_t >
     std::enable_if_t< enum_t::is_enum > create( txn_t &txn, enum_t )

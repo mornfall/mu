@@ -133,7 +133,7 @@ namespace brq
             curl_easy_setopt( _curl, CURLOPT_CURLU, _url );
 
             if ( auto err = curl_easy_perform( _curl ) )
-                brq::raise() << "curl error: " << curl_easy_strerror( err );
+                brq::raise< error >( 0 ) << "curl error: " << curl_easy_strerror( err );
 
             auto code = info< long >( CURLINFO_RESPONSE_CODE );
             DEBUG( "done", code, info< string >( CURLINFO_CONTENT_TYPE ),

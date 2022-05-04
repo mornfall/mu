@@ -256,6 +256,7 @@ namespace brq
             memcpy( this, &o, size ? size : o.size() );
         }
 
+        bool is_var()     const { return smt_traits( op ).is_var();   }
         bool is_const()   const { return smt_traits( op ).is_const(); }
         bool is_resize()  const { return smt_traits( op ).is_resize(); }
         bool is_cast()    const { return smt_traits( op ).is_cast(); }

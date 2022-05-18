@@ -85,6 +85,8 @@ namespace umd::doc
                     case U'#': flush(); out.emit( "\\#" ); break;
                     case U'|': flush(); out.emit( "\\|" ); break;
                     case U'_': if ( !_in_math ) flush(), out.emit( "\\_" ); break;
+                    case U'[': if ( !_in_math ) flush(), out.emit( "\\[" ); break;
+                    case U']': if ( !_in_math ) flush(), out.emit( "\\]" ); break;
                     case U'{': if ( !_in_math ) flush(), out.emit( "\\{" ); break;
                     case U'}': if ( !_in_math ) flush(), out.emit( "\\}" ); break;
                     case U'~': flush(); out.emit( "\\textasciitilde{}" ); break;

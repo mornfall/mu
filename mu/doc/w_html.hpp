@@ -106,7 +106,8 @@ namespace umd::doc
 
             if ( num.empty() )
             {
-                out.emit( ++ _sections[ level ] );
+                if ( _meta[ U"toc" ] == U"yes" )
+                    out.emit( ++ _sections[ level ] );
                 _section_num[ level ] = U"";
             }
             else

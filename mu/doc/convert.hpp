@@ -102,7 +102,7 @@ namespace umd::doc
         void try_table();
         bool try_dispmath();
         void try_nested();
-        void try_directive();
+        bool try_directive();
 
         void recurse( const std::u32string &data );
 

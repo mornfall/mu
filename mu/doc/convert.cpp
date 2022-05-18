@@ -597,7 +597,7 @@ namespace umd::doc
         }
     }
 
-    void convert::try_directive()
+    bool convert::try_directive()
     {
         if ( starts_with( todo, U"$$raw_mpost" ) )
         {
@@ -612,6 +612,8 @@ namespace umd::doc
                 w.mpost_write( "\n" );
             }
             w.mpost_stop();
+
+            return true;
         }
 
         if ( starts_with( todo, U"$$html" ) )
@@ -619,12 +621,18 @@ namespace umd::doc
             auto l = fetch_line();
             l.remove_prefix( 7 );
             w.html( l );
+
+            return true;
         }
+
+        return false;
     }
 
     void convert::body()
     {
-        try_directive();
+        if ( try_directive() )
+            body();
+
         try_table();
         while ( try_dispmath() );
         if ( !in_code )

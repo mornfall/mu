@@ -226,6 +226,7 @@ namespace brq::sql
             std::memcpy( &t, PQgetvalue( _result, _row, _col ), sizeof( T ) );
         }
 
+        void fetch_one( inet &in ) { fetch_raw( in ); }
         void fetch_one( bool &t ) { fetch_raw( t ); }
         void fetch_one( int16_t &t ) { fetch_raw( t ); t = be16toh( t ); }
         void fetch_one( int32_t &t ) { fetch_raw( t ); t = be32toh( t ); }
@@ -300,6 +301,7 @@ namespace brq::sql
         void bind_one( int32_t &t ) { t = htobe32( t ); bind_raw( t ); }
         void bind_one( int16_t &t ) { t = htobe16( t ); bind_raw( t ); }
         void bind_one( bool &t )    { bind_raw( t ); }
+        void bind_one( inet &in )   { bind_raw( in ); }
         void bind_one( std::string_view s ) { bind_mem( s.data(), s.size() ); }
         void bind_one( std::u32string_view us )
         {

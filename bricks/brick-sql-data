@@ -27,6 +27,8 @@
 #include <set>
 #include <cxxabi.h>
 #include <codecvt>
+#include <sys/socket.h>
+#include <netdb.h> /* gethostbyname2 for sql::inet */
 
 namespace brq::sql
 {
@@ -273,6 +275,28 @@ namespace brq::sql
     };
 
     struct decimal {};
+    struct inet
+    {
+        uint8_t family = AF_INET, bits = 32, is_cidr = 0, addr_len = 4;
+        uint32_t address = 0; /* network byte order! */
+        /* TODO this won't do for IPv6 */
+
+        inet() = default;
+        inet( std::string_view host )
+        {
+            auto h_ent = ::gethostbyname2( c_str( host ), AF_INET );
+            if ( !h_ent )
+                brq::raise() << "error resolving host " << host << ": " << hstrerror( h_errno );
+            address = *reinterpret_cast< uint32_t * >( h_ent->h_addr );
+        }
+
+        friend string_builder &operator<<( brq::string_builder &s, const inet &v )
+        {
+            for ( int sh = 0, m = 0xff; sh < 32; sh += 8, m <<= 8 )
+                s << ( ( v.address & m ) >> sh ) << ( sh == 24 ? "" : "." );
+            return s;
+        }
+    };
 
     template< typename T, typename = void > struct type_map {};
     template<> struct type_map< bool >           { static auto name() { return "bool"; } };
@@ -291,6 +315,7 @@ namespace brq::sql
     template<> struct type_map< timestamp >      { static auto name() { return "timestamp"; }; };
     template<> struct type_map< interval >       { static auto name() { return "interval"; }; };
     template<> struct type_map< decimal >        { static auto name() { return "decimal"; }; };
+    template<> struct type_map< inet >           { static auto name() { return "inet"; }; };
 
     template< typename T > struct type_map< std::optional< T > > : type_map< T > {};
 

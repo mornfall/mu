@@ -266,7 +266,7 @@ struct Filter {
     using BaseIterator = _Iterator< Range >;
 
     Filter() = default;
-    Filter( Range range, UnaryPred pred ) : _range( range ), _pred( pred ) { }
+    Filter( Range range, UnaryPred pred ) : _range( range ), _pred( std::move( pred ) ) { }
 
     struct Iterator : std::iterator< std::forward_iterator_tag, ValueType > {
         Iterator() : _filter( nullptr ) { }

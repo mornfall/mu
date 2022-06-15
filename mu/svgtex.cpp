@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <map>
 #include <string_view>
 #include <limits>
 
@@ -138,35 +139,54 @@ void convert_page( PopplerPage *page, int docid )
     cairo_surface_destroy(surface);
 
     std::string_view todo = buf;
-    todo.remove_prefix( strlen( "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" ) );
 
-    std::vector< std::string_view > tweak =
+    auto unprefix = []( std::string_view &str, std::string_view p )
     {
-        "id=\"clip",
-        "url(#clip",
-        "id=\"glyph",
-        "xlink:href=\"#glyph"
+        if ( str.substr( 0, p.size() ) == p )
+            str.remove_prefix( p.size() );
+    };
+
+    unprefix( todo, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" );
+
+    enum class tweak_t { skip, docid };
+
+    std::map< std::string_view, tweak_t > tweak =
+    {
+        { "id=\"clip", tweak_t::docid },
+        { "url(#clip", tweak_t::docid },
+        { "id=\"glyph", tweak_t::docid },
+        { "xlink:href=\"#glyph", tweak_t::docid },
+        { "<page>", tweak_t::skip },
+        { "</page>", tweak_t::skip },
+        { "<pageSet>", tweak_t::skip },
+        { "</pageSet>", tweak_t::skip }
     };
 
     while ( !todo.empty() )
     {
-        std::string_view next = tweak[ 0 ];
+        std::string_view next;
         size_t offset = INT_MAX;
+        tweak_t apply;
 
-        for ( auto str : tweak )
+        for ( auto [ str, what ] : tweak )
             if ( todo.find( str ) < offset )
-                offset = todo.find( str ), next = str;
+                offset = todo.find( str ), next = str, apply = what;
+
+        if ( next.empty() )
+            break;
 
         auto [ pass, tail ] = brq::split( todo, next );
 
-        if ( tail.empty() )
-            break;
-
         ::write( 1, pass.begin(), pass.size() );
-        write_sv( 1, next );
-        write_sv( 1, "-" );
-        write_sv( 1, std::to_string( docid ) );
-        write_sv( 1, "-" );
+
+        if ( apply == tweak_t::docid )
+        {
+            write_sv( 1, next );
+            write_sv( 1, "-" );
+            write_sv( 1, std::to_string( docid ) );
+            write_sv( 1, "-" );
+        }
+
         todo = tail;
     }
 

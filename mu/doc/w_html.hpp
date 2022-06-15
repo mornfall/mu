@@ -31,6 +31,14 @@ namespace umd::doc
         bool _in_mpost = false;
         int _heading = 0; // currently open <hN> tag (must not be nested)
 
+        sv fgcolor() const
+        {
+            if ( auto i = _meta.find( U"fgcolor" ); i != _meta.end() )
+                return i->second;
+            else
+                return U"black";
+        }
+
         void meta( sv key, sv value ) override { _meta[ key ] = value; }
         void meta_end() override
         {
@@ -166,8 +174,11 @@ namespace umd::doc
 
         void mpost_start() override
         {
-            out.emit( "<div class=\"center\"><tex>\\startMPpage\n",
-                      "color fg; fg := black; picture dotted; dotted := dashpattern( on 1 off 1.5 ); " );
+            out.emit( "<div class=\"center\"><tex>"
+                      "\\setupMPinstance[metafun][textcolor=", fgcolor(), "]"
+                      "\\startMPpage\n",
+                      "color fg; fg := ", fgcolor(),
+                      "; picture dotted; dotted := dashpattern( on 1 off 1.5 ); " );
             _in_mpost = true;
         }
 

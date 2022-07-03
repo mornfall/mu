@@ -46,7 +46,7 @@
 #endif
 
 #define BRICK_SHARP_FIRST(x, ...) #x
-#define BRICK_ASSERT(t,l,...) ::brq::assert_ ## t ## _fn( BRICK_LOCATION( l ), __VA_ARGS__ )
+#define BRICK_ASSERT(t,...) ::brq::assert_ ## t ## _fn( BRICK_LOCATION, __VA_ARGS__ )
 
 #ifdef NDEBUG
 
@@ -61,12 +61,12 @@
 
 #define BRICK_ASSERT_BIN(op, inv, x, ...)                                       \
     BRICK_ASSERT( bin,                                                          \
-                  #x " "  #op " " BRICK_SHARP_FIRST( __VA_ARGS__, ignored ),    \
                   []( const auto &a, const auto &b ) { return a op b; },        \
-                  #op, #inv, x, __VA_ARGS__ )
+                  #x, #op, BRICK_SHARP_FIRST( __VA_ARGS__, ignored ),           \
+                  x, __VA_ARGS__ )
 
 #define ASSERT(...)     BRICK_ASSERT( bool, BRICK_SHARP_FIRST( __VA_ARGS__, ignored ), __VA_ARGS__ )
-#define ASSERT_P(p, x)  BRICK_ASSERT( pred, #p "( " #x " )", x, p( x ) )
+#define ASSERT_P(p, x)  BRICK_ASSERT( pred, #p, #x, x, p( x ) )
 #define ASSERT_EQ(...)  BRICK_ASSERT_BIN( ==, !=, __VA_ARGS__ )
 #define ASSERT_LT(...)  BRICK_ASSERT_BIN(  <, >=, __VA_ARGS__ )
 #define ASSERT_LEQ(...) BRICK_ASSERT_BIN( <=, >,  __VA_ARGS__ )
@@ -75,10 +75,10 @@
 #endif
 
 /* you must #include <brick-string> to use UNREACHABLE_F */
-#define UNREACHABLE(...)   BRICK_ASSERT( die, "", __VA_ARGS__ )
-#define NOT_IMPLEMENTED()  BRICK_ASSERT( die, "", "missing implementation" )
+#define UNREACHABLE(...)   BRICK_ASSERT( die, __VA_ARGS__ )
+#define NOT_IMPLEMENTED()  BRICK_ASSERT( die, "missing implementation" )
 
-#define BRICK_LOCATION(stmt) ::brq::trace_location{ __LINE__, __FILE__, stmt }
+#define BRICK_LOCATION ::brq::trace_location{ __LINE__, __FILE__ }
 
 namespace brq
 {
@@ -103,7 +103,7 @@ namespace brq
             return f.ref;
         }
 
-        assert_failed( const trace_location &l, const char *expected = "expected" )
+        assert_failed( const trace_location &l )
         {
             std::string_view file( l._file );
             int slashes = 0;
@@ -119,9 +119,9 @@ namespace brq
             }
 
             if ( file != l._file )
-                (*this) << ".../";
-            (*this) << file << ": " << l.line;
-            (*this) << ":\n  " << expected << " " << l.statement();
+                (*this) << "…/";
+            (*this) << file << ":" << l.line;
+            (*this) << ": ";
         }
 
         const char *what() const noexcept { return buffer(); }
@@ -144,27 +144,49 @@ namespace brq
     }
 
     template< typename X, typename... Y >
-    void assert_bool_fn( const trace_location &l, const X &x, const Y & ... y  )
+    void assert_bool_fn( const trace_location &l, std::string_view x_str, const X &x, const Y & ... y  )
     {
         if ( x )
             return;
         assert_failed f( l );
+        f << x_str;
         format_args< true >( " ", f, y... );
         assert_signal( f );
-        trace_fn< true >( 4, l, "assert:", l._statement, y... );
+        trace_fn< true >( 4, l, "assert:", x_str, x, y... );
     }
 
     template< typename... T >
     __attribute__((noreturn))
     void assert_die_fn( const trace_location &l, const T & ... args )
     {
-        assert_failed f( l, "unreachable executed:" );
+        assert_failed f( l );
+        f << "unreachable executed:";
         format_args< true >( " ", f, args... );
         assert_signal( f );
     }
 
+    template< typename value_t >
+    struct rpad
+    {
+        int width;
+        const value_t &val;
+
+        rpad( int w, const value_t &v ) : width( w ), val( v ) {}
+
+        friend string_builder &operator<<( string_builder &b, const rpad &p )
+        {
+            int start = b.size();
+            b << p.val;
+            int end = b.size();
+            for ( int i = 0; i < p.width - end + start ; ++i )
+                b << " ";
+            return b;
+        }
+    };
+
     template< typename Op, typename A, typename B, typename... T >
-    void assert_bin_fn( const trace_location &l, Op op, std::string_view op_str, std::string_view inv,
+    void assert_bin_fn( const trace_location &l, Op op,
+                        std::string_view a_str, std::string_view op_str, std::string_view b_str,
                         const A &a, const B &b, const T & ... args )
     {
         bool pass;
@@ -175,24 +197,37 @@ namespace brq
         else
             pass = !!op( a, b );
 
+        int eqw = std::max( a_str.size(), b_str.size() );
+
         if ( !pass )
         {
             assert_failed f( l );
-            f << "\n   but got " << a << " " << inv << " " << b << "\n";
+            f << a_str << " " << op_str << " " << b_str;
+            f << "\n  " << rpad( eqw, a_str ) << " = " << a;
+            f << "\n  " << rpad( eqw, b_str ) << " = " << b;
+
+            if constexpr ( sizeof...( args ) )
+                f << "\n  ";
             format_args< true >( " ", f, args... );
+
             assert_signal( f );
         }
 
-        trace_fn< true >( 4, l, "assert:", l._statement, "[", a, op_str, b, "]", args... );
+        trace_fn< true >( 4, l, "assert:", a_str, op_str, b_str, "\n ",
+                                rpad( eqw, a_str ), "=", a, "\n ",
+                                rpad( eqw, b_str ), "=", b, args... );
     }
 
     template< typename X >
-    __boring void assert_pred_fn( const trace_location &l, X x, bool p )
+    __boring void assert_pred_fn( const trace_location &l,
+                                  std::string_view p_str,
+                                  std::string_view x_str, X x, bool p )
     {
         if ( !p )
         {
             assert_failed f( l );
-            f << "\n   but got x = " << x << "\n";
+            f << "expected " << p_str << "( " << x_str << " )\n"
+              << "  but " << x_str << " = " << x << "\n";
             assert_signal( f );
         }
     }

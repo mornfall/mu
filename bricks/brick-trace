@@ -61,30 +61,29 @@
  * model checking, only for counter-example generation -- TRACE therefore only
  * causes very modest overhead in DIVINE). */
 
-#define BRICK_LOCATION(stmt) ::brq::trace_location{ __LINE__, __FILE__, stmt }
+#define BRICK_LOCATION ::brq::trace_location{ __LINE__, __FILE__ }
 
 #ifdef NDEBUG
 #define TRACE(...) static_cast< decltype(__VA_ARGS__, void(0)) >(0)
 #define NOISE(...) static_cast< decltype(__VA_ARGS__, void(0)) >(0)
 #else
-#define TRACE(...) ::brq::trace_fn< true >( 4, BRICK_LOCATION( "" ), __VA_ARGS__ )
-#define NOISE(...) ::brq::trace_fn< true >( 5, BRICK_LOCATION( "" ), __VA_ARGS__ )
+#define TRACE(...) ::brq::trace_fn< true >( 4, BRICK_LOCATION, __VA_ARGS__ )
+#define NOISE(...) ::brq::trace_fn< true >( 5, BRICK_LOCATION, __VA_ARGS__ )
 #endif
-#define DEBUG(...) ::brq::trace_fn< false >( 3, BRICK_LOCATION( "" ), __VA_ARGS__ )
-#define INFO(...)  ::brq::trace_fn< false >( 2, BRICK_LOCATION( "" ), __VA_ARGS__ )
-#define WARN(...)  ::brq::trace_fn< false >( 1, BRICK_LOCATION( "" ), __VA_ARGS__ )
-#define ERROR(...) ::brq::trace_fn< false >( 0, BRICK_LOCATION( "" ), __VA_ARGS__ )
+#define DEBUG(...) ::brq::trace_fn< false >( 3, BRICK_LOCATION, __VA_ARGS__ )
+#define INFO(...)  ::brq::trace_fn< false >( 2, BRICK_LOCATION, __VA_ARGS__ )
+#define WARN(...)  ::brq::trace_fn< false >( 1, BRICK_LOCATION, __VA_ARGS__ )
+#define ERROR(...) ::brq::trace_fn< false >( 0, BRICK_LOCATION, __VA_ARGS__ )
 
 namespace brq
 {
-    /* Wrap __FILE__ and __LINE__, optionally together with a stringified
-     * assertion statement. Needs to be cheap to construct and pass around,
-     * since in debug builds this happens a lot. */
+    /* Wrap __FILE__ and __LINE__. Needs to be cheap to construct and pass
+     * around, since in debug builds this happens a lot. */
 
     struct trace_location
     {
         int line;
-        const char *_file, *_statement;
+        const char *_file;
 
         std::string_view filename() const noexcept
         {
@@ -97,11 +96,6 @@ namespace brq
         std::string_view file() const noexcept
         {
             return _file;
-        }
-
-        const char *statement() const noexcept
-        {
-            return _statement;
         }
     };
 
@@ -267,7 +261,10 @@ namespace brq
         string_builder builder;
 
         if ( trace()._use_buffer )
-            format_args< nofail >( " ", trace()._buffer, args..., "\n" );
+        {
+            format_args< nofail >( " ", trace()._buffer, args... );
+            trace()._buffer << "\n";
+        }
         else if ( trace().prepare( builder, level, location ) )
         {
             format_args< nofail >( " ", builder, args... );

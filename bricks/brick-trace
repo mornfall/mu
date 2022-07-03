@@ -133,8 +133,9 @@ namespace brq
         static constexpr bool nothrow = false;
 #endif
         rules_t _rules;
-        bool _print_tid = false, _print_location = false, _use_syslog = false;
+        bool _print_tid = false, _print_location = false, _use_syslog = false, _use_buffer = false;
         string_builder _syslog_meta;
+        string_builder _buffer;
 
         void use_syslog( bool s = true, std::string_view meta = "" )
         {
@@ -142,6 +143,12 @@ namespace brq
             _syslog_meta.clear();
             if ( !meta.empty() )
                 _syslog_meta << meta << " ";
+        }
+
+        void use_buffer( bool s = true )
+        {
+            _use_buffer = s;
+            _buffer.clear();
         }
 
         trace() noexcept( nothrow )
@@ -258,7 +265,10 @@ namespace brq
     __debugfn void trace_fn( int level, trace_location location, const Args &... args ) noexcept
     {
         string_builder builder;
-        if ( trace().prepare( builder, level, location ) )
+
+        if ( trace()._use_buffer )
+            format_args< nofail >( " ", trace()._buffer, args..., "\n" );
+        else if ( trace().prepare( builder, level, location ) )
         {
             format_args< nofail >( " ", builder, args... );
             trace().print( builder, level );

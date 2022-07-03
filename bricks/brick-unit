@@ -1,0 +1,99 @@
+/*
+ * (c) 2022 Petr Ročkai <code@fixp.eu>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#pragma once
+#include "brick-assert"
+#include <string_view>
+#include <functional>
+#include <list>
+
+namespace brq
+{
+    struct test_summary
+    {
+        int total = 0, failed = 0;
+
+        ~test_summary()
+        {
+            if ( failed )
+                abort();
+        }
+    };
+
+    struct test_case
+    {
+        std::string_view name;
+        test_case( std::string_view n = "unnamed" ) : name( n ) {}
+
+        bool was_buffered = false, was_throwing = false;
+
+        void setup()
+        {
+            was_buffered = trace()._use_buffer;
+            was_throwing = singleton< assert_throw >().on_fail;
+            singleton< test_summary >().total ++;
+
+            if ( !was_buffered )
+                trace().use_buffer( true );
+            if ( !was_throwing )
+                singleton< assert_throw >().on_fail = true;
+        }
+
+        void cleanup()
+        {
+            if ( !was_buffered )
+                trace().use_buffer( false );
+
+            singleton< assert_throw >().on_fail = was_throwing;
+        }
+
+        template< typename fun_t >
+        test_case &operator=( const fun_t &r )
+        {
+            setup();
+
+            try
+            {
+                r();
+                cleanup();
+                INFO( "test", name, "passed" );
+                return *this; // passed
+            }
+            catch ( std::exception &e )
+            {
+                ERROR( "uncaught exception", e.what() );
+            }
+            catch ( brq::assert_failed &f )
+            {
+                ::write( 2, "as\n", 3 );
+                ERROR( f.what() );
+            }
+            catch ( ... )
+            {
+                ERROR( "uncaught exception, not derived from std::exception" );
+            }
+
+            ERROR( "test", name, "failed" );
+
+            if ( !was_buffered )
+                trace().print( trace()._buffer, 0 );
+            singleton< test_summary >().failed ++;
+
+            cleanup();
+            return *this;
+        }
+    };
+}

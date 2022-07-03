@@ -16,6 +16,7 @@
 
 #pragma once
 #include "brick-assert"
+#include "brick-string"
 #include <string_view>
 #include <functional>
 #include <list>
@@ -69,7 +70,7 @@ namespace brq
             {
                 r();
                 cleanup();
-                INFO( "test", name, "passed" );
+                INFO( mark, name, pad( 30 ), "passed" );
                 return *this; // passed
             }
             catch ( std::exception &e )

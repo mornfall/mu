@@ -46,6 +46,7 @@ namespace brq
             was_buffered = trace()._use_buffer;
             was_throwing = singleton< assert_throw >().on_fail;
             singleton< test_summary >().total ++;
+            brq::trace().add_rule( "+", "trace" );
 
             if ( !was_buffered )
                 trace().use_buffer( true );
@@ -79,7 +80,6 @@ namespace brq
             }
             catch ( brq::assert_failed &f )
             {
-                ::write( 2, "as\n", 3 );
                 ERROR( f.what() );
             }
             catch ( ... )
@@ -87,13 +87,17 @@ namespace brq
                 ERROR( "uncaught exception, not derived from std::exception" );
             }
 
-            ERROR( "test", name, "failed" );
-
             if ( !was_buffered )
-                trace().print( trace()._buffer, 0 );
-            singleton< test_summary >().failed ++;
+            {
+                std::fprintf( stderr, "────────────────────────────────────────────\n" );
+                std::fwrite( trace()._buffer.buffer(), 1, trace()._buffer.size(), stderr );
+                std::fprintf( stderr, "────────────────────────────────────────────\n" );
+                std::fflush( stderr );
+            }
 
+            singleton< test_summary >().failed ++;
             cleanup();
+            INFO( mark, name, pad( 30 ), "failed" );
             return *this;
         }
     };

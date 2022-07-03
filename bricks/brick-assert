@@ -82,6 +82,11 @@
 
 namespace brq
 {
+    struct assert_throw
+    {
+        bool on_fail = false;
+    };
+
     struct assert_failed : string_builder
     {
         struct fail_ref
@@ -119,26 +124,22 @@ namespace brq
             (*this) << ":\n  " << expected << " " << l.statement();
         }
 
-#ifdef BRICKS_NOTHROW_ASSERTS
-        assert_failed( assert_failed &&o )
-        {
-            ::write( 2, o.buffer(), o.size() );
-            abort();
-        }
-#endif
-
         const char *what() const noexcept { return buffer(); }
     };
 
     [[noreturn]] static inline void assert_signal( assert_failed &err )
     {
+        if ( singleton< assert_throw >().on_fail )
+            throw std::move( err );
+
 #if defined(__divine__)
         if ( err.truncated() )
             __vm_cancel();
         __dios_fault( _VM_F_Assert, err.what() );
         __builtin_trap();
 #else
-        throw std::move( err );
+        ERROR( err.what() );
+        abort();
 #endif
     }
 

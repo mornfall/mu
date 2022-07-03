@@ -56,6 +56,8 @@ namespace brq
 
         void cleanup()
         {
+            brq::trace()._rules.pop_back();
+
             if ( !was_buffered )
                 trace().use_buffer( false );
 

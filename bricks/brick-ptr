@@ -160,6 +160,7 @@ namespace brq
 
         bool ref_put()
         {
+            ASSERT_QUIET;
             ASSERT_LEQ( 1, _refcount );
             return _refcount < max && --_refcount;
         }

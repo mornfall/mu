@@ -56,6 +56,7 @@
 #define ASSERT_LEQ(...)  static_cast< decltype(__VA_ARGS__, void(0)) >(0)
 #define ASSERT_LT(...)   static_cast< decltype(__VA_ARGS__, void(0)) >(0)
 #define ASSERT_NEQ(...)  static_cast< decltype(__VA_ARGS__, void(0)) >(0)
+#define ASSERT_QUIET
 
 #else
 
@@ -71,6 +72,7 @@
 #define ASSERT_LT(...)  BRICK_ASSERT_BIN(  <, >=, __VA_ARGS__ )
 #define ASSERT_LEQ(...) BRICK_ASSERT_BIN( <=, >,  __VA_ARGS__ )
 #define ASSERT_NEQ(...) BRICK_ASSERT_BIN( !=, ==, __VA_ARGS__ )
+#define ASSERT_QUIET ::brq::assert_quiet _brq_assert_quiet
 
 #endif
 
@@ -82,9 +84,18 @@
 
 namespace brq
 {
-    struct assert_throw
+    struct assert_config
     {
-        bool on_fail = false;
+        bool throw_on_fail = false;
+        bool quiet = false;
+    };
+
+    struct assert_quiet
+    {
+        bool was_quiet;
+        bool &quiet() { return singleton< assert_config >().quiet; }
+        assert_quiet()  { was_quiet = quiet(); quiet() = true; }
+        ~assert_quiet() { quiet() = was_quiet; }
     };
 
     struct assert_failed : string_builder
@@ -129,7 +140,7 @@ namespace brq
 
     [[noreturn]] static inline void assert_signal( assert_failed &err )
     {
-        if ( singleton< assert_throw >().on_fail )
+        if ( singleton< assert_config >().throw_on_fail )
             throw std::move( err );
 
 #if defined(__divine__)
@@ -152,7 +163,9 @@ namespace brq
         f << x_str;
         format_args< true >( " ", f, y... );
         assert_signal( f );
-        trace_fn< true >( 4, l, "assert:", x_str, x, y... );
+
+        if ( !singleton< assert_config >().quiet )
+            trace_fn< true >( 4, l, "assert:", x_str, x, y... );
     }
 
     template< typename... T >
@@ -213,9 +226,10 @@ namespace brq
             assert_signal( f );
         }
 
-        trace_fn< true >( 4, l, "assert:", a_str, op_str, b_str, "\n ",
-                                rpad( eqw, a_str ), "=", a, "\n ",
-                                rpad( eqw, b_str ), "=", b, args... );
+        if ( !singleton< assert_config >().quiet )
+            trace_fn< true >( 4, l, "assert:", a_str, op_str, b_str, "\n ",
+                                    rpad( eqw, a_str ), "=", a, "\n ",
+                                    rpad( eqw, b_str ), "=", b, args... );
     }
 
     template< typename X >

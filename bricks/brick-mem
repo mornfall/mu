@@ -107,6 +107,7 @@ struct PoolMixin
     auto &header( Pointer p ) { return self().header( p.slab() ); }
     auto &header( int b )
     {
+        ASSERT_QUIET;
         ASSERT( self()._s );
         ASSERT_LEQ( b, Self::blockcount );
         ASSERT_LEQ( 0, b );

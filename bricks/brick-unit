@@ -44,14 +44,14 @@ namespace brq
         void setup()
         {
             was_buffered = trace()._use_buffer;
-            was_throwing = singleton< assert_throw >().on_fail;
+            was_throwing = singleton< assert_config >().throw_on_fail;
             singleton< test_summary >().total ++;
             brq::trace().add_rule( "+", "trace" );
 
             if ( !was_buffered )
                 trace().use_buffer( true );
             if ( !was_throwing )
-                singleton< assert_throw >().on_fail = true;
+                singleton< assert_config >().throw_on_fail = true;
         }
 
         void cleanup()
@@ -59,7 +59,7 @@ namespace brq
             if ( !was_buffered )
                 trace().use_buffer( false );
 
-            singleton< assert_throw >().on_fail = was_throwing;
+            singleton< assert_config >().throw_on_fail = was_throwing;
         }
 
         template< typename fun_t >

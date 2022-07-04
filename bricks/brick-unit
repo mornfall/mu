@@ -65,7 +65,7 @@ namespace brq
         }
 
         template< typename fun_t >
-        test_case &operator=( const fun_t &r )
+        test_case &operator=( fun_t &&r )
         {
             setup();
 

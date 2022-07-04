@@ -21,21 +21,20 @@
 #include "brick-trace"
 #include <stdexcept>
 #include <system_error>
-#include <string>
 #include <tuple>
 #include <functional>
 
 namespace brq
 {
-
     /* This is a base class for exceptions which arise from improper use at the
-    * user level (as opposed to programmer level). Use this if you expect an
-    * exception to be seen by actual users. */
+     * user level (as opposed to programmer level). Use this if you expect an
+     * exception to be seen by actual users. */
+
     struct error : std::runtime_error
     {
         int _exit;
 
-        error( std::string err, int exit = 1 )
+        error( const char *err, int exit = 1 )
             : std::runtime_error( err ), _exit( exit )
         {}
 

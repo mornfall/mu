@@ -200,7 +200,7 @@ namespace brq
 
     template< typename gen_t, typename state_t > struct generator
     {
-        using value_type = std::tuple_element_t< 0, std::result_of_t< gen_t( state_t ) > >;
+        using value_type = std::tuple_element_t< 0, std::invoke_result_t< gen_t, state_t > >;
         gen_t _gen;
         state_t _initial;
 

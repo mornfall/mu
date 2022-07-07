@@ -157,15 +157,16 @@ namespace brq
     template< typename X, typename... Y >
     void assert_bool_fn( const trace_location &l, std::string_view x_str, const X &x, const Y & ... y  )
     {
-        if ( x )
-            return;
-        assert_failed f( l );
-        f << x_str;
-        format_args< true >( " ", f, y... );
-        assert_signal( f );
+        if ( !x )
+        {
+            assert_failed f( l );
+            f << x_str;
+            format_args< true >( " ", f, y... );
+            assert_signal( f );
+        }
 
         if ( !singleton< assert_config >().quiet )
-            trace_fn< true >( 4, l, "assert:", x_str, x, y... );
+            trace_fn< true >( 4, l, "assert:", x_str, y... );
     }
 
     template< typename... T >

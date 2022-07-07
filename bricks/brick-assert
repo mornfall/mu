@@ -228,9 +228,7 @@ namespace brq
         }
 
         if ( !singleton< assert_config >().quiet )
-            trace_fn< true >( 4, l, "assert:", a_str, op_str, b_str, "\n ",
-                                    rpad( eqw, a_str ), "=", a, "\n ",
-                                    rpad( eqw, b_str ), "=", b, args... );
+            trace_fn< true >( 4, l, "assert:", a_str, op_str, b_str, args... );
     }
 
     template< typename X >

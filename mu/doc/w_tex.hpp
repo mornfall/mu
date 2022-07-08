@@ -87,8 +87,8 @@ namespace umd::doc
                     case U'_': if ( !_in_math ) flush(), out.emit( "\\_" ); break;
                     case U'[': if ( !_in_math ) flush(), out.emit( "\\[" ); break;
                     case U']': if ( !_in_math ) flush(), out.emit( "\\]" ); break;
-                    case U'{': if ( !_in_math ) flush(), out.emit( "\\{" ); break;
-                    case U'}': if ( !_in_math ) flush(), out.emit( "\\}" ); break;
+                    case U'{': if ( !_in_math ) flush(), out.emit( "\\textbraceleft"); break;
+                    case U'}': if ( !_in_math ) flush(), out.emit( "\\textbraceright" ); break;
                     case U'~': flush(); out.emit( "\\textasciitilde{}" ); break;
                     case U'^': if ( !_in_math ) flush(), out.emit( "\\textasciicircum{}" ); break;
                     case U'\\': if ( !_in_math ) flush(), out.emit( "\\textbackslash{}" ); break;

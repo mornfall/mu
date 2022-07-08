@@ -1,4 +1,5 @@
 #include <fstream>
+#include <iostream>
 #include <string>
 #include <vector>
 #include <set>
@@ -110,7 +111,7 @@ auto write_sv = []( int fd, std::string_view str )
     return write( fd, str.begin(), str.size() );
 };
 
-void convert_page( PopplerPage *page, int docid )
+void convert_page( PopplerPage *page, int docid, float scale )
 {
     double width, height;
 
@@ -124,14 +125,16 @@ void convert_page( PopplerPage *page, int docid )
         return CAIRO_STATUS_SUCCESS;
     };
 
-    auto surface = cairo_svg_surface_create_for_stream( do_write, &buf, width, height );
+    auto surface = cairo_svg_surface_create_for_stream( do_write, &buf, width * scale, height * scale );
 
     auto drawcontext = cairo_create(surface);
+    cairo_scale(drawcontext, scale, scale);
     poppler_page_render_for_printing(page, drawcontext);
     cairo_show_page(drawcontext);
     cairo_destroy(drawcontext);
 
     drawcontext = cairo_create(surface);
+    cairo_scale(drawcontext, scale, scale);
     poppler_page_render_for_printing(page, drawcontext);
     cairo_show_page(drawcontext);
     cairo_destroy(drawcontext);
@@ -207,7 +210,7 @@ std::string read_stdin()
     return doc;
 }
 
-void process()
+void process( float scale )
 {
     std::string doc = read_stdin();
     std::string_view w( doc );
@@ -261,7 +264,7 @@ void process()
             write_sv( 1, "pt\">" );
         }
 
-        convert_page( poppler_document_get_page( pdf, i ), i );
+        convert_page( poppler_document_get_page( pdf, i ), i, scale );
 
         if ( use_yshift.count( i ) )
             write_sv( 1, "</span>" );
@@ -271,14 +274,28 @@ void process()
     g_object_unref( pdf );
 }
 
-int main()
+int main( int argc, char **argv )
 {
     char tmpdir[] = "/tmp/svgtex.XXXXXX";
+    float scale = 1.0;
+    char ch;
+
+    while ( ( ch = getopt( argc, argv, "s:" ) ) != -1 )
+        switch ( ch )
+        {
+            case 's':
+                scale = strtof( optarg, nullptr );
+                break;
+            default:
+                std::cerr << "usage: " << argv[ 0 ] << " [-s scale_factor]";
+                std::exit( 1 );
+        }
 
     if ( !mkdtemp( tmpdir ) )
-        abort();
+        std::exit( 1 );
+
     chdir( tmpdir );
 
-    process();
+    process( scale );
     run( "rm", "-r", tmpdir );
 }

@@ -93,6 +93,12 @@ namespace brq
         memcpy( &t, mem, sizeof( T ) );
     }
 
+    template< typename T >
+    void bitcast_mem( const T &t, uint8_t *mem )
+    {
+        memcpy( mem, &t, sizeof( T ) );
+    }
+
     template< typename type >
     constexpr size_t storage_size()
     {

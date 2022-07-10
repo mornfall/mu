@@ -34,8 +34,12 @@ namespace brq
     {
         int _exit;
 
-        error( const char *err, int exit = 1 )
+        error( int exit, const char *err )
             : std::runtime_error( err ), _exit( exit )
+        {}
+
+        error( const char *err )
+            : std::runtime_error( err ), _exit( 1 )
         {}
 
         std::string_view message() const { return what(); }

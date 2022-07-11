@@ -19,7 +19,7 @@
 #include "brick-string"
 #include <string_view>
 #include <functional>
-#include <list>
+#include <memory>
 
 namespace brq
 {
@@ -35,15 +35,36 @@ namespace brq
     };
 
     template< typename base_t >
-    struct test_fixture : std::unique_ptr< base_t >
+    struct test_fixture
     {
+        std::unique_ptr< base_t > orig;
+        std::weak_ptr< base_t >   work_weak;
+        std::shared_ptr< base_t > work;
+
         template< typename... args_t >
         test_fixture( args_t && ... args )
-            : std::unique_ptr< base_t >( new base_t( std::forward< args_t >( args )... ) )
+            : orig( new base_t( std::forward< args_t >( args )... ) )
         {}
 
-        test_fixture( const test_fixture &o ) : std::unique_ptr< base_t >( new base_t( *o ) ) {}
-        test_fixture( test_fixture &o )       : std::unique_ptr< base_t >( new base_t( *o ) ) {}
+        test_fixture( const test_fixture &o ) = delete;
+        test_fixture( test_fixture &o )
+            : work( new base_t( *o.orig ) )
+        {
+            o.work_weak = work;
+        }
+
+        base_t *get() const
+        {
+            if ( auto ptr = work_weak.lock() )
+                return ptr.get();
+            else if ( work )
+                return work.get();
+            else
+                return orig.get();
+        }
+
+        base_t *operator->() const { return  get(); }
+        base_t &operator*()  const { return *get(); }
     };
 
     struct test_case

@@ -34,6 +34,18 @@ namespace brq
         }
     };
 
+    template< typename base_t >
+    struct test_fixture : std::unique_ptr< base_t >
+    {
+        template< typename... args_t >
+        test_fixture( args_t && ... args )
+            : std::unique_ptr< base_t >( new base_t( std::forward< args_t >( args )... ) )
+        {}
+
+        test_fixture( const test_fixture &o ) : std::unique_ptr< base_t >( new base_t( *o ) ) {}
+        test_fixture( test_fixture &o )       : std::unique_ptr< base_t >( new base_t( *o ) ) {}
+    };
+
     struct test_case
     {
         std::string_view name;

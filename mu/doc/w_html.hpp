@@ -95,7 +95,7 @@ namespace umd::doc
                 }
             };
 
-            if ( _in_math )
+            if ( _in_math || _in_mpost )
                 w_tex::text( t );
             else
                 process( t, char_cb, [&]( auto s ) { out.emit( s ); } );

@@ -189,6 +189,7 @@ namespace umd::doc
         {
             _table_rule = false;
             _table_rows = _table_cells = 0;
+            ensure_div();
             out.emit( "<table class=\"", even ? "even" : "", "\">\n" );
             auto setup = []( char c )
             {

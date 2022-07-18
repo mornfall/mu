@@ -636,12 +636,9 @@ struct Chunked
 template< typename T >
 using SharedQueue = Chunked< LockedQueue, T >;
 
-namespace
-{
-
 using steady_time = std::chrono::time_point< std::chrono::steady_clock >;
 
-steady_time later( int ms )
+inline steady_time later( int ms )
 {
     return std::chrono::steady_clock::now() + std::chrono::milliseconds( ms );
 }
@@ -667,8 +664,6 @@ std::future_status wait( I b, I e, F cleanup, steady_time until = later( 500 ) )
     }
     return std::future_status::timeout;
 } catch ( ... ) { cleanup(); throw; };
-
-}
 
 }
 

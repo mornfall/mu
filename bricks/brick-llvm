@@ -140,27 +140,38 @@ private:
     std::vector< std::string > _parts;
 };
 
-template< typename yield_t >
+template< typename source_t = llvm::Module *, typename view_t = brq::unit >
 struct llvm_enumerate
 {
-    llvm::Module &mod;
-    const yield_t &yield;
+    static_assert( !std::is_same_v< source_t, llvm::Module * > ||
+                    std::is_same_v< view_t, brq::unit > );
+    source_t src;
+    view_t view;
 
-    llvm_enumerate( llvm::Module &mod, const yield_t &yield )
-        : mod( mod ), yield( yield )
-    {}
+    llvm_enumerate( const source_t &src ) : src( src ) {}
+    llvm_enumerate( const source_t &src, const view_t &view ) : src( src ), view( view ) {}
 
-    template< typename value_t >
-    void annotations()
+    template< typename yield_t >
+    void operator>>( yield_t &&yield )
     {
-        const auto annos = mod.getNamedGlobal( "llvm.global.annotations" );
+        if constexpr ( std::is_same_v< source_t, llvm::Module * > )
+            fetch( yield );
+        else
+            src >> [&]( auto... xs ) { view( xs..., yield ); };
+    }
+
+    template< typename yield_t >
+    void fetch( yield_t &&yield )
+    {
+        static_assert( std::is_same_v< source_t, llvm::Module * > );
+        const auto annos = src->getNamedGlobal( "llvm.global.annotations" );
         auto arr = llvm_transform( annos ).operand( 0 ).template cast< llvm::ConstantArray >().freeze();
 
         if ( arr )
             for ( const auto &op : arr->operands() )
             {
                 auto cs = llvm_transform( op.get() ).template cast< llvm::ConstantStruct >();
-                if ( auto val = cs.operand( 0 ).operand( 0 ).template cast< value_t >().freeze() )
+                if ( auto val = cs.operand( 0 ).operand( 0 ).freeze() )
                 {
                     auto anno = cs.operand( 1 ).operand( 0 )
                                .template cast< llvm::GlobalVariable >().operand( 0 )
@@ -171,38 +182,43 @@ struct llvm_enumerate
             }
     }
 
-    template< typename value_t >
-    void annotations( llvm_annotation ns )
+    template< typename add_view_t >
+    auto operator|( add_view_t av )
     {
-        auto accept = [&]( const auto &val, llvm_annotation anno )
+        return brq::llvm_enumerate( *this, av );
+    }
+
+    template< typename value_t >
+    auto as()
+    {
+        return *this | []( auto val, auto anno, auto yield )
+        {
+            yield( llvm::cast< value_t >( val ), anno );
+        };
+    }
+
+    auto in_namespace( llvm_annotation ns )
+    {
+        return *this | [=]( const auto &val, llvm_annotation anno, auto yield )
         {
             if ( anno.in_namespace( ns ) )
                 yield( val, anno.drop_namespace( ns ) );
         };
-
-        brq::llvm_enumerate( mod, accept ).template annotations< value_t >();
     }
 
-    template< typename value_t >
-    void values( llvm_annotation anno )
+    auto equal( llvm_annotation match )
     {
-        auto accept = [&]( const auto &val, llvm_annotation ann )
+        return *this | [=]( const auto &val, llvm_annotation anno, auto yield )
         {
-            if ( ann == anno )
+            if ( match == anno )
                 yield( val );
         };
-
-        brq::llvm_enumerate( mod, accept ).template annotations< value_t >();
     }
 
-    template< typename value_t >
-    void annotations( std::string_view ns ) { annotations< value_t >( llvm_annotation( ns ) ); }
-    template< typename value_t >
-    void values( std::string_view anno ) { values< value_t >( llvm_annotation( anno ) ); }
-
-    void functions( std::string_view anno ) { values< llvm::Function >( anno ); }
-    void function_annotations() { annotations< llvm::Function >(); }
-    void function_annotations( std::string_view ns ) { annotations< llvm::Function >( ns ); }
+    auto in_namespace( std::string_view ns ) { return in_namespace( llvm_annotation( ns ) ); }
+    auto equal( std::string_view anno ) { return equal( llvm_annotation( anno ) ); }
+    auto as_function() { return as< llvm::Function >(); }
+    auto functions( std::string_view anno ) { return as_function().equal( anno ); }
 };
 
 template< typename yield_t >

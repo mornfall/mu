@@ -282,7 +282,7 @@ namespace brq
             if ( auto w = smt_bw( op ) ) /* fixed-width cases */
                 return w;
 
-                if ( op == smt_op::bv_concat )
+            if ( op == smt_op::bv_concat )
             {
                 ASSERT_EQ( sizeof...( args ), 2 );
                 return ( 0 + ... + args );

@@ -253,7 +253,7 @@ namespace brq
 #endif
     };
 
-    static inline struct trace &trace() noexcept { return singleton< struct trace >(); }
+    inline struct trace &trace() noexcept { return singleton< struct trace >(); }
 
     template< bool nofail, typename... Args >
     __debugfn void trace_fn( int level, trace_location location, const Args &... args ) noexcept

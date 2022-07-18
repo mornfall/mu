@@ -320,7 +320,7 @@ namespace brq
     using split_view = split_view_t< char >; // std::pair< std::string_view, std::string_view >;
 
     template< typename char_t >
-    static inline split_view_t< char_t > split( std::basic_string_view< char_t > p,
+    inline split_view_t< char_t > split( std::basic_string_view< char_t > p,
                                                 char_t d, bool reverse = false ) noexcept
     {
         using view = std::basic_string_view< char_t >;
@@ -333,13 +333,13 @@ namespace brq
         return { p, q };
     }
 
-    static inline split_view split( std::string_view p, char d, bool reverse = false ) noexcept
+    inline split_view split( std::string_view p, char d, bool reverse = false ) noexcept
     {
         return split< char >( p, d, reverse );
     }
 
     template< typename char_t >
-    static inline bool starts_with( std::basic_string_view< char_t > s,
+    inline bool starts_with( std::basic_string_view< char_t > s,
                                     std::basic_string_view< char_t > t ) noexcept
     {
         if ( s.size() >= t.size() )
@@ -352,7 +352,7 @@ namespace brq
     }
 
     template< typename char_t >
-    static inline bool ends_with( std::basic_string_view< char_t > s,
+    inline bool ends_with( std::basic_string_view< char_t > s,
                                   std::basic_string_view< char_t > t ) noexcept
     {
         if ( s.size() >= t.size() )
@@ -364,22 +364,22 @@ namespace brq
             return false;
     }
 
-    static inline bool starts_with( std::string_view s, std::string_view t ) noexcept
+    inline bool starts_with( std::string_view s, std::string_view t ) noexcept
     {
         return starts_with< char >( s, t );
     }
 
-    static inline bool ends_with( std::string_view s, std::string_view t ) noexcept
+    inline bool ends_with( std::string_view s, std::string_view t ) noexcept
     {
         return ends_with< char >( s, t );
     }
 
-    static inline bool starts_with( std::u32string_view s, std::u32string_view t ) noexcept
+    inline bool starts_with( std::u32string_view s, std::u32string_view t ) noexcept
     {
         return starts_with< char32_t >( s, t );
     }
 
-    static inline bool ends_with( std::u32string_view s, std::u32string_view t ) noexcept
+    inline bool ends_with( std::u32string_view s, std::u32string_view t ) noexcept
     {
         return ends_with< char32_t >( s, t );
     }

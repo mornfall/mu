@@ -138,7 +138,7 @@ namespace brq
         const char *what() const noexcept { return buffer(); }
     };
 
-    [[noreturn]] static inline void assert_signal( assert_failed &err )
+    [[noreturn]] inline void assert_signal( assert_failed &err )
     {
         if ( singleton< assert_config >().throw_on_fail )
             throw std::move( err );

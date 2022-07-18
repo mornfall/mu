@@ -56,7 +56,7 @@ namespace brq::impl
     static const uint64_t prime_6 = UINT64_C( 0xCB5AF53AE3AAAC31 );
 
     template< bool strict >
-    static inline uint64_t tail( const uint64_t *v, unsigned count )
+    inline uint64_t tail( const uint64_t *v, unsigned count )
     {
         ASSERT( count );
         if constexpr ( strict )
@@ -272,14 +272,14 @@ namespace brq
      * per hash on modern, 64b superscalar processors, depending on the CPU and
      * the compiler */
 
-    static inline hash64_t hash( const uint8_t *data, size_t len, hash64_t seed = 0 )
+    inline hash64_t hash( const uint8_t *data, size_t len, hash64_t seed = 0 )
     {
         hash_state s( seed );
         s.update_aligned( data, len );
         return s.hash();
     }
 
-    static inline hash64_t hash_short( std::string_view sv, hash64_t seed = 0 )
+    inline hash64_t hash_short( std::string_view sv, hash64_t seed = 0 )
     {
         hash_state s( seed );
         s.update_short( sv );

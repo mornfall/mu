@@ -106,7 +106,7 @@ inline void writeArchive( It begin, It end, std::string out )
     brq::create_file( out );
     auto res = ::llvm::writeArchive( out, members, true, object::Archive::K_GNU, true, false );
     if ( res )
-        _throwLLVMError( res );
+        brq::llvm_throw( res );
 }
 
 using Archive = ::llvm::object::Archive;
@@ -134,7 +134,7 @@ struct ArchiveReader
         _archive = std::make_unique< Archive >( ::llvm::MemoryBufferRef(
                         ::llvm::StringRef( _data.left().data(), _data.left().size() ), filename ), ec );
         if ( ec )
-            _throwLLVMError( ec );
+            brq::llvm_throw( ec );
     }
 
     explicit ArchiveReader( std::string filename, std::string_view contents, std::shared_ptr< Ctx > ctx = nullptr ) :
@@ -144,7 +144,7 @@ struct ArchiveReader
         _archive = std::make_unique< Archive >( ::llvm::MemoryBufferRef(
                         ::llvm::StringRef( contents.data(), contents.size() ), filename ), ec );
         if ( ec )
-            _throwLLVMError( ec );
+            brq::llvm_throw( ec );
     }
 
     explicit ArchiveReader( std::string filename, std::string &&contents, std::shared_ptr< Ctx > ctx = nullptr ) :
@@ -154,7 +154,7 @@ struct ArchiveReader
         auto ec = ::llvm::Error::success();
         _archive = std::make_unique< Archive >( ::llvm::MemoryBufferRef( _data.right(), filename ), ec );
         if ( ec )
-            _throwLLVMError( ec );
+            brq::llvm_throw( ec );
     }
 
     explicit ArchiveReader( std::unique_ptr< ::llvm::MemoryBuffer > buffer, std::shared_ptr< Ctx > ctx = nullptr ) :
@@ -164,7 +164,7 @@ struct ArchiveReader
         auto ec = ::llvm::Error::success();
         _archive = std::make_unique< Archive >( _buffer->getMemBufferRef(), ec );
         if ( ec )
-            _throwLLVMError( ec );
+            brq::llvm_throw( ec );
     }
 
     ArchiveReader( ArchiveReader && ) = default;
@@ -172,7 +172,7 @@ struct ArchiveReader
     ~ArchiveReader()
     {
         if ( _err )
-            _throwLLVMError( _err );
+            brq::llvm_throw( _err );
     }
 
     // An iterator allowing nice access to modules contained in an archive
@@ -205,7 +205,7 @@ struct ArchiveReader
             if ( !name )
             {
                 auto err = name.takeError();
-                _throwLLVMError( err );
+                brq::llvm_throw( err );
             }
             return name.get();
         }
@@ -253,7 +253,7 @@ struct ArchiveReader
                 if ( !buf && errorIsFatal )
                 {
                     auto err = buf.takeError();
-                    _throwLLVMError( err );
+                    brq::llvm_throw( err );
                 }
                 if ( !buf )
                     return false;
@@ -261,7 +261,7 @@ struct ArchiveReader
                 auto bc_buf = IRObjectFile::findBitcodeInMemBuffer( buf.get()->getMemoryBufferRef() );
 
                 if ( !bc_buf )
-                    _throwLLVMError( bc_buf.takeError() );
+                    brq::llvm_throw( bc_buf.takeError() );
 
                 auto parsed = ::llvm::parseBitcodeFile( bc_buf.get(), *_parent->_ctx.get() );
                 if ( !parsed )
@@ -274,7 +274,7 @@ struct ArchiveReader
         void _bump()
         {
             if ( _parent->_err )
-                _throwLLVMError( _parent->_err );
+                brq::llvm_throw( _parent->_err );
             _bc.reset();
         }
 
@@ -297,7 +297,7 @@ struct ArchiveReader
     BitcodeIterator modules_begin()
     {
         auto res = BitcodeIterator( _archive->child_begin( _err ), _archive->child_end(), this );
-        if ( _err ) _throwLLVMError( _err );
+        if ( _err ) brq::llvm_throw( _err );
         return res;
     }
 
@@ -367,7 +367,7 @@ struct Linker
 
         // In case the module was loaded lazily, we need to materialize definitions
         if ( auto err = src->materializeAll() )
-            _throwLLVMError( err );
+            brq::llvm_throw( err );
 
         // If there is no composite module, we use 'src' as our new composite base
         if ( !_module )
@@ -438,7 +438,7 @@ struct Linker
                 if ( !m )
                 {
                     auto e = m.takeError();
-                    _throwLLVMError( e );
+                    brq::llvm_throw( e );
                 }
 
                 ::llvm::Error Err = ::llvm::Error::success();

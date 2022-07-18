@@ -238,17 +238,17 @@ inline void llvm_verify( llvm::Module *module )
         throw std::runtime_error( "Invalid bitcode: " + serr.str() );
 }
 
-static void llvm_throw( std::error_code ec )
+inline void llvm_throw( std::error_code ec )
 {
     throw std::runtime_error( "LLVM Error: " + ec.message() );
 }
 
-static void llvm_throw( ::llvm::Error &e )
+inline void llvm_throw( ::llvm::Error &e )
 {
     throw std::runtime_error( "LLVM Error: " + toString( std::move( e ) ) );
 }
 
-static void llvm_throw( ::llvm::Error &&e )
+inline void llvm_throw( ::llvm::Error &&e )
 {
     throw std::runtime_error( "LLVM Error: " + toString( std::move( e ) ) );
 }

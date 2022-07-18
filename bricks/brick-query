@@ -201,7 +201,14 @@ struct Map {
     using ValueType = decltype( std::declval< UnaryFn & >()( *std::declval< typename Range::iterator & >() ) );
     using BaseIterator = typename Range::iterator;
 
-    struct Iterator : std::iterator< std::forward_iterator_tag, ValueType > {
+    struct Iterator
+    {
+        using value_type = ValueType;
+        using reference = value_type &;
+        using pointer = value_type *;
+        using difference_type = std::ptrdiff_t;
+        using iterator_category = std::forward_iterator_tag;
+
         Iterator() : _map( nullptr ) { }
         Iterator( BaseIterator it, Map< Range, UnaryFn > *map ) :
             _it( it ), _map( map )
@@ -268,7 +275,14 @@ struct Filter {
     Filter() = default;
     Filter( Range range, UnaryPred pred ) : _range( range ), _pred( std::move( pred ) ) { }
 
-    struct Iterator : std::iterator< std::forward_iterator_tag, ValueType > {
+    struct Iterator
+    {
+        using value_type = ValueType;
+        using reference = value_type &;
+        using pointer = value_type *;
+        using difference_type = std::ptrdiff_t;
+        using iterator_category = std::forward_iterator_tag;
+
         Iterator() : _filter( nullptr ) { }
         Iterator( BaseIterator it, Filter< Range, UnaryPred > *filter ) :
             _it( it ), _filter( filter )
@@ -331,7 +345,14 @@ struct Flatten {
     Flatten() = default;
     Flatten( Range range ) : _range( range ) { }
 
-    struct Iterator : std::iterator< std::forward_iterator_tag, ValueType > {
+    struct Iterator
+    {
+        using value_type = ValueType;
+        using reference = value_type &;
+        using pointer = value_type *;
+        using difference_type = std::ptrdiff_t;
+        using iterator_category = std::forward_iterator_tag;
+
         Iterator() : _flatten( nullptr ) { }
         Iterator( BaseIterator it, Flatten< Range > *flatten ) :
             _it( it ), _flatten( flatten )
@@ -422,7 +443,14 @@ struct Append {
     Append() = default;
     Append( Range1 range1, Range2 range2 ) : _range1( range1 ), _range2( range2 ) { }
 
-    struct Iterator : std::iterator< std::forward_iterator_tag, ValueType > {
+    struct Iterator
+    {
+        using value_type = ValueType;
+        using reference = value_type &;
+        using pointer = value_type *;
+        using difference_type = std::ptrdiff_t;
+        using iterator_category = std::forward_iterator_tag;
+
         Iterator() : _append( nullptr ) { }
         Iterator( const Iterator &o ) :
             _it1( o._it1 ? new It1( *o._it1 ) : nullptr ),
@@ -568,8 +596,7 @@ struct Query {
         return *this;
     }
 
-    template< typename KeySelect,
-        typename Key = typename std::result_of< KeySelect( ValueType & ) >::type >
+    template< typename KeySelect, typename Key = std::invoke_result_t< KeySelect, ValueType & > >
     auto groupBy( KeySelect fn ) -> Query< std::map< Key, std::vector< ValueType > > >
     {
         std::map< Key, std::vector< ValueType > > map;

@@ -1,9 +1,7 @@
-// -*- mode: C++; indent-tabs-mode: nil; c-basic-offset: 4 -*-
-
 /*
  * (c) 2018 Henrich Lauko
  * (c) 2014-2018 Vladimír Štill
- * (c) 2014, 2015 Petr Ročkai
+ * (c) 2014, 2015, 2022 Petr Ročkai
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,23 +13,9 @@
  * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
- * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- */
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
 
 #pragma once
-
-#ifdef BRICKS_HAVE_LLVM
-
-#ifndef __STDC_LIMIT_MACROS
-#define __STDC_LIMIT_MACROS
-#endif
-#ifndef __STDC_CONSTANT_MACROS
-#define __STDC_CONSTANT_MACROS
-#endif
-
-#ifdef DIVINE_RELAX_WARNINGS
-DIVINE_RELAX_WARNINGS
-#endif
 
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -48,10 +32,6 @@ DIVINE_RELAX_WARNINGS
 #include <llvm/Support/FileSystem.h>
 #include <llvm/IR/AbstractCallSite.h>
 
-#ifdef DIVINE_RELAX_WARNINGS
-DIVINE_UNRELAX_WARNINGS
-#endif
-
 #include <memory>
 
 #include <brick-assert>
@@ -59,70 +39,76 @@ DIVINE_UNRELAX_WARNINGS
 #include <brick-types>
 #include <brick-fs>
 
-namespace brick::llvm {
-
-#if __cplusplus >= 201703L
+namespace brq
+{
 
 template< typename T >
 using get_operand_t = decltype( std::declval<T&>().getOperand( std::declval< int >() ) );
 
-template< typename Value >
-struct LLVMTransformer {
-    using value_type = typename std::conditional< std::is_pointer_v< Value >, Value, Value * >::type;
+template< typename value_t >
+struct llvm_transform
+{
+    using value_type = std::conditional_t< std::is_pointer_v< value_t >, value_t, value_t * >;
 
-    constexpr LLVMTransformer( const value_type &val ) : state( val ) {}
-    constexpr LLVMTransformer( value_type &&val ) : state( std::move( val ) ) {}
+    constexpr llvm_transform( const value_type &val ) : state( val ) {}
+    constexpr llvm_transform( value_type &&val ) : state( std::move( val ) ) {}
 
-    template< typename F >
-    constexpr decltype(auto) apply( F f ) noexcept {
-        using R = decltype( f( state ) );
+    template< typename fun_t >
+    constexpr decltype( auto ) apply( fun_t f ) noexcept
+    {
+        using result_t = decltype( f( state ) );
+
         if ( state )
-            return LLVMTransformer< R >( f( state ) );
+            return llvm_transform< result_t >( f( state ) );
         else
-            return LLVMTransformer< R >( nullptr );
+            return llvm_transform< result_t >( nullptr );
     }
 
-    constexpr decltype(auto) operand( size_t idx ) noexcept {
-        if constexpr ( brick::types::is_detected_v< get_operand_t, std::remove_pointer_t< Value > > ) {
+    constexpr decltype( auto ) operand( size_t idx ) noexcept
+    {
+        if constexpr ( brick::types::is_detected_v< get_operand_t, std::remove_pointer_t< value_t > > )
             return apply( [idx] ( const auto& v ) { return v->getOperand( idx ); } );
-        } else {
-            return LLVMTransformer< value_type >( nullptr );
-        }
+        else
+            return llvm_transform< value_type >( nullptr );
     }
 
     template< typename T >
-    constexpr decltype(auto) cast() noexcept {
+    constexpr decltype( auto ) cast() noexcept
+    {
         return apply( [] ( const auto& v ) { return ::llvm::dyn_cast< T >( v ); } );
     }
 
     constexpr value_type freeze() noexcept { return state; }
+
 private:
     value_type state;
 };
 
-template< typename T >
-decltype( auto ) transformer( T val ) {
-    return LLVMTransformer< T >( val );
-}
+template< typename value_t >
+llvm_transform( value_t val ) -> llvm_transform< value_t >;
 
-#endif // c++17
+struct llvm_annotation : brick::types::Eq
+{
+    llvm_annotation() = default;
 
-struct Annotation : brick::types::Eq {
-    Annotation() = default;
-    explicit Annotation( const std::string& anno ) {
+    explicit llvm_annotation( std::string_view anno )
+    {
         size_t oldoff = 0, off = 0;
+
         do {
             off = anno.find( '.', oldoff );
-            _parts.emplace_back( anno.substr( oldoff, off - oldoff) );
+            _parts.emplace_back( anno.substr( oldoff, off - oldoff ) );
             oldoff = off + 1;
         } while ( off != std::string::npos );
     }
-    template< typename It >
-    Annotation( It begin, It end ) : _parts( begin, end ) { }
+
+    template< typename iter_t >
+    llvm_annotation( iter_t begin, iter_t end ) : _parts( begin, end ) {}
 
     std::string name() const { return _parts.back(); }
-    Annotation ns() const { return Annotation( _parts.begin(), _parts.end() - 1); }
-    std::string toString() const
+    llvm_annotation ns() const { return llvm_annotation( _parts.begin(), _parts.end() - 1 ); }
+
+    std::string to_string() const
     {
         brq::string_builder ss;
         for ( auto &n : _parts )
@@ -130,148 +116,156 @@ struct Annotation : brick::types::Eq {
         return std::string( ss.data(), 0, ss.data().size() - 1 );
     }
 
-    bool inNamespace( Annotation ns ) const {
+    bool in_namespace( llvm_annotation ns ) const
+    {
         return ns._parts.size() < _parts.size()
             && std::equal( ns._parts.begin(), ns._parts.end(), _parts.begin() );
     }
 
-    Annotation dropNamespace( Annotation ns ) const {
-        return inNamespace( ns )
-             ? Annotation( _parts.begin() + ns.size(), _parts.end() )
+    llvm_annotation drop_namespace( llvm_annotation ns ) const
+    {
+        return in_namespace( ns )
+             ? llvm_annotation( _parts.begin() + ns.size(), _parts.end() )
              : *this;
     }
 
     size_t size() const { return _parts.size(); }
 
-    bool operator==( const Annotation &o ) const {
+    bool operator==( const llvm_annotation &o ) const
+    {
         return o.size() == size() && std::equal( _parts.begin(), _parts.end(), o._parts.begin() );
     }
 
-  private:
+private:
     std::vector< std::string > _parts;
 };
 
-template< typename Value, typename Yield >
-void enumerateAnnos( ::llvm::Module &m, Yield &&yield ) {
-    using ConstantArray = ::llvm::ConstantArray;
-    const auto annos = m.getNamedGlobal( "llvm.global.annotations" );
-    if ( auto arr = transformer( annos ).operand( 0 ).template cast< ConstantArray >().freeze() ) {
-        for ( const auto &op : arr->operands() ) {
-            auto cs = transformer( op.get() ).template cast< ::llvm::ConstantStruct >();
-            if ( auto val = cs.operand( 0 ).operand( 0 ).template cast< Value >().freeze() ) {
-                auto anno = cs.operand( 1 ).operand( 0 )
-                           .template cast< ::llvm::GlobalVariable >().operand( 0 )
-                           .template cast< ::llvm::ConstantDataArray >()
-                           .freeze();
-                yield( val, Annotation( anno->getAsCString().str() ) );
+template< typename yield_t >
+struct llvm_enumerate
+{
+    llvm::Module &mod;
+    const yield_t &yield;
+
+    llvm_enumerate( llvm::Module &mod, const yield_t &yield )
+        : mod( mod ), yield( yield )
+    {}
+
+    template< typename value_t >
+    void annotations()
+    {
+        const auto annos = mod.getNamedGlobal( "llvm.global.annotations" );
+        auto arr = llvm_transform( annos ).operand( 0 ).template cast< llvm::ConstantArray >().freeze();
+
+        if ( arr )
+            for ( const auto &op : arr->operands() )
+            {
+                auto cs = llvm_transform( op.get() ).template cast< llvm::ConstantStruct >();
+                if ( auto val = cs.operand( 0 ).operand( 0 ).template cast< value_t >().freeze() )
+                {
+                    auto anno = cs.operand( 1 ).operand( 0 )
+                               .template cast< llvm::GlobalVariable >().operand( 0 )
+                               .template cast< llvm::ConstantDataArray >()
+                               .freeze();
+                    yield( val, llvm_annotation( anno->getAsCString().str() ) );
+                }
             }
-        }
     }
-}
 
-template< typename Value, typename Yield >
-void enumerateAnnosInNs( Annotation ns, ::llvm::Module &m, Yield &&yield ) {
-    enumerateAnnos< Value >( m, [&]( const auto &val, Annotation anno ) {
-        if ( anno.inNamespace( ns ) )
-            yield( val, anno.dropNamespace( ns ) );
-    } );
-}
+    template< typename value_t >
+    void annotations( llvm_annotation ns )
+    {
+        auto accept = [&]( const auto &val, llvm_annotation anno )
+        {
+            if ( anno.in_namespace( ns ) )
+                yield( val, anno.drop_namespace( ns ) );
+        };
 
-template< typename Value, typename Yield >
-void enumerateAnnosInNs( const std::string& ns, ::llvm::Module &m, Yield &&yield ) {
-    enumerateAnnosInNs< Value >( Annotation( ns ), m, std::forward< Yield >( yield ) );
-}
+        brq::llvm_enumerate( mod, accept ).template annotations< value_t >();
+    }
 
-template< typename Value, typename Yield >
-void enumerateForAnno( Annotation anno, ::llvm::Module &m, Yield &&yield ) {
-    enumerateAnnos< Value >( m, [&]( const auto &val, Annotation ann ) {
-        if ( ann == anno )
-            yield( val );
-    } );
-}
+    template< typename value_t >
+    void values( llvm_annotation anno )
+    {
+        auto accept = [&]( const auto &val, llvm_annotation ann )
+        {
+            if ( ann == anno )
+                yield( val );
+        };
 
-template< typename Value, typename Yield >
-void enumerateForAnno( const std::string& anno, ::llvm::Module &m, Yield &&yield ) {
-    enumerateForAnno< Value >( Annotation( anno ), m, std::forward< Yield >( yield ) );
-}
+        brq::llvm_enumerate( mod, accept ).template annotations< value_t >();
+    }
 
-template< typename Yield >
-void enumerateFunctionsForAnno( const std::string& anno, ::llvm::Module &m, Yield &&yield ) {
-    enumerateForAnno< ::llvm::Function >( anno, m, std::forward< Yield >( yield ) );
-}
+    template< typename value_t >
+    void annotations( std::string_view ns ) { annotations< value_t >( llvm_annotation( ns ) ); }
+    template< typename value_t >
+    void values( std::string_view anno ) { values< value_t >( llvm_annotation( anno ) ); }
 
-template< typename Yield >
-void enumerateFunctionAnnos( ::llvm::Module &m, Yield &&yield ) {
-    enumerateAnnos< ::llvm::Function >( m, std::forward< Yield >( yield ) );
-}
+    void functions( std::string_view anno ) { values< llvm::Function >( anno ); }
+    void function_annotations() { annotations< llvm::Function >(); }
+    void function_annotations( std::string_view ns ) { annotations< llvm::Function >( ns ); }
+};
 
-template< typename Yield >
-void enumerateFunctionAnnosInNs( const std::string& ns, ::llvm::Module &m, Yield &&yield ) {
-    enumerateAnnosInNs< ::llvm::Function >( ns, m, std::forward< Yield >( yield ) );
-}
-
-template< typename Yield >
-void enumerateFunctionsForAttribute( const std::string& attr, ::llvm::Module &m, Yield &&yield ) {
+template< typename yield_t >
+void llvm_functions_by_attribute( const std::string& attr, ::llvm::Module &m, yield_t &&yield )
+{
     for ( auto & fn : m )
         if ( fn.hasFnAttribute( attr ) )
             yield( fn );
 }
 
-inline void verifyModule( ::llvm::Module *module ) {
+inline void llvm_verify( llvm::Module *module )
+{
     std::string err;
     ::llvm::raw_string_ostream serr( err );
-    if ( ::llvm::verifyModule( *module, &serr ) ) {
+
+    if ( llvm::verifyModule( *module, &serr ) )
         throw std::runtime_error( "Invalid bitcode: " + serr.str() );
-    }
 }
 
-static void _throwLLVMError( std::error_code ec )
+static void llvm_throw( std::error_code ec )
 {
     throw std::runtime_error( "LLVM Error: " + ec.message() );
 }
 
-static void _throwLLVMError( ::llvm::Error &e )
+static void llvm_throw( ::llvm::Error &e )
 {
     throw std::runtime_error( "LLVM Error: " + toString( std::move( e ) ) );
 }
 
-static void _throwLLVMError( ::llvm::Error &&e )
+static void llvm_throw( ::llvm::Error &&e )
 {
     throw std::runtime_error( "LLVM Error: " + toString( std::move( e ) ) );
 }
 
-inline void writeModule( ::llvm::Module *m, std::string out ) {
-    verifyModule( *m );
+inline void llvm_write( llvm::Module *m, std::string path )
+{
+    llvm_verify( m );
     std::error_code serr;
-    brq::create_file( out );
-    ::llvm::raw_fd_ostream fs( out.c_str(), serr, ::llvm::sys::fs::OF_None );
+    brq::create_file( path );
+    llvm::raw_fd_ostream fs( path.c_str(), serr, llvm::sys::fs::OF_None );
     if ( serr )
-        _throwLLVMError( serr );
+        llvm_throw( serr );
     WriteBitcodeToFile( *m, fs );
 }
 
-inline std::unique_ptr< ::llvm::Module > load_bc( const std::string &str,
-                                                  ::llvm::LLVMContext *ctx )
+inline std::unique_ptr< llvm::Module > llvm_read( const std::string &str, llvm::LLVMContext *ctx )
 {
-    std::unique_ptr< ::llvm::MemoryBuffer > input =
-        std::move( ::llvm::MemoryBuffer::getFile( str ).get() );
-    auto bc_input =
-        ::llvm::object::IRObjectFile::findBitcodeInMemBuffer( input->getMemBufferRef() );
+    std::unique_ptr< llvm::MemoryBuffer > input = std::move( llvm::MemoryBuffer::getFile( str ).get() );
+    auto bc_input = llvm::object::IRObjectFile::findBitcodeInMemBuffer( input->getMemBufferRef() );
 
     if ( !bc_input )
         UNREACHABLE( "Could not load bitcode file" );
-    auto module = ::llvm::parseBitcodeFile( bc_input.get(), *ctx );
 
-    if ( !module )
+    if ( auto mod = ::llvm::parseBitcodeFile( bc_input.get(), *ctx ) )
+        return std::move( mod.get() );
+    else
         UNREACHABLE( "Error parsing input model; probably not a valid bc file." );
-
-    return std::move( module.get() );
 }
 
-
-inline std::string getModuleBytes( ::llvm::Module *m ) {
+inline std::string llvm_serialize( llvm::Module *m )
+{
     std::string s;
-    verifyModule( *m );
+    llvm_verify( m );
     {
         ::llvm::raw_string_ostream fs( s );
         WriteBitcodeToFile( *m, fs );
@@ -279,19 +273,23 @@ inline std::string getModuleBytes( ::llvm::Module *m ) {
     return s;
 }
 
-inline int intrinsic_id( ::llvm::Value *v )
+inline int llvm_intrinsic_id( llvm::Value *v )
 {
-    auto insn = ::llvm::dyn_cast< ::llvm::Instruction >( v );
-    if ( !insn || insn->getOpcode() != ::llvm::Instruction::Call )
-        return ::llvm::Intrinsic::not_intrinsic;
-    auto *CB = ::llvm::cast< ::llvm::CallBase >( insn );
+    auto insn = llvm::dyn_cast< llvm::Instruction >( v );
+
+    if ( !insn || insn->getOpcode() != llvm::Instruction::Call )
+        return llvm::Intrinsic::not_intrinsic;
+
+    auto *CB = llvm::cast< llvm::CallBase >( insn );
     auto f = CB->getCalledFunction();
+
     if ( !f )
-        return ::llvm::Intrinsic::not_intrinsic;
+        return llvm::Intrinsic::not_intrinsic;
+
     return f->getIntrinsicID();
 }
 
-} // namespace brick::llvm
+}
 
 namespace llvm
 {
@@ -308,7 +306,3 @@ namespace llvm
         return o;
     }
 }
-
-#endif // BRICKS_HAVE_LLVM
-
-// vim: syntax=cpp tabstop=4 shiftwidth=4 expandtab ft=cpp

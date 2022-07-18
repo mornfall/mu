@@ -78,7 +78,7 @@ namespace brq
 
     using smtlib_type = smtlib_node::type_t;
 
-    static inline brq::string_builder &operator<<( brq::string_builder &o, const smtlib_node &n )
+    inline brq::string_builder &operator<<( brq::string_builder &o, const smtlib_node &n )
     {
         n._fmt( o );
         return o;
@@ -128,7 +128,7 @@ namespace brq
         };
     }
 
-    static inline brq::string_builder &operator<<( brq::string_builder &o, smtlib_rounding mode )
+    inline brq::string_builder &operator<<( brq::string_builder &o, smtlib_rounding mode )
     {
         o << to_string( mode );
         return o;
@@ -468,7 +468,7 @@ namespace brq
         return (uint64_t( 1 ) << bitwidth) - 1;
     }
 
-    static inline brq::string_builder to_bitvector( int bitwidth,
+    inline brq::string_builder to_bitvector( int bitwidth,
                                                     brick::data::SmallVector< uint64_t > data )
     {
         int bw = bitwidth;

@@ -160,7 +160,7 @@ namespace brq
         }
     };
 
-    static inline std::string hostname()
+    inline std::string hostname()
     {
         char host[ HOST_NAME_MAX + 1 ];
         ::gethostname( host, HOST_NAME_MAX );
@@ -901,73 +901,71 @@ namespace brq
         }
     };
 
-    namespace {
-
-        std::string read_file( std::ifstream &in, size_t length = std::numeric_limits< size_t >::max() )
-        {
-            if ( !in.is_open() )
-                brq::raise() << "reading filestream";
-
-            in.seekg( 0, std::ios::end );
-            length = std::min< size_t >( length, in.tellg() );
-            in.seekg( 0, std::ios::beg );
-
-            std::string buffer;
-            buffer.resize( length );
-
-            in.read( &buffer[ 0 ], length );
-            return buffer;
-        }
-
-        std::string read_file( std::istream &in )
-        {
-            std::string out;
-            int pos = 0;
-
-            while ( in )
-            {
-                out.resize( pos + 1024 );
-                in.read( out.data() + pos, 1024 );
-                out.resize( pos += in.gcount() );
-            }
-
-            return out;
-        }
-
-        std::string read_file( std::string_view file,
-                               size_t length = std::numeric_limits< size_t >::max() )
-        {
-            std::ifstream in( c_str( file ), std::ios::binary );
-            if ( !in.is_open() )
-                brq::raise() << "reading file " << file;
-            return read_file( in, length );
-        }
-
-        std::string read_file_or( std::string_view file, std::string_view def,
+    inline std::string read_file( std::ifstream &in,
                                   size_t length = std::numeric_limits< size_t >::max() )
+    {
+        if ( !in.is_open() )
+            brq::raise() << "reading filestream";
+
+        in.seekg( 0, std::ios::end );
+        length = std::min< size_t >( length, in.tellg() );
+        in.seekg( 0, std::ios::beg );
+
+        std::string buffer;
+        buffer.resize( length );
+
+        in.read( &buffer[ 0 ], length );
+        return buffer;
+    }
+
+    inline std::string read_file( std::istream &in )
+    {
+        std::string out;
+        int pos = 0;
+
+        while ( in )
         {
-            std::ifstream in( c_str( file ), std::ios::binary );
-            if ( !in.is_open() )
-                return std::string( def );
-            return read_file( in, length );
+            out.resize( pos + 1024 );
+            in.read( out.data() + pos, 1024 );
+            out.resize( pos += in.gcount() );
         }
 
-        void write_file( std::ofstream &out, std::string_view s )
-        {
-            if ( !out.is_open() )
-                brq::raise() << "writing filestream";
-            out.write( s.data(), s.size() );
-        }
+        return out;
+    }
 
-        void write_file( std::string_view file, std::string_view data )
-        {
-            std::ofstream out( std::string( file ), std::ios::binary );
-            if ( !out.is_open() )
-                brq::raise< system_error >() << "writing file " << file;
-            out << data;
-            if ( !out.good() )
-                brq::raise< system_error >() << "writing data to file " << file;
-        }
+    inline std::string read_file( std::string_view file,
+                                  size_t length = std::numeric_limits< size_t >::max() )
+    {
+        std::ifstream in( c_str( file ), std::ios::binary );
+        if ( !in.is_open() )
+            brq::raise() << "reading file " << file;
+        return read_file( in, length );
+    }
+
+    inline std::string read_file_or( std::string_view file, std::string_view def,
+                                     size_t length = std::numeric_limits< size_t >::max() )
+    {
+        std::ifstream in( c_str( file ), std::ios::binary );
+        if ( !in.is_open() )
+            return std::string( def );
+        return read_file( in, length );
+    }
+
+    inline void write_file( std::ofstream &out, std::string_view s )
+    {
+        if ( !out.is_open() )
+            brq::raise() << "writing filestream";
+        out.write( s.data(), s.size() );
+    }
+
+    inline void write_file( std::string_view file, std::string_view data )
+    {
+        std::ofstream out( std::string( file ), std::ios::binary );
+        if ( !out.is_open() )
+            brq::raise< system_error >() << "writing file " << file;
+        out << data;
+        if ( !out.good() )
+            brq::raise< system_error >() << "writing data to file " << file;
     }
 
 #ifdef _WIN32

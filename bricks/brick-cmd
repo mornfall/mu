@@ -85,7 +85,7 @@ namespace brq
         explicit operator bool() const { return !name.empty(); }
     };
 
-    static parse_result from_string( std::string_view s, cmd_flag &f )
+    inline parse_result from_string( std::string_view s, cmd_flag &f )
     {
         return from_string( s, f._value );
     }

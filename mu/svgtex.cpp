@@ -126,6 +126,7 @@ void convert_page( PopplerPage *page, int docid, float scale )
     };
 
     auto surface = cairo_svg_surface_create_for_stream( do_write, &buf, width * scale, height * scale );
+    cairo_svg_surface_set_document_unit( surface, CAIRO_SVG_UNIT_PT );
 
     auto drawcontext = cairo_create(surface);
     cairo_scale(drawcontext, scale, scale);

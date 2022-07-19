@@ -156,10 +156,12 @@ namespace umd::doc
         void math_start() override
         {
             _in_math = true;
+
             if ( _in_mpost )
                 out.emit( "\\math{" );
             else
-                out.emit( "<tex>\\startMPpage[instance=mathfun]\npicture p; p := btex \\math{" );
+                out.emit( "<tex>\\setupMPinstance[mathfun][textcolor=", fgcolor(), "]\n"
+                          "\\startMPpage[instance=mathfun]\npicture p; p := btex \\math{" );
         }
 
         void math_stop()  override

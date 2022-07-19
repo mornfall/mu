@@ -145,8 +145,8 @@ namespace umd::doc
             out.emit( "<tex>\\startTEXpage\\startformula[packed]\\startmathalignment[n=", n, "]" );
         }
 
-        void eqn_new_cell() override { out.emit( "\\NC" ); }
-        void eqn_new_row() override { out.emit( "\\NR" ); }
+        void eqn_new_cell() override { out.emit( "\\NC " ); }
+        void eqn_new_row() override { out.emit( "\\NR " ); }
         void eqn_stop() override
         {
             _in_math = false;

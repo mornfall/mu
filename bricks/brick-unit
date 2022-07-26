@@ -18,7 +18,7 @@
 #include "brick-assert"
 #include "brick-string"
 #include <string_view>
-#include <functional>
+#include <list>
 #include <memory>
 
 namespace brq
@@ -34,37 +34,50 @@ namespace brq
         }
     };
 
-    template< typename base_t >
-    struct test_fixture
+    struct test_fixture_base
     {
-        std::unique_ptr< base_t > orig;
-        std::weak_ptr< base_t >   work_weak;
-        std::shared_ptr< base_t > work;
+        virtual void save() = 0;
+        virtual void reset() = 0;
+    protected:
+        ~test_fixture_base() = default;
+    };
+
+    using test_fixtures_t = std::list< test_fixture_base * >;
+    static inline test_fixtures_t test_fixtures;
+
+    template< typename fixture_t >
+    struct test_fixture : test_fixture_base
+    {
+        std::shared_ptr< fixture_t > fixture;
+        std::unique_ptr< fixture_t > backup;
+        test_fixtures_t::iterator self;
 
         template< typename... args_t >
         test_fixture( args_t && ... args )
-            : orig( new base_t( std::forward< args_t >( args )... ) )
+            : fixture( new fixture_t( std::forward< args_t >( args )... ) ),
+              self( test_fixtures.insert( test_fixtures.end(), this ) )
         {}
 
-        test_fixture( const test_fixture &o ) = delete;
-        test_fixture( test_fixture &o )
-            : work( new base_t( *o.orig ) )
+        ~test_fixture()
         {
-            o.work_weak = work;
+            if ( self != test_fixtures.end() )
+                test_fixtures.erase( self );
         }
 
-        base_t *get() const
-        {
-            if ( auto ptr = work_weak.lock() )
-                return ptr.get();
-            else if ( work )
-                return work.get();
-            else
-                return orig.get();
-        }
+        void save()  override { backup.reset( new fixture_t( *fixture ) ); }
+        void reset() override { fixture = std::move( backup ); }
 
-        base_t *operator->() const { return  get(); }
-        base_t &operator*()  const { return *get(); }
+        fixture_t *operator->() const { return  fixture.get(); }
+        fixture_t &operator*()  const { return *fixture; }
+
+    private:
+        struct copy_t {};
+        template< typename this_t > test_fixture( copy_t, this_t &&o )
+            : fixture( o.fixture ), self( test_fixtures.end() )
+        {}
+    public:
+        test_fixture( test_fixture &o )       : test_fixture( copy_t(), o ) {}
+        test_fixture( const test_fixture &o ) : test_fixture( copy_t(), o ) {}
     };
 
     struct test_case
@@ -85,6 +98,9 @@ namespace brq
                 trace().use_buffer( true );
             if ( !was_throwing )
                 singleton< assert_config >().throw_on_fail = true;
+
+            for ( auto &f : test_fixtures )
+                f->save();
         }
 
         void cleanup()
@@ -95,6 +111,9 @@ namespace brq
                 trace().use_buffer( false );
 
             singleton< assert_config >().throw_on_fail = was_throwing;
+
+            for ( auto &f : test_fixtures )
+                f->reset();
         }
 
         template< typename fun_t >

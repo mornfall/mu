@@ -274,7 +274,7 @@ namespace umd::doc
         void code_line( sv l )  override { text( l ); out.emit( "\n" ); }
         void code_stop()        override { out.emit( "</code></pre>\n" ); }
         void quote_start()      override { out.emit( "<blockquote>\n" ); }
-        void quote_stop()       override { out.emit( "</blockquote>\n" );  }
+        void quote_stop()       override { out.emit( "</blockquote>\n" ); }
 
         void small_start() override {}
         void small_stop()  override {}

@@ -5,6 +5,17 @@
 
 #include <map>
 #include <bitset>
+#include <brick-except>
+
+namespace umd::pic
+{
+    struct bad_picture : brq::error
+    {
+        using brq::error::error;
+        std::u32string picture;
+        int x = 0, y = 0;
+    };
+};
 
 namespace umd::pic::reader
 {
@@ -58,8 +69,12 @@ namespace umd::pic::reader
 
         dir_t dir( std::bitset< 8 > bs ) const
         {
-            assert( bs.count() > 0 );
-            assert( bs.count() == 1 );
+            if ( bs.count() == 0 )
+                brq::raise< bad_picture >() << "unattached line";
+
+            if ( bs.count() > 1 )
+                brq::raise< bad_picture >() << "ambiguous attachment";
+
             for ( dir_t dir : all_dirs )
                 if ( bs[ dir ] )
                     return dir;
@@ -125,6 +140,7 @@ namespace umd::pic::reader
         int _x = 0, _y = 0;
         std::vector< std::tuple< int, int, cell > > _iterable;
         std::vector< std::vector< cell > > _indexable;
+        std::u32string_view _raw;
 
         grid() { _indexable.emplace_back(); }
 
@@ -166,6 +182,8 @@ namespace umd::pic::reader
     static inline grid read_grid( std::u32string_view ptr )
     {
         grid g;
+        g._raw = ptr;
+
         while ( !ptr.empty() )
             g.add( ptr[0] ), ptr.remove_prefix( 1 );
         return g;

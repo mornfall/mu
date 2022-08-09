@@ -302,21 +302,29 @@ namespace umd::pic::convert
         state s( grid );
         auto seen = [&]( int x, int y ) { return s.processed.count( reader::point( x, y ) ); };
 
-        for ( auto [ x, y, c ] : grid )
-            if ( c.attach() )
-                s.object( x, y );
+        try
+        {
+            for ( auto [ x, y, c ] : grid )
+                if ( c.attach() )
+                    s.object( x, y );
 
-        for ( auto [ x, y, c ] : grid )
-            if ( c.arrow() && !seen( x, y ) )
-                s.arrow( x, y );
+            for ( auto [ x, y, c ] : grid )
+                if ( c.arrow() && !seen( x, y ) )
+                    s.arrow( x, y );
 
-        for ( auto [ x, y, c ] : grid )
-            if ( c.attach() && !seen( x, y ) )
-                s.line( x, y );
+            for ( auto [ x, y, c ] : grid )
+                if ( c.attach() && !seen( x, y ) )
+                    s.line( x, y );
 
-        for ( auto [ x, y, c ] : grid )
-            if ( c.text() && !seen( x, y ) )
-                s.label( x, y );
+            for ( auto [ x, y, c ] : grid )
+                if ( c.text() && !seen( x, y ) )
+                    s.label( x, y );
+        }
+        catch ( bad_picture &bp )
+        {
+            bp.picture = grid._raw;
+            throw;
+        }
 
         return s.group;
     }

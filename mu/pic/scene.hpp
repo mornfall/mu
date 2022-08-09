@@ -84,6 +84,7 @@ namespace umd::pic
     struct port_in : port
     {
         port_in( port p ) : port( p ) {}
+
         void emit( writer &o ) const override
         {
             o << -_dir << _position;
@@ -93,6 +94,7 @@ namespace umd::pic
     struct port_out : port
     {
         port_out( port p ) : port( p ) {}
+
         void emit( writer &o ) const override
         {
             o << _position << _dir;

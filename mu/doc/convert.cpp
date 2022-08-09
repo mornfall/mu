@@ -233,6 +233,8 @@ namespace umd::doc
                         flush(), w.math_stop();
                     -- in_math;
                     break;
+                case 0x2028:
+                    flush(); w.linebreak(); break;
                 default:
                     if ( !in_math && sup.find( c ) != sup.npos )
                         flush(), emit_footnote( c );

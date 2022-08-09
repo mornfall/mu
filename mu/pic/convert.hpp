@@ -124,26 +124,34 @@ namespace umd::pic::convert
         {
             int joined = 0;
             bool first = true;
+
             for ( ; grid[ p ].attach( dir ); p = p + diff( dir ) )
             {
                 if ( dashed && grid[ p ].dashed() )
                     *dashed = true;
+
                 if ( first )
                 {
                     first = false;
                     continue;
                 }
+
                 if ( ( !jcw && grid[ p ].attach( cw( dir ) ) ) ||
                      ( jcw && grid[ p ].attach( ccw( dir ) ) ) )
                     if ( ++joined == joins )
                         break;
+
+                if ( grid[ p + diff( dir ) ].node() )
+                    break;
             }
+
             return { p, joined };
         }
 
         using joins = std::array< int, 4 >;
+        using box_ptr = std::shared_ptr< pic::box >;
 
-        std::shared_ptr< pic::box > box( reader::point p, joins mj = { 1, 1, 1, 1 } )
+        box_ptr box( reader::point p, joins mj = { 1, 1, 1, 1 } )
         {
             std::array< reader::point, 4 > c;
             joins j;
@@ -153,6 +161,9 @@ namespace umd::pic::convert
                 return nullptr;
             else
                 processed.insert( p );
+
+            if ( grid[ p ].node() )
+                return nullptr;
 
             auto nw = p;
             auto [ ne, jn ] = boundary( p, east,   mj[ 0 ], false, dashed + 0 );

@@ -62,19 +62,25 @@ namespace umd::pic::convert
                 return pic::point( xpitch * p.x(), -ypitch * p.y() );
             };
 
+            reader::point next;
+
             auto head   = grid[ p ].head();
             auto at_dir = grid[ p ].attach_dir( to_dir );
             auto to     = p + diff( to_dir );
             auto to_obj = objects.at( to );
-            auto to_port = to_obj ? to_obj->port( opposite( to_dir ) ) : port( conv( p ), to_dir );
             std::vector< pic::point > points;
             bool dashed = false, curved = false;
+
+            auto to_port = port( conv( to ), to_dir );
+
+            if ( to_obj && ( !grid[ to ].attach( opposite( to_dir ) ) || grid[ to ].node() ) )
+                to_port = to_obj->port( opposite( to_dir ) );
 
             std::shared_ptr< pic::object > from_obj = nullptr;
 
             while ( true )
             {
-                auto next = p + diff( at_dir );
+                next = p + diff( at_dir );
                 from_obj = objects.at( next );
 
                 if ( grid[ p ].dashed() )
@@ -83,22 +89,29 @@ namespace umd::pic::convert
                     curved = true;
 
                 processed.insert( p );
-                p = next;
+
                 auto cell = grid[ next ];
                 auto ndir = at_dir;
 
                 if ( from_obj || cell.arrow() )
                     break;
 
+                p = next;
+
                 if ( !cell.attach_all() && !cell.arrow() )
                     ndir = cell.attach_dir( opposite( at_dir ) );
                 if ( at_dir != ndir )
                     points.emplace_back( xpitch * next.x(), -ypitch * next.y() );
+
                 at_dir = ndir;
             }
 
-            auto from_port = from_obj ? from_obj->port( opposite( at_dir ) )
-                                      : port( conv( p ), at_dir );
+            auto from = grid[ next ];
+            auto from_port = port( conv( next ), at_dir );
+
+            if ( from_obj && ( !from.attach( opposite( at_dir ) ) || from.node() ) )
+                from_port = from_obj->port( opposite( at_dir ) );
+
             auto &arrow = *group.add< pic::arrow >( from_port, to_port );
             arrow._dashed = dashed;
             arrow._curved = curved;

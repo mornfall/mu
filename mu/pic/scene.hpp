@@ -28,19 +28,10 @@ namespace umd::pic
         return w;
     }
 
-    struct string_writer : writer
+    inline writer &operator<<( writer &w, std::string_view sv )
     {
-        brq::string_builder &b;
-        string_writer( brq::string_builder &b ) : b ( b ) {}
-        virtual void emit_mpost( std::string_view sv ) { b << sv; }
-        virtual void emit_tex( std::u32string_view sv ) { b << sv; }
-    };
-
-    static inline brq::string_builder &operator<<( brq::string_builder &s, const element &obj )
-    {
-        string_writer sw( s );
-        obj.emit( sw );
-        return s;
+        w.emit_mpost( sv );
+        return w;
     }
 
     struct point : element
@@ -56,7 +47,7 @@ namespace umd::pic
 
         void emit( writer &w ) const override
         {
-            w << "(" << x << ", " << y << ")";
+            w << "(" << std::to_string( x ) << ", " << std::to_string( y ) << ")";
         }
     };
 
@@ -69,11 +60,11 @@ namespace umd::pic
 
         void emit( writer &w ) const override
         {
-            w << "{dir " << angle << "}";
+            w << "{dir " << std::to_string( angle ) << "}";
         }
     };
 
-    static inline point dir_to_vec( dir d )
+    inline point dir_to_vec( dir d )
     {
         auto rad = 4 * std::atan( 1 ) * float( d.angle ) / 180;
         return point( std::cos( rad ), std::sin( rad ) );
@@ -214,8 +205,8 @@ namespace umd::pic
 
         void emit( writer &o ) const override
         {
-            o << "fill fullcircle scaled " << 2 * _radius << " shifted " << _position
-              << " withcolor fg;\n";
+            o << "fill fullcircle scaled " << std::to_string( 2 * _radius )
+              << " shifted " << _position << " withcolor fg;\n";
         }
     };
 
@@ -267,17 +258,18 @@ namespace umd::pic
                   se = _position + point(  _w/2, -_h/2 ),
                   sw = _position + point( -_w/2, -_h/2 );
 
-            auto corner = []( auto t ) -> std::string
+            auto corner = []( writer &w, auto t ) -> writer &
             {
                 auto [ a, b, c ] = t;
-                return brq::format( a, ".. controls", b, "..", c ).buffer();
+                return w << a << ".. controls" << b << ".." << c;
             };
 
             auto line = [&]( int i, auto f, auto t )
             {
                 if ( !_hidden[ i ] )
                 {
-                    o << "draw " << corner( f ) << " -- " << std::get< 0 >( t );
+                    o << "draw ";
+                    corner( o, f ) << " -- " << std::get< 0 >( t );
                     if ( _dashed[ i ] )
                         o << " dashed dotted";
                     o << " withcolor fg;";
@@ -297,8 +289,12 @@ namespace umd::pic
                 line( 3, c_sw, c_nw );
             }
             else
-                o << corner( c_nw ) << " -- " << corner( c_ne ) << " -- "
-                  << corner( c_se ) << " -- " << corner( c_sw ) << " -- cycle";
+            {
+                corner( o, c_nw ) << " -- ";
+                corner( o, c_ne ) << " -- ";
+                corner( o, c_se ) << " -- ";
+                corner( o, c_sw ) << " -- cycle";
+            }
 
             return o;
         }
@@ -311,9 +307,15 @@ namespace umd::pic
         void fill( writer &o ) const override
         {
             auto col = 1 - _shaded * 1.0 / 4;
+
             if ( _shaded )
-                o << "fill ", path( o, false )
-                  << " withcolor (" << col << ", " << col << ", " << col << ");\n";
+            {
+                o << "fill ";
+                path( o, false );
+                o << " withcolor (" << std::to_string( col ) << ", "
+                                    << std::to_string( col ) << ", "
+                                    << std::to_string( col ) << ");\n";
+            }
         }
     };
 

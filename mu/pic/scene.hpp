@@ -22,7 +22,7 @@ namespace umd::pic
         virtual ~element() {}
     };
 
-    static inline writer &operator<<( writer &w, const element &obj )
+    inline writer &operator<<( writer &w, const element &obj )
     {
         obj.emit( w );
         return w;

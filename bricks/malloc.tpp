@@ -69,7 +69,7 @@ int main()
         {
             auto ptr = ptrs[ i ] = brq::malloc< int >();
             *ptr = i;
-            ASSERTQ( !used.count( ptr ) );
+            ASSERT( !used.count( ptr ) );
             used.insert( ptr );
         }
 
@@ -85,11 +85,11 @@ int main()
             {
                 auto ptr = ptrs[ i ] = brq::malloc< int >();
                 *ptr = i;
-                ASSERTQ( !used.count( ptr ) );
+                ASSERT( !used.count( ptr ) );
                 used.insert( ptr );
             }
 
         for ( int i = 0; i < count; ++i )
-            ASSERTQ_EQ( *ptrs[ i ], i );
+            ASSERT_EQ( *ptrs[ i ], i );
     };
 }

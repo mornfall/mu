@@ -250,7 +250,7 @@ namespace brq::mm
         uint64_t base()  const { return uint64_t( _rep.a_group ) << 44 | s_group() << 36; }
         uint64_t raw()   const
         {
-            ASSERTQ_LT( index() * size(), 1ull << 36 );
+            ASSERT_LT( index() * size(), 1ull << 36 );
             return base() | index() * size();
         }
 
@@ -331,7 +331,7 @@ namespace brq::mm
     inline ptr< void > from_size( size_t bytes )
     {
         static_assert( sizeof( uint32_t ) == sizeof( unsigned ) );
-        ASSERTQ( bytes );
+        ASSERT( bytes );
 
         constexpr std::array< uint8_t, 18 > lgrp = { 1, 2, 2, 3, 3, 3, 4, 4, 4,
                                                      4, 5, 5, 5, 5, 6, 6, 6, 6 };

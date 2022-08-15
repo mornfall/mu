@@ -1,0 +1,540 @@
+#include <array>
+#include <unistd.h>
+#include <sys/mman.h>
+
+#include "brick-min"
+#include "brick-bitlevel"
+
+namespace brq::mm
+{
+    /* Allocations are sorted into a 2-level system of groups based their size.
+     * There are 6 ‘alignment groups’ and each of them has 256 ‘size groups’.
+     * The grouping is configured to balance a fairly tricky set of constraints
+     * and goals:
+     *
+     *  1. current POSIX systems are only willing to map addresses with highest
+     *     16 bits set to 0, giving us an address space somewhat smaller than
+     *     7⋅2⁴⁴ to play with,
+     *  2. the distance (in bits of alignment) between groups is what governs
+     *     how much memory we are willing to waste per allocation on alignment
+     *     (currently we make at most 4 bit jumps, which corresponds to 6.25%
+     *     space overhead due to alignment),
+     *  3. in the opposite direction, using more groups (both alignment and
+     *     size) means we need more bits per pointer and more metadata, neither
+     *     of which comes free; we use 1.5k groups total, which translates to
+     *     11 bits of information (rounded to whole bits) and 6 pages (24K) of
+     *     per-thread metadata + 3 pages (12K) of global metadata (not counting
+     *     out-of-line free list cells, which are shared between groups).
+     *
+     * The groups are split as follows:
+     *
+     *  •   4B –   1K in   4B increments (2 bit align),   # 2⁰-2¹⁰
+     *  •   1K –   4K in  16B increments (4 bit align),   # 2¹⁰+1 – 2¹²
+     *  •   4K –  32K in 128B increments (7 bit align),   # 2¹²+1 – 2¹⁵
+     *  •  32K – 512K in   2K increments (11 bit align),  # 2¹⁵+1 – 2¹⁹
+     *  • 512K –   8M in  32K increments (15 bit align),  # 2¹⁹+1 – 2²³
+     *  •   8M – 128M in 512K increments (19 bit align)   # 2²³+1 – 2²⁷
+     *
+     * Allocations above 128M are forwarded to the OS, one ‹mmap› per
+     * allocation. Compressed pointers are not available for those. */
+
+    constexpr uint32_t list_end = 0xffff'ffff;
+    using agrp_array = std::array< uint32_t, 8 >;
+
+    constexpr agrp_array misalign = { 0, 0x3, 0xf, 0x7f, 0x7ff, 0x7fff, 0x7ffff, 0x3ff };
+    constexpr agrp_array align    = { 0,   2,   4,    7,    11,     15,      19,    10 };
+    constexpr agrp_array idxmask  = { 0xffff'ffff, 0x7fff'ffff, 0x3fff'ffff, 0x1fff'ffff,
+                                      0x0fff'ffff, 0x07ff'ffff, 0x03ff'ffff, 0x01ff'ffff };
+
+    /* The per-thread free list is split into two parts, so that we can easily move
+     * excess free memory between threads (e.g. to cover cases where one thread is
+     * allocating items and sending them off to another thread for processing,
+     * which then frees them – we want the memory to keep returning to the
+     * allocating thread). At the same time, we don't want a ‘cliff’ where we send
+     * off all our free slots just to immediately realize we are out of memory and
+     * we have to get that free list back (this could lead to some serious
+     * thrashing if we get unlucky with a free/allocate loop right at the edge of
+     * this cliff). To keep them roughly balanced, we always add newly freed
+     * objects to the shorter of the two (see also ‹free_small› below). */
+
+    struct thread_group_t
+    {
+        uint32_t free[ 2 ];
+        uint32_t count[ 2 ];
+
+        void swap()
+        {
+            std::swap( free[ 0 ], free[ 1 ] );
+            std::swap( count[ 0 ], count[ 1 ] );
+        }
+    };
+
+    struct global_group_t
+    {
+        std::atomic< uint32_t > free, brk;
+    };
+
+    /* The metadata is split into per-thread and global parts. Per-thread
+     * metadata can be used without any synchronisation at all, which makes it
+     * fast. Access to global metadata is synchronised using ‹std::atomic›, but
+     * never uses any locking – the most complicated data structure around are
+     * singly-linked lists, and those can be made lockless reasonably easily. */
+
+    using thread_t = std::array< std::array< thread_group_t, 256 >, 6 >;
+    using global_t = std::array< std::array< global_group_t, 256 >, 6 >;
+
+    constexpr thread_group_t thread_init = { { list_end, list_end }, { 0, 0 } };
+
+    inline thread_local thread_t thread = {{ [ 0 ... 5 ] = {{ [ 0 ... 255 ] = thread_init }} }};
+    inline              global_t global = {{ [ 0 ... 5 ] = {{ [ 0 ... 255 ] = { list_end, 0 } }} }};
+
+    /* The global free list, or rather a list of free lists. When a local free list
+     * grows ‘too long’ the thread in question will donate the excess memory to this
+     * global free list. Likewise, when a thread runs out of its private free list,
+     * this is the first place it will try to get more slots. The individual free
+     * lists are of an essentially fixed size (see ‹free_small› later down) and
+     * are popped off the global list as a whole – we really don't want to walk a
+     * free list in the allocator (to move it one slot at a time), since that would
+     * send worst-case latency through the roof «and» it would trash the cache. */
+
+    struct global_free_t
+    {
+        struct cell
+        {
+            std::atomic< uint32_t > next;
+            uint32_t head;
+            uint32_t count;
+        };
+
+        static constexpr size_t size = 32 * 1024;
+        std::array< cell, size > cells;
+        std::atomic< uint32_t > unused;
+
+        void push_cell( std::atomic< uint32_t > &head, uint32_t index )
+        {
+            uint32_t old_head = head.load();
+            do
+                cells[ index ].next = old_head - index - 1;
+            while ( !head.compare_exchange_weak( old_head, index ) );
+        }
+
+        uint32_t pop_cell( std::atomic< uint32_t > &head )
+        {
+            uint32_t cell_idx = head.load();
+
+            while ( cell_idx != list_end &&
+                    !head.compare_exchange_weak( cell_idx,
+                                                 cell_idx + cells[ cell_idx ].next.load() + 1 ) );
+
+            return cell_idx;
+        }
+
+        void push( std::atomic< uint32_t > &g_head, uint32_t &t_head, uint32_t &count )
+        {
+            /* Pop a free cell off the list of unused cells. If we run out of
+             * cells, we can't do anything – the free memory remains with the
+             * thread for now (it might retry at some later point). */
+
+            if ( uint32_t cell_idx = pop_cell( unused ); cell_idx != list_end )
+            {
+                /* We have a cell, fill it in (by moving the entire thread-owned free
+                 * list) and push it onto the provided global stack. */
+
+                auto &cell = cells[ cell_idx ];
+                cell.head = t_head;
+                cell.count = count;
+                t_head = list_end;
+                count = 0;
+
+                push_cell( g_head, cell_idx );
+            }
+        }
+
+        bool pop( std::atomic< uint32_t > &g_head, uint32_t &t_head, uint32_t &count )
+        {
+            if ( uint32_t cell_idx = pop_cell( g_head ); cell_idx != list_end )
+            {
+                auto &cell = cells[ cell_idx ];
+                t_head = cell.head;
+                count  = cell.count;
+
+                /* Clear the now-unused cell and chain it onto the list of unused cells. */
+
+                cell.head  = list_end;
+                cell.count = 0;
+
+                push_cell( unused, cell_idx );
+                return true;
+            }
+            else
+                return false;
+        }
+    };
+
+    inline global_free_t global_free;
+
+    /* The allocator uses a fixed memory map, to make compressed pointers possible,
+     * without indirection through metadata. The map starts at 0x100000000000 (2⁴⁴)
+     * and uses a 44 bit (16TiB) mapping per alignment group. For ‘big’ (over 128M)
+     * allocations, no fixed mapping is made, there is no free list for this
+     * memory, and hence no compressed pointers – it is directly mapped and unmapped
+     * as needed. Large allocation support is only really useful if you want to use
+     * this code as a general-purpose allocator (e.g. via ‹brq::malloc›). */
+
+    [[gnu::constructor]] inline void init()
+    {
+        for ( uint64_t i = 1; i <= 6; ++i )
+        {
+            void *base = reinterpret_cast< void * >( i << 44 );
+            void *addr = mmap( base, 1ull << 44, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0 );
+
+            if ( base != addr )
+            {
+                fprintf( stderr, "brq::mm::init failed: could not map %p", base );
+                _exit( 1 );
+            }
+        }
+
+        global_free.cells[ global_free.size - 1 ].next = list_end - global_free.size - 2;
+    }
+
+    inline uint64_t size( uint32_t a_group, uint32_t s_group )
+    {
+        return uint64_t( s_group + 1 ) << align[ a_group ];
+    }
+
+    /* Compressed pointers are 39 bits long, allowing for 25 bits of extra data (or
+     * 24 bits of data + a locking bit). Alternatively, arrays of pointers can
+     * be stored as 32 + 8 bits split over two blocks of memory. The allocation
+     * size can be fairly efficiently computed both from the compressed and
+     * uncompressed pointers, but depending on alignment group, additional bits are
+     * needed to store the exact size (in a compressed pointer, these bits always
+     * fit in the tag: at most 19 bits are needed for the highest alignment group,
+     * leaving 6 free bits). */
+
+    struct ptr_rep
+    {
+        uint64_t tag:25;
+
+        uint64_t a_group:3; /* alignment group */
+        uint64_t s_bits:3;  /* this many top bits of index are actually size */
+        uint64_t s_low:1;   /* the lowest bit of size */
+        uint64_t index:32;  /* 32-sz_bits bits of index + sz_bits bits of size */
+
+        ptr_rep() : tag( 0 ), a_group( 0 ), s_bits( 0 ), s_low( 0 ), index( 0 ) {}
+    };
+
+    template< typename type >
+    struct ptr_base
+    {
+        ptr_rep _rep;
+
+        /* The following methods compute/access the group numbers and the
+         * allocation size. The only tricky part is the overlap between the ‹index›
+         * and the ‹s_group› (resolved in the like-named methods). */
+
+        int      s_shift() const { return 31 - _rep.s_bits; }
+        uint64_t s_index() const { return ( _rep.index & ~idxmask[ _rep.s_bits ] ) >> s_shift(); }
+        uint64_t s_group() const { return _rep.s_low | s_index(); }
+        uint64_t a_group() const { return _rep.a_group; }
+        uint64_t size()    const { return mm::size( a_group(), s_group() ); }
+        uint64_t index()   const { return _rep.index & idxmask[ _rep.s_bits ]; }
+
+        /* Conversion to actual pointers that can be dereferenced. The uncompressed
+         * pointer consists of 3 bits for alignment group, 8 bits for size group
+         * and 36 bits for offset. The conversion between the two is purely
+         * arithmetic (no memory operations need to be done, in principle, though
+         * we use a couple of small lookup tables (see above) to avoid branching). */
+
+        uint64_t base()  const { return uint64_t( _rep.a_group ) << 44 | s_group() << 36; }
+        uint64_t raw()   const
+        {
+            ASSERTQ_LT( index() * size(), 1ull << 36 );
+            return base() | index() * size();
+        }
+
+        type *get() const { return reinterpret_cast< type * >( raw() ); }
+        type *operator->() const { return get(); }
+
+        /* Bitwise comparison of compressed pointers. NB. We should reconsider
+         * whether the tag should really participate (as it stands, pointers can
+         * compare unequal even if they point to the same object). */
+
+        bool operator==( ptr_base< type > o ) const
+        {
+            return brq::bitcast< uint64_t >( _rep ) == brq::bitcast< uint64_t >( o._rep );
+        }
+
+        explicit ptr_base( ptr_rep r ) : _rep( r ) {}
+        ptr_base() = default;
+    };
+
+    /* What follows is just template boilerplate to make typed pointers work
+     * reasonably well, including ‹void› pointers. Feel free to skip ahead. */
+
+    template< typename type, typename = void > struct ptr;
+
+    template<>
+    struct ptr< void, void > : ptr_base< void >
+    {
+        using ptr_base< void >::ptr_base;
+
+        template< typename type >
+        ptr< type > cast() const { return ptr< type >( _rep ); }
+    };
+
+    template< typename type >
+    struct ptr< type, std::enable_if_t< !std::is_same_v< type, void > > > : ptr_base< type >
+    {
+        using ptr_base< type >::ptr_base;
+        using ptr_base< type >::get;
+
+        type &operator*() const { return *get(); }
+    };
+
+    /* We basically uncompress the pointers to print them. Much easier to
+     * follow, though if there are bugs in the decompression code (in
+     * ‹ptr_base›), this could end up being very misleading. Caveat emptor. */
+
+    template< typename type >
+    inline brq::string_builder &operator<<( brq::string_builder &b, ptr< type > p )
+    {
+        return b << p.a_group() << ":" << p.s_group() << ":" << p.index();
+    }
+
+    /* The following code computes the compressed form of the pointer, either
+     * directly from parts, or by reverse-mapping machine pointers. */
+
+    template< typename type = void >
+    inline ptr< type > from_parts( uint32_t a_group, uint32_t s_group, uint32_t index )
+    {
+        ptr< type > r;
+        r._rep.a_group = a_group;
+        r._rep.s_bits = 8 * sizeof( unsigned ) - __builtin_clz( s_group ) - 1;
+        r._rep.s_low  = s_group & 1;
+        r._rep.index  = uint64_t( s_group & 254 ) << ( 31 - r._rep.s_bits ) | index;
+        return r;
+    }
+
+    template< typename type >
+    ptr< type > from_ptr( type *ptr )
+    {
+        uint64_t bits = reinterpret_cast< uint64_t >( ptr );
+        uint32_t a_group = bits >> 44 & 7;
+        uint32_t s_group = bits >> 36 & 255;
+        uint64_t offset  = bits & 0xfffffffffull;
+
+        return from_parts< type >( a_group, s_group, offset / size( a_group, s_group ) );
+    }
+
+    inline ptr< void > from_size( size_t bytes )
+    {
+        static_assert( sizeof( uint32_t ) == sizeof( unsigned ) );
+        ASSERTQ( bytes );
+
+        constexpr std::array< uint8_t, 18 > lgrp = { 1, 2, 2, 3, 3, 3, 4, 4, 4,
+                                                     4, 5, 5, 5, 5, 6, 6, 6, 6 };
+
+        uint32_t lbytes  = __builtin_clz( ( ( bytes - 1 ) >> 9 ) | 1 );
+        uint32_t a_group = lgrp[ 31 - lbytes ];
+        uint64_t s_group = ( bytes >> align[ a_group ] ) + bool( bytes & misalign[ a_group ] ) - 1;
+
+        return from_parts( a_group, s_group, 0 );
+    }
+
+    /* The ‘boring’ slow paths for large allocations. The result is 16-byte
+     * aligned, which should be enough for everybody (we need to remember the
+     * size of the mapping and grabbing an entire page just for that seems a
+     * little excessive). Doing anything more complicated is probably not worth
+     * the effort. */
+
+    inline void *malloc_big( size_t bytes )
+    {
+        void *addr = mmap( nullptr, bytes + 16,
+                           PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0 );
+        uint64_t bits = reinterpret_cast< uint64_t >( addr );
+
+        if ( bits == -1 )
+            throw std::bad_alloc();
+
+        uint64_t *size = reinterpret_cast< uint64_t * >( addr );
+        *size = bytes;
+
+        return reinterpret_cast< void * >( bits + 16 );
+    }
+
+    inline void free_big( void *ptr )
+    {
+        char *base = reinterpret_cast< char * >( ptr ) - 16;
+        uint64_t *size = reinterpret_cast< uint64_t * >( base );
+        int r = munmap( base, *size + 16 );
+        ASSERT_EQ( r, 0 );
+    }
+
+    /* That's all of the preliminaries, what remains is the actual allocation
+     * and deallocation logic. The fast paths are designed to cause minimum
+     * memory traffic and to be essentially branch-less (though there's always
+     * at least one unlikely branch that diverts onto the slow path).
+     *
+     * The next function, however, is the slowest of the slow paths: we need to
+     * call out into the OS to get more memory mapped. That is costly because
+     * it inevitably means page table shuffling, as if syscall overhead wasn't
+     * bad enough by itself. */
+
+    inline void map_memory( global_group_t &global, ptr< void > base, uint32_t &head, uint32_t &count )
+    {
+        uint64_t offset = global.brk ++;
+        uint64_t chunk  = std::max( 512ull * 1024u, base.size() );
+        void    *addr   = reinterpret_cast< void * >( base.raw() + offset * chunk );
+
+        if ( offset * chunk >= 1ull << 36 )
+            [[unlikely]] throw std::bad_alloc();
+
+        if ( mprotect( addr, chunk, PROT_READ | PROT_WRITE ) != 0 )
+            [[unlikely]] throw std::bad_alloc();
+
+        /* We got the memory: it already constitutes an almost valid free list, but
+         * we still need to terminate it. The last thing we need to do is point the
+         * thread-local head at the first item, which is the one at the lowest
+         * address (i.e. at ‹base›). We just need to turn that into a valid index
+         * (‹offset› is in chunks, but the unit of the free list is the allocation
+         * size). */
+
+        head  = offset * chunk / base.size();
+        count = chunk / base.size();
+
+        auto end_index = head + count - 1;
+
+        base._rep.index |= end_index;
+        *base.cast< uint32_t >() = list_end - end_index - 1;
+    }
+
+    inline ptr< void > malloc_small( size_t bytes )
+    {
+        /* The first thing we need to do is find the alignment and size groups. We
+         * can do that by constructing the final pointer (without an index) and
+         * getting the groups from that, with the hope that the optimizer will
+         * remove the redundant part of the computation. */
+
+        auto r = from_size( bytes );
+        auto &thread = mm::thread[ r.a_group() ][ r.s_group() ];
+        auto &global = mm::global[ r.a_group() ][ r.s_group() ];
+
+        auto &thread_free  = thread.free[ 0 ];
+        auto &thread_count = thread.count[ 0 ];
+        auto &global_free  = global.free;
+
+        /* In all cases, eventually we will want to pop an item off the
+         * thread-local free list (the only question is how much we need to fiddle
+         * with that list first. This helper function does the popping. We use two
+         * tricks: ‹r› has index 0, but ‹_rep.index› also carries some ‹s_group›
+         * bits – we ‹or› the actual index in, to preserve those. The other is that
+         * the ‹next› pointers in free lists are relative, with zero meaning the
+         * «next» slot. This means that pages zeroed by the OS are already valid
+         * free lists, all slots ordered in sequence of increasing addresses. */
+
+        auto pop = [&]
+        {
+            r._rep.index |= thread_free;
+            thread_free += *r.cast< uint32_t >() + 1;
+            thread_count --;
+            return r;
+        };
+
+        /* Since fresh memory is immediately converted into a free list, it's a
+         * near certainty that we can satisfy the request that way. We pop off an
+         * item and return it. No atomics required since this is a thread-local
+         * list. */
+
+        if ( thread_free != list_end ) [[likely]]
+            return pop();
+
+        thread.swap();
+
+        if ( thread_free != list_end )
+            return pop();
+
+        /* We are out of per-thread free list, after all. There are now two options
+         * – either we fetch a new free list from the global pool, or if that also
+         * fails, we need to map in new memory. The global pool is a list of lists
+         * already cut to a suitable length (see ‹free_small›). */
+
+        if ( mm::global_free.pop( global_free, thread_free, thread_count ) )
+            return pop();
+
+        /* We did not manage to get anything from the global pool. Let's ask the
+         * kernel for more memory then. We also have to check that we didn't run
+         * out of addresses for this particular allocation group (in which case we
+         * just give up). */
+
+        map_memory( global, r, thread_free, thread_count );
+        return pop();
+    }
+
+    inline void free_small( ptr< void > ptr )
+    {
+        auto &thread = mm::thread[ ptr.a_group() ][ ptr.s_group() ];
+        auto &global = mm::global[ ptr.a_group() ][ ptr.s_group() ];
+
+        int  use_backup    = thread.free[ 0 ] > thread.free[ 1 ];
+        auto &thread_free  = thread.free[ use_backup ];
+        auto &thread_count = thread.count[ use_backup ];
+
+        uint32_t count = ++thread_count;
+
+        /* We always start by chaining the freed object onto the smaller of the two
+         * thread-local free lists. If it isn't too big, that's all there is and we
+         * return immediately. Otherwise, we try to return some of our excess
+         * memory to the global pool. */
+
+        *ptr.cast< uint32_t >() = thread_free - ptr.index() - 1;
+        thread_free = ptr.index();
+
+        if ( count < 128 ) [[likely]] /* TODO scale the limit based on size */
+            return;
+
+        /* We do have a lot of memory. Sharing is caring. We also swap the lists if
+         * we just axed the primary, since allocations try to use the primary first. */
+
+        mm::global_free.push( global.free, thread_free, thread_count );
+
+        if ( !use_backup )
+            thread.swap();
+    }
+
+    inline void free_small( void *ptr )
+    {
+        free_small( from_ptr( ptr ) );
+    }
+}
+
+/* Finally, the user-facing interface. Slightly fancier than ‹std::malloc› as
+ * we don't have to be compatible with C. */
+
+namespace brq
+{
+    inline void *malloc( size_t bytes )
+    {
+        if ( bytes > 1ull << 27 ) [[unlikely]]
+            return mm::malloc_big( bytes );
+        else
+            return mm::malloc_small( bytes ).get();
+    }
+
+    template< typename type >
+    inline type *malloc( size_t count = 1 )
+    {
+        return reinterpret_cast< type * >( malloc( count * sizeof( type ) ) );
+    }
+
+    inline void free( void *ptr )
+    {
+        uint64_t bits = reinterpret_cast< uint64_t >( ptr );
+        uint32_t a_group = bits >> 44 & 0xf;
+
+        if ( a_group >= 1 && a_group <= 6 )
+            mm::free_small( ptr );
+        else
+            mm::free_big( ptr );
+    }
+}

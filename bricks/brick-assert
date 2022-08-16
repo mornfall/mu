@@ -140,8 +140,10 @@ namespace brq
 
     [[noreturn]] inline void assert_signal( assert_failed &err )
     {
+#if !defined(__divine__)
         if ( singleton< assert_config >().throw_on_fail )
             throw std::move( err );
+#endif
 
 #if defined(__divine__)
         if ( err.truncated() )

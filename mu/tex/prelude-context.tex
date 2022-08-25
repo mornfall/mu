@@ -143,6 +143,7 @@
 \def\titlesize{18pt}
 \def\sectionsize{14.5pt} % only for notes
 \def\subsectionsize{13pt}
+\def\subsubsectionsize{11pt}
 \def\bodysize{11pt}
 \def\listsize{9.4pt}
 \ifslides \def\codesize{9.2pt} \fi
@@ -162,8 +163,10 @@
 \ifslides
   \setuphead[section, subsection] [before={\startmakeup[titleslide]}, after={\stopmakeup}]
 \else
-  \setuphead[section]    [style={\switchtobodyfont[\sectionsize]}]
-  \setuphead[subsection] [style={\switchtobodyfont[\subsectionsize]}]
+  \setuphead[section]       [style={\switchtobodyfont[\sectionsize]}]
+  \setuphead[subsection]    [style={\switchtobodyfont[\subsectionsize]}, before={\blank[6pt]},
+                             after={\vskip-4pt}]
+  \setuphead[subsubsection] [style={\switchtobodyfont[\subsubsectionsize]}, after={\vskip-6pt}]
 \fi
 
 %

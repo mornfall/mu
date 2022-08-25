@@ -116,7 +116,9 @@ namespace umd::doc
         while ( skip( U'#' ) )
             ++ level;
         skip_white();
-        w.heading( fetch_line(), level );
+        w.heading_start( level );
+        emit_text( fetch_line() );
+        w.heading_stop();
     }
 
     bool convert::end_list( int count, bool xspace )

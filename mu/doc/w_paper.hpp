@@ -19,9 +19,14 @@ namespace umd::doc
         bool in_math = false;
         bool first_cell = true;
 
-        virtual void heading( std::u32string_view t, int level )
+        virtual void heading_start( int level )
         {
-            out.emit( heading_cmd( level ), "{", t, "}" );
+            out.emit( heading_cmd( level ), "{" );
+        }
+
+        virtual void heading_stop()
+        {
+            out.emit( "}" );
         }
 
         /* spans ; may be also called within mpost btex/etex */

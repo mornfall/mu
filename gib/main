@@ -1,0 +1,28 @@
+# system configuration
+
+set cxx /usr/bin/c++
+set cc  /usr/bin/cc
+set ar  /usr/bin/ar
+set obj
+
+set cxxflags -fdiagnostics-color -fmessage-length=100 -std=c++17 -g -ferror-limit=1
+add cxxflags -I$(srcdir)/mu -I$(srcdir)/bricks
+set cflags
+set ldflags
+
+sub? gib/sys.$(uname)
+sub? gib/local
+sub  gib/bundle/boot.gib
+
+out gib.manifest
+cmd gib.findsrc $(srcdir) $(out)
+
+src sources dirs gib.manifest
+
+out create build directories
+dep gib.manifest
+cmd gib.nochange /bin/mkdir -p $(dirs) bin
+
+sub mu/bundle.gib
+
+set all bin/mu bin/svgtex bin/mu-pic

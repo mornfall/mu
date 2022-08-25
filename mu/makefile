@@ -1,6 +1,5 @@
 .CURDIR ?= .
-CXXFLAGS += -MD -MP -I$(.CURDIR) -std=c++17 -I/usr/local/include -Wextra -Wall -Werror \
-            -fcolor-diagnostics -I$(.CURDIR)/bricks
+CXXFLAGS += -MD -MP -I$(.CURDIR) -std=c++17 -I/usr/local/include -Wextra -Wall
 LDADD += -L/usr/local/lib -licuuc
 FONTCSS = $(.CURDIR)/html/fonts.css
 

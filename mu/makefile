@@ -1,9 +1,10 @@
 .CURDIR ?= .
-CXXFLAGS += -MD -MP -I$(.CURDIR) -std=c++17 -I/usr/local/include
+CXXFLAGS += -MD -MP -I$(.CURDIR) -std=c++17 -I/usr/local/include -Wextra -Wall -Werror \
+            -fcolor-diagnostics -I$(.CURDIR)/bricks
 LDADD += -L/usr/local/lib -licuuc
 
 SRC_common = doc/convert.cpp
-SRC = $(SRC_common) slides.cpp paper.cpp pic.cpp
+SRC = $(SRC_common) slides.cpp paper.cpp pic.cpp main.cpp
 BIN = mu mu-pic
 
 LIB = ${SRC_common:%.cpp=%.o}
@@ -22,6 +23,9 @@ mu-paper: paper.o $(LIB)
 
 mu-pic: pic.o $(LIB)
 	$(CXX) -o $@ $(LIB) pic.o $(LDADD)
+
+mu: main.o $(LIB)
+	$(CXX) -o $@ $(LIB) main.o $(LDADD)
 
 clean:
 	rm -f $(OBJ) $(DEP) $(BIN) svgtex

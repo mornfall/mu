@@ -215,6 +215,7 @@ namespace umd::doc
     void convert::emit_text( std::u32string_view v )
     {
         sv sup = U"¹²³⁴⁵⁶⁷⁸⁹";
+
         auto char_cb = [&]( auto flush, char32_t c )
         {
             switch ( c )
@@ -239,7 +240,7 @@ namespace umd::doc
                     flush(); w.linebreak(); break;
                 default:
                     if ( !in_math && sup.find( c ) != sup.npos )
-                        flush(), emit_footnote( c );
+                        emit_footnote( flush, c );
             }
         };
 
@@ -299,26 +300,48 @@ namespace umd::doc
             w.code_stop(), in_code = false;
     }
 
-    /* scan ahead: quadratic in the number of footnotes, not a
-     * bottleneck for now */
-    void convert::emit_footnote( char32_t head )
+    template< typename flush_t >
+    void convert::process_footnote( flush_t flush, sv par )
+    {
+        w.footnote_head();
+        flush();
+        w.footnote_start();
+
+        while ( !par.empty() )
+        {
+            auto line = fetch( par, newline );
+
+            if ( line.size() >= 1 && sv( U"¹²³⁴⁵⁶⁷⁸⁹" ).find( line[ 0 ] ) != sv::npos )
+                break; /* another footnote → done */
+
+            _last_footnote = line;
+            emit_text( line );
+        }
+
+        w.footnote_stop();
+    }
+
+    template< typename flush_t >
+    void convert::emit_footnote( flush_t flush, char32_t head )
     {
         std::stack< sv > backup;
 
         while ( todo.size() > 1 )
             backup.emplace( todo.top() ), todo.pop();
         checkpoint();
+        skip_to_addr( &*_last_footnote.end() + 1 );
 
         while ( have_chars() )
         {
             auto par = fetch_par();
-            if ( par[ 0 ] == head )
+            if ( par.size() >= 2 && par[ 0 ] == head && par[ 1 ] == U' ' )
             {
-                w.footnote_start();
-                emit_text( par.substr( 1 ) );
-                w.footnote_stop();
+                _footnotes.insert( par.data() );
+                process_footnote( flush, par.substr( 2 ) );
                 break;
             }
+            else if ( sv( U"¹²³⁴⁵⁶⁷⁸⁹" ).find( par[ 0 ] ) != sv::npos )
+                break; /* mismatch → not a footnote */
         }
 
         restore();
@@ -658,6 +681,7 @@ namespace umd::doc
             body();
 
         try_table();
+
         while ( try_dispmath() );
         if ( !in_code )
             try_picture();
@@ -676,7 +700,7 @@ namespace umd::doc
             if ( starts_with( std::u32string( 40, c ) ) )
                 fetch_line(), w.hrule( c );
 
-        if ( have_chars() && sv( U"¹²³⁴⁵⁶⁷⁸⁹" ).find( peek() ) != sv::npos )
+        if ( _footnotes.count( todo.top().data() ) )
             return fetch_par(), body();
 
         if ( starts_with( U'' ) )

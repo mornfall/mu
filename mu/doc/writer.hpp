@@ -112,6 +112,7 @@ namespace umd::doc
         virtual void code_stop() = 0;
         virtual void quote_start() {}
         virtual void quote_stop() {}
+        virtual void footnote_head() {}
         virtual void footnote_start() = 0;
         virtual void footnote_stop() = 0;
 

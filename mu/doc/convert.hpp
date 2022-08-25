@@ -3,11 +3,11 @@
 #include "pic/writer.hpp"
 #include <string_view>
 #include <stack>
+#include <set>
 #include <cassert>
 
 namespace umd::doc
 {
-
     static inline int stoi( std::u32string_view n )
     {
         std::wstring_convert< std::codecvt_utf8< char32_t >, char32_t > conv;
@@ -20,7 +20,15 @@ namespace umd::doc
 
         doc::writer &w;
         std::stack< sv > todo;
-        convert( sv t, doc::writer &w ) : w( w ) { todo.emplace( t ); }
+
+        std::set< const char32_t * > _footnotes;
+        sv _last_footnote;
+
+        convert( sv t, doc::writer &w )
+            : w( w ), _last_footnote( t.substr( 0, 0 ) )
+        {
+            todo.emplace( t );
+        }
 
         struct list
         {
@@ -50,6 +58,12 @@ namespace umd::doc
 
         void skip_white() { skip_white( todo.top() ); }
         bool skip( char32_t c );
+
+        void skip_to_addr( const char32_t *a )
+        {
+            if ( a > todo.top().data() )
+                shift( a - todo.top().data() );
+        }
 
         std::pair< int, int > skip_item_lead( list::type );
         int skip_bullet_lead();
@@ -93,7 +107,9 @@ namespace umd::doc
         void restore() { todo.pop(); }
 
         void emit_text( std::u32string_view v );
-        void emit_footnote( char32_t head );
+
+        template< typename flush_t > void process_footnote( flush_t, sv par );
+        template< typename flush_t > void emit_footnote( flush_t, char32_t head );
 
         void heading();
         void start_list( list::type l, int indent, int first );

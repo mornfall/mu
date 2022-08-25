@@ -300,7 +300,7 @@ namespace umd::doc
 
         void ensure_div()
         {
-            if ( !_in_div && !_heading )
+            if ( !_in_div && !_heading && !_in_mpost )
             {
                 out.emit( "<div class=\"par\">" );
                 _in_div = true;

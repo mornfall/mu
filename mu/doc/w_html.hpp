@@ -302,6 +302,8 @@ namespace umd::doc
             _footnote.clear();
         }
 
+        void linebreak() override { out.emit( "<br>" ); }
+
         void footnote_stop() override
         {
             ensure_div();

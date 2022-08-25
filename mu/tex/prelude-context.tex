@@ -1,3 +1,4 @@
+\unprotect
 \newif\ifslides
 \ifnotes\else\slidestrue\fi
 
@@ -40,9 +41,12 @@
 \setuptolerance     [verytolerant, stretch]
 
 \input{prelude-typescript.tex}
+\input{prelude-strings.tex}
+
 \definefontfeature[default][default][protrusion=quality,expansion=quality]
 \setupalign[hz,hanging]
 \setupbodyfont[aleo]
+\language[\mmlang]
 
 %
 % slide setup
@@ -78,7 +82,6 @@
 % source code syntax highlighting
 %
 
-\unprotect
 \ifbw
 \definestartstop[SynSnippetKeyword]  [\c!style=boldface]
 \definestartstop[SynSnippetOperator] []
@@ -113,7 +116,6 @@
 \definestartstop[SynSnippetString]   [\c!color=darkgreen]
 \definestartstop[SynSnippetComment]  [\c!color=brownish]
 \fi\fi
-\protect
 
 \registerctxluafile{syn-cxx.lua}    {1.001}
 \registerctxluafile{syn-python.lua} {1.001}
@@ -148,7 +150,7 @@
 %
 
 \setuphead[section]       [align=center, sectionnumber=yes, placehead=yes, page=no,
-                           aftersection={}, sectionstarter=Part , sectionstopper=:, number=yes]
+                           aftersection={}, sectionstarter=\str!part\ , sectionstopper=:, number=yes]
 \setuphead[subsection]    [before={}, after={}, aftersection={}]
 \setuphead[subsubsection] [before={}, after={}, aftersection={}, sectionstarter={}, sectionstopper={}]
 
@@ -216,3 +218,4 @@ dotted := dashpattern( on 1 off 1.5 );
 
 \ifnotes\switchtobodyfont[\notesize]\fi
 \ifslides\switchtobodyfont[\bodysize]\fi
+\protect

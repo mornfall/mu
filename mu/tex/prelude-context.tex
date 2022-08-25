@@ -24,12 +24,12 @@
   \defineoverlay[slideover]
     [{\framed[width=\overlaywidth,height=\overlayheight,align={top,flushright},frame=no,roffset=2pt]
             {\hfill\footfont\rawcountervalue[slidenum]}}]
-  \def\startslide{\blank[6pt]\incrementcounter[slidenum]
-                  \startframed[align=width, width=93mm, frame=off, background={color,slideover},
-                               backgroundcolor=slidebg, offset=6pt]
-                  \switchtobodyfont[\bodysize]
-                  \def\codesize{9.2pt}
-                  \setupitemize[before={\blank[4pt]\switchtobodyfont[\listsize]}, after={\blank[2pt]},
+  \def\startslide{\blank[6pt]\incrementcounter[slidenum]%
+                  \startframed[align=width, width=93mm, frame=off, background={color,slideover},%
+                               backgroundcolor=slidebg, offset=8pt]%
+                  \switchtobodyfont[\bodysize]%
+                  \def\codesize{9.2pt}%
+                  \setupitemize[before={\blank[4pt]\switchtobodyfont[\listsize]}, after={\blank[2pt]},%
                                 width=12pt]}
   \def\stopslide{\stopframed\blank[4pt]}
 \else

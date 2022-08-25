@@ -1,0 +1,29 @@
+out gib.mu-pkgconfig
+dep mu/pkgconfig.sh
+cmd /bin/sh $(srcdir)/mu/pkgconfig.sh $(out)
+
+sub gib.mu-pkgconfig
+
+set obj_mu
+
+for src $(sources:*.cpp)
+out $(src:%.cpp:$1.o)
+dep $(src)
+dep create build directories
+add obj_mu $(out)
+cmd gib.wrapcc $(cxx) -c $(cxxflags) $(cxxflags.mu) -o $(out) $(srcdir)/$(src)
+
+out bin/mu
+dep $(obj_mu:mu/doc/*)
+dep $(obj_mu:mu/pic/*)
+dep mu/main.o
+cmd $(cxx) -o $(out) $(dep) $(ldflags) $(ldflags.mu)
+
+out bin/mu-pic
+dep $(obj_mu:mu/pic/*)
+dep mu/pic.o
+cmd $(cxx) -o $(out) $(dep) $(ldflags) $(ldflags.mu)
+
+out bin/svgtex
+dep mu/svgtex.o
+cmd $(cxx) -o $(out) $(dep) $(ldflags) $(ldflags.svgtex)

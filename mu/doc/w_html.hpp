@@ -77,9 +77,9 @@ namespace umd::doc
                 out.emit( "</div></body></html>" );
         }
 
-        void text( std::u32string_view t ) override { return text( t, false ); }
+        void text( std::u32string_view t ) override { return text( t, true ); }
 
-        void text( std::u32string_view t, bool code )
+        void text( std::u32string_view t, bool allow_div )
         {
             auto char_cb = [&]( auto flush, char32_t c )
             {
@@ -100,7 +100,7 @@ namespace umd::doc
                 w_tex::text( t );
             else
             {
-                if ( !code ) ensure_div();
+                if ( allow_div ) ensure_div();
                 process( t, char_cb, [&]( auto s ) { out.emit( s ); } );
             }
         }
@@ -279,7 +279,7 @@ namespace umd::doc
         void bullet_stop( bool )     override { list_stop(); out.emit( "</ul>" ); }
 
         void code_start( sv t ) override { out.emit( "<pre><code class=\"", t, "\">" ); }
-        void code_line( sv l )  override { text( l, true ); out.emit( "\n" ); }
+        void code_line( sv l )  override { text( l, false ); out.emit( "\n" ); }
         void code_stop()        override { out.emit( "</code></pre>\n" ); }
         void quote_start()      override { out.emit( "<blockquote>\n" ); }
         void quote_stop()       override { out.emit( "</blockquote>\n" ); }

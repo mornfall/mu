@@ -24,7 +24,7 @@
             {\hfill\footfont\rawcountervalue[slidenum]}}]
   \def\startslide{\blank[6pt]\incrementcounter[slidenum]
                   \startframed[align=width, width=96mm, frame=off, background={color,slideover},
-                               backgroundcolor=lightgray, offset=6pt]
+                               backgroundcolor=lightgray, offset=6pt]\switchtobodyfont[\bodysize]}
   \def\stopslide{\stopframed\blank[4pt]}
 \else
   \def\startslide{\startmakeup[slide]}
@@ -136,9 +136,10 @@
 \def\titlesize{18pt}
 \def\sectionsize{14.5pt} % only for notes
 \def\subsectionsize{13pt}
-\def\bodysize{10pt}
-\def\listsize{9.6pt}
-\def\codesize{9.4pt}
+\def\bodysize{11pt}
+\def\listsize{9.4pt}
+\ifslides \def\codesize{9.2pt} \fi
+\ifnotes  \def\codesize{6.95pt} \fi
 \def\notesize{8.6pt}
 \def\footsize{6.4pt}
 
@@ -213,4 +214,5 @@ dotted := dashpattern( on 1 off 1.5 );
   \setupfootertexts [{\footfont{\foottext}}]
 \fi
 
-\switchtobodyfont[\notesize]
+\ifnotes\switchtobodyfont[\notesize]\fi
+\ifslides\switchtobodyfont[\bodysize]\fi

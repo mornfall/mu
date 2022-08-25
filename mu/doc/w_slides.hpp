@@ -49,7 +49,7 @@ namespace umd::doc
 
         virtual void heading_stop()
         {
-            out.emit( "}]" );
+            out.emit( "}]\n" );
         }
 
         /* display math */

@@ -33,7 +33,7 @@ namespace umd::doc
 
         void heading_stop() override
         {
-            out.emit( "}]\\ifnotes{}" );
+            out.emit( "}]\\ifnotes{}\n" );
             if ( section_level.top() == 1 )
                 in_cols = true, out.emit( "\\startsectioncolumns\n" );
         }

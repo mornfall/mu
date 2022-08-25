@@ -19,7 +19,7 @@ namespace umd::doc
         bool in_math = false;
         bool first_cell = true;
 
-        virtual void heading_start( int level )
+        virtual void heading_start( int level, std::u32string_view )
         {
             out.emit( heading_cmd( level ), "{" );
         }

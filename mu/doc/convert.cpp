@@ -115,7 +115,18 @@ namespace umd::doc
         while ( skip( U'#' ) )
             ++ level;
         skip_white();
-        w.heading_start( level );
+        auto first = fetch_word();
+        if ( first.back() == '.' )
+        {
+            first.remove_suffix( 1 );
+            w.heading_start( level, first );
+        }
+        else
+        {
+            w.heading_start( level );
+            emit_text( first );
+            emit_text( U" " );
+        }
         emit_text( fetch_line() );
         while ( skip( U'\n' ) );
         w.heading_stop();

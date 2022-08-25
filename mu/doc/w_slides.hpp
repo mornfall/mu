@@ -30,16 +30,21 @@ namespace umd::doc
             }
         }
 
-        void open_section( int level )
+        void open_section( int level, std::u32string_view num )
         {
-            out.emit( "\\start", heading_cmd( level ), "[title={" );
+            if ( !num.empty() )
+                out.emit( "\\setupheadnumber[", heading_cmd( level ), "][-1]\n" );
+            out.emit( "\\start", heading_cmd( level ), "[" );
+            if ( !num.empty() )
+                out.emit( "ownnumber={", num, "}," );
+            out.emit( "title={" );
             section_level.push( level );
         }
 
-        virtual void heading_start( int level )
+        virtual void heading_start( int level, std::u32string_view num )
         {
             close_sections( level );
-            open_section( level );
+            open_section( level, num );
         }
 
         virtual void heading_stop()

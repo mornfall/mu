@@ -22,18 +22,18 @@ namespace umd::doc
             out.emit( "\\ifnotes" );
         }
 
-        void heading_start( int level ) override
+        void heading_start( int level, std::u32string_view num ) override
         {
             close_sections( level );
             if ( level == 1 && in_cols )
                 out.emit( "\\stopsectioncolumns" );
             out.emit( "\\fi" );
-            open_section( level );
+            open_section( level, num );
         }
 
         void heading_stop() override
         {
-            out.emit( "}]\\ifnotes" );
+            out.emit( "}]\\ifnotes{}" );
             if ( section_level.top() == 1 )
                 in_cols = true, out.emit( "\\startsectioncolumns\n" );
         }

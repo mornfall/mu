@@ -29,7 +29,7 @@ mu: main.o $(LIB) $(FONTCSS)
 	$(CXX) -o $@ $(LIB) main.o $(LDADD)
 
 $(FONTCSS):
-	perl $(.CURDIR)/html/mkfonts.pl > $(FONTCSS)
+	cd $(.CURDIR) ; perl html/mkfonts.pl > $(FONTCSS)
 
 svgtex: svgtex.cpp
 	$(CXX) $(CXXFLAGS) $$(pkg-config --cflags --libs poppler-glib) -o svgtex $(.CURDIR)/svgtex.cpp

@@ -129,7 +129,7 @@ namespace umd::doc
 
         void heading_stop() override
         {
-            out.emit( "</h", _heading, ">" );
+            out.emit( "</h", _heading, "> " );
         }
 
         /* spans ; may be also called within mpost btex/etex */

@@ -118,6 +118,8 @@ namespace umd::doc
         skip_white();
         w.heading_start( level );
         emit_text( fetch_line() );
+        while ( !todo.empty() && todo[ 0 ] == '\n'  )
+            todo.remove_prefix( 1 );
         w.heading_stop();
     }
 

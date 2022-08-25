@@ -55,3 +55,19 @@
 \definebodyfont[10.5pt]
 \definebodyfont[8.64pt]
 \definebodyfont[8.4pt]
+
+\definefontfeature[default][default][protrusion=quality,expansion=quality]
+\setupalign[hz,hanging]
+\setupbodyfont[aleo]
+\defineMPinstance[mathfun][format=metafun] % for svgtex
+\setupMPinstance[metafun][initializsations=yes,textstyle={\setupbodyfont[sans,\notesize]}]
+
+\def\titlesize{18pt}
+\def\sectionsize{14.5pt} % only for notes
+\def\subsectionsize{13pt}
+\def\subsubsectionsize{8.6pt}
+\def\bodysize{11pt}
+\def\listsize{9.4pt}
+\def\notesize{8.6pt}
+\def\footsize{6.4pt}
+\def\codesize{8pt}

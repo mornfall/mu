@@ -2,6 +2,7 @@
 CXXFLAGS += -MD -MP -I$(.CURDIR) -std=c++17 -I/usr/local/include -Wextra -Wall -Werror \
             -fcolor-diagnostics -I$(.CURDIR)/bricks
 LDADD += -L/usr/local/lib -licuuc
+FONTCSS = $(.CURDIR)/html/fonts.css
 
 SRC_common = doc/convert.cpp
 SRC = $(SRC_common) slides.cpp paper.cpp pic.cpp main.cpp
@@ -24,14 +25,17 @@ mu-paper: paper.o $(LIB)
 mu-pic: pic.o $(LIB)
 	$(CXX) -o $@ $(LIB) pic.o $(LDADD)
 
-mu: main.o $(LIB)
+mu: main.o $(LIB) $(FONTCSS)
 	$(CXX) -o $@ $(LIB) main.o $(LDADD)
+
+$(FONTCSS):
+	perl $(.CURDIR)/html/mkfonts.pl > $(FONTCSS)
 
 svgtex: svgtex.cpp
 	$(CXX) $(CXXFLAGS) $$(pkg-config --cflags --libs poppler-glib) -o svgtex $(.CURDIR)/svgtex.cpp
 
 clean:
-	rm -f $(OBJ) $(DEP) $(BIN) svgtex
+	rm -f $(OBJ) $(DEP) $(BIN) svgtex $(FONTCSS)
 
 .cpp.o:
 	@mkdir -p $$(dirname $@)

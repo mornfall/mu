@@ -345,9 +345,20 @@ namespace umd::doc
         for ( ; i < int( chk.size() ) - 1 && ( chk[ i ] != '\n' || chk[ i + 1 ] != '\n' ) ; ++ i );
 
         w.mpost_start();
-        auto grid = pic::reader::read_grid( peek( i ) );
-        auto scene = pic::convert::scene( grid );
-        scene.emit( *this );
+
+        try
+        {
+            auto grid = pic::reader::read_grid( peek( i ) );
+            auto scene = pic::convert::scene( grid );
+            scene.emit( *this );
+        }
+        catch ( const pic::bad_picture &bp )
+        {
+            std::cerr << bp.what() << std::endl;
+            std::cerr << to_utf8( bp.picture ) << std::endl;
+            w.mpost_write( "label( 0, 0, btex error processing figure etex );" );
+        }
+
         w.mpost_stop();
 
         shift( i );

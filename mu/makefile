@@ -27,6 +27,9 @@ mu-pic: pic.o $(LIB)
 mu: main.o $(LIB)
 	$(CXX) -o $@ $(LIB) main.o $(LDADD)
 
+svgtex: svgtex.cpp
+	$(CXX) $(CXXFLAGS) $$(pkg-config --cflags --libs poppler-glib) -o svgtex $(.CURDIR)/svgtex.cpp
+
 clean:
 	rm -f $(OBJ) $(DEP) $(BIN) svgtex
 

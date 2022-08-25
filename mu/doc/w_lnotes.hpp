@@ -31,7 +31,7 @@ namespace umd::doc
             open_section( t, level );
             out.emit( "\\ifnotes" );
             if ( level == 1 )
-                in_cols = true, out.emit( "\\startsectioncolumns" );
+                in_cols = true, out.emit( "\\startsectioncolumns\n" );
         }
 
         void nest_start() override

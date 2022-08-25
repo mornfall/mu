@@ -29,6 +29,7 @@
                                backgroundcolor=slidebg, offset=8pt]%
                   \switchtobodyfont[\bodysize]%
                   \def\codesize{9.2pt}%
+                  \def\posttabskip{-3ex}%
                   \setupitemize[before={\blank[4pt]\switchtobodyfont[\listsize]}, after={\blank[2pt]},%
                                 width=12pt]}
   \def\stopslide{\stopframed\blank[4pt]}
@@ -122,7 +123,12 @@
 % named font sizes
 %
 
-\ifslides \def\codesize{9.2pt} \fi
+\ifslides
+ \def\codesize{9.2pt}
+\fi
+
+\def\pretabskip{-5ex}
+\def\posttabskip{-1.5ex}
 
 %
 % sectioning

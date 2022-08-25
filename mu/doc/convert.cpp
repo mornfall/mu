@@ -325,7 +325,8 @@ namespace umd::doc
         int i = 0;
 
         for ( ; i < int( todo.size() ) && todo[ i ] != '\n'; ++i )
-            if ( todo[ i ] >= 0x2500 && todo[ i ] < 0x2580 )
+            if ( ( todo[ i ] >= 0x2500 && todo[ i ] < 0x2580 ) ||
+                 todo[ i ] == U'●' )
                 special = true;
 
         if ( !special ) return;

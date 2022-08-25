@@ -15,7 +15,7 @@ namespace umd::doc
 
     char32_t convert::nonwhite()
     {
-        auto l = todo;
+        sv l = todo.top();
         skip_white( l );
         return l.empty() ? 0 : l[ 0 ];
     }
@@ -35,11 +35,10 @@ namespace umd::doc
 
     bool convert::skip( char32_t c )
     {
-        if ( todo.empty() ) return false;
-        if ( todo[ 0 ] == c )
-            return todo.remove_prefix( 1 ), true;
-        else
+        if ( !starts_with( c ) )
             return false;
+        shift();
+        return true;
     }
 
     int convert::skip_bullet_lead()
@@ -47,13 +46,13 @@ namespace umd::doc
         int indent = 0;
         bool saw_leader = false;
 
-        while ( !todo.empty() )
+        while ( have_chars() )
         {
-            auto ch = todo[ 0 ];
+            auto ch = peek();
             if ( ch != U' ' && saw_leader ) return indent;
 
             ++ indent;
-            todo.remove_prefix( 1 );
+            shift();
 
             if ( ch == U'•' || ch == U'◦' || ch == U'‣' )
                 saw_leader = true;
@@ -76,14 +75,14 @@ namespace umd::doc
             return int( lstr[ 0 ] - U'α' + 1 );
         };
 
-        while ( !todo.empty() )
+        while ( have_chars() )
         {
-            auto ch = todo[ 0 ];
+            auto ch = peek();
 
             if ( ch != U' ' && leader == 2 ) return { indent, first() };
 
             ++ indent;
-            todo.remove_prefix( 1 ); /* commit to eating the char */
+            shift(); /* commit to eating the char */
 
             if ( ch == U' ' ) continue;
             if ( ch == U'.' && leader == 1 ) leader = 2; /* go on to eat whitespace */
@@ -118,8 +117,7 @@ namespace umd::doc
         skip_white();
         w.heading_start( level );
         emit_text( fetch_line() );
-        while ( !todo.empty() && todo[ 0 ] == '\n'  )
-            todo.remove_prefix( 1 );
+        while ( skip( U'\n' ) );
         w.heading_stop();
     }
 
@@ -175,7 +173,7 @@ namespace umd::doc
         std::u32string buf{ fetch_line() };
         buf += U'\n';
 
-        while ( !todo.empty() )
+        while ( have_chars() )
         {
             if ( white_count() < indent )
                 break;
@@ -191,7 +189,7 @@ namespace umd::doc
 
     bool convert::try_enum()
     {
-        auto l = todo;
+        auto l = todo.top();
         skip_white( l );
 
         int digits = 0;
@@ -305,8 +303,13 @@ namespace umd::doc
      * bottleneck for now */
     void convert::emit_footnote( char32_t head )
     {
-        auto backup = todo;
-        while ( !todo.empty() )
+        std::stack< sv > backup;
+
+        while ( todo.size() > 1 )
+            backup.emplace( todo.top() ), todo.pop();
+        checkpoint();
+
+        while ( have_chars() )
         {
             auto par = fetch_par();
             if ( par[ 0 ] == head )
@@ -317,7 +320,10 @@ namespace umd::doc
                 break;
             }
         }
-        todo = backup;
+
+        restore();
+        while ( backup.size() )
+            todo.emplace( backup.top() ), backup.pop();
     }
 
     void convert::try_picture()
@@ -328,22 +334,23 @@ namespace umd::doc
         bool special = false;
         int i = 0;
 
-        for ( ; i < int( todo.size() ) && todo[ i ] != '\n'; ++i )
-            if ( ( todo[ i ] >= 0x2500 && todo[ i ] < 0x2580 ) ||
-                 todo[ i ] == U'●' )
+        auto chk = todo.top();
+
+        for ( ; i < int( chk.size() ) && chk[ i ] != '\n'; ++i )
+            if ( ( chk[ i ] >= 0x2500 && chk[ i ] < 0x2580 ) || chk[ i ] == U'●' )
                 special = true;
 
         if ( !special ) return;
 
-        for ( ; i < int( todo.size() ) - 1 && ( todo[ i ] != '\n' || todo[ i + 1 ] != '\n' ) ; ++ i );
+        for ( ; i < int( chk.size() ) - 1 && ( chk[ i ] != '\n' || chk[ i + 1 ] != '\n' ) ; ++ i );
 
         w.mpost_start();
-        auto grid = pic::reader::read_grid( todo.substr( 0, i ) );
+        auto grid = pic::reader::read_grid( peek( i ) );
         auto scene = pic::convert::scene( grid );
         scene.emit( *this );
         w.mpost_stop();
 
-        todo = todo.substr( i, todo.npos );
+        shift( i );
     }
 
     bool convert::try_dispmath()
@@ -464,9 +471,9 @@ namespace umd::doc
         while ( white_count() == wc )
         {
             skip_white();
-            if ( todo[ 0 ] == U'├' )
+            if ( starts_with( U'├' ) )
                 sep = fetch_line(), sep_line = lines.size();
-            else if ( todo[ 0 ] == U'│' )
+            else if ( starts_with( U'│' ) )
                 lines.push_back( fetch_line() );
             else
                 break;
@@ -573,11 +580,10 @@ namespace umd::doc
     {
         int ldepth = rec_list_depth;
         rec_list_depth = _list.size();
-        auto backup = todo;
-        todo = buf;
+        todo.emplace( buf );
         body();
         end_list( _list.size() - rec_list_depth );
-        todo = backup;
+        todo.pop();
         rec_list_depth = ldepth;
     }
 
@@ -588,7 +594,7 @@ namespace umd::doc
         while ( true )
         {
             if ( todo.empty() ) break;
-            if ( todo[ 0 ] != U'│' ) break;
+            if ( !starts_with( U'│' ) ) break;
 
             auto l = fetch_line();
             l.remove_prefix( std::min( 2lu, l.size() ) ); /* strip │ and a space */
@@ -606,7 +612,7 @@ namespace umd::doc
 
     bool convert::try_directive()
     {
-        if ( starts_with( todo, U"$$raw_mpost" ) )
+        if ( starts_with( U"$$raw_mpost" ) )
         {
             w.mpost_start();
             auto l = fetch_line();
@@ -623,7 +629,7 @@ namespace umd::doc
             return true;
         }
 
-        if ( starts_with( todo, U"$$html" ) )
+        if ( starts_with( U"$$html" ) )
         {
             auto l = fetch_line();
             l.remove_prefix( 7 );
@@ -652,28 +658,20 @@ namespace umd::doc
             return;
         }
 
-        if ( !in_code && _list.empty() && todo[ 0 ] == U'\n' )
+        if ( !in_code && _list.empty() && starts_with( U'\n' ) )
             return w.paragraph(), fetch_line(), body();
 
         for ( auto c : U"┄" )
-        {
-            bool hrule = todo.size() >= 40;
-
-            for ( int i = 0; hrule && i < 40; ++ i )
-                if ( todo[ i ] != c )
-                    hrule = false;
-
-            if ( hrule )
+            if ( starts_with( std::u32string( 40, c ) ) )
                 fetch_line(), w.hrule( c );
-        }
 
-        if ( sv( U"¹²³⁴⁵⁶⁷⁸⁹" ).find( todo[ 0 ] ) != sv::npos )
+        if ( have_chars() && sv( U"¹²³⁴⁵⁶⁷⁸⁹" ).find( peek() ) != sv::npos )
             return fetch_par(), body();
 
-        if ( todo[ 0 ] == U'' )
+        if ( starts_with( U'' ) )
             return end_list( -1 ), w.pagebreak(), fetch_line(), body();
 
-        if ( todo[ 0 ] == U'>' )
+        if ( starts_with( U'>' ) )
             return emit_quote(), body();
         else
             end_quote();
@@ -706,7 +704,7 @@ namespace umd::doc
 
     void convert::header()
     {
-        if ( todo[ 0 ] != U':' )
+        if ( !starts_with( U':' ) )
             return w.meta_end();
         skip( U':' );
         skip_white();

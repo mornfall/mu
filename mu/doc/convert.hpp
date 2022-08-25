@@ -19,8 +19,8 @@ namespace umd::doc
         using sv = std::u32string_view;
 
         doc::writer &w;
-        sv todo;
-        convert( sv t, doc::writer &w ) : w( w ), todo( t ) {}
+        std::stack< sv > todo;
+        convert( sv t, doc::writer &w ) : w( w ) { todo.emplace( t ); }
 
         struct list
         {
@@ -46,9 +46,9 @@ namespace umd::doc
         void skip_white( std::u32string_view &l );
 
         int white_count( std::u32string_view v );
-        int white_count() { return white_count( todo ); }
+        int white_count() { return white_count( todo.top() ); }
 
-        void skip_white() { skip_white( todo ); }
+        void skip_white() { skip_white( todo.top() ); }
         bool skip( char32_t c );
 
         std::pair< int, int > skip_item_lead( list::type );
@@ -78,9 +78,19 @@ namespace umd::doc
         static int space( sv s )    { return s[ 0 ] == U' ' || s[ 0 ] == U'\n'; }
         static int parbreak( sv s ) { int c = count( s, U'\n' ); return c >= 2 ? c : 0; }
 
-        std::u32string_view fetch_line() { return fetch( todo, newline ); }
-        std::u32string_view fetch_word() { return fetch( todo, space ); }
-        std::u32string_view fetch_par()  { return fetch( todo, parbreak ); }
+        std::u32string_view fetch_line() { return fetch( todo.top(), newline ); }
+        std::u32string_view fetch_word() { return fetch( todo.top(), space ); }
+        std::u32string_view fetch_par()  { return fetch( todo.top(), parbreak ); }
+
+        bool starts_with( char32_t c ) const { return !todo.top().empty() && todo.top()[ 0 ] == c; }
+        bool starts_with( sv s ) const { return todo.top().substr( 0, s.size() ) == s; }
+        sv peek( int c ) const { return todo.top().substr( 0, c ); }
+        char32_t peek() const { assert( !todo.top().empty() ); return todo.top()[ 0 ]; }
+        sv shift( int c = 1 ) { sv res = peek( c ); todo.top().remove_prefix( c ); return res; }
+        bool have_chars( int c = 1 ) { return todo.top().size() >= c; }
+
+        void checkpoint() { todo.emplace( todo.top() ); }
+        void restore() { todo.pop(); }
 
         void emit_text( std::u32string_view v );
         void emit_footnote( char32_t head );

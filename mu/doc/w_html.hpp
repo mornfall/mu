@@ -24,6 +24,7 @@ namespace umd::doc
         std::vector< int > _sections;
         std::vector< sv > _section_num;
 
+        bool _in_div = false;
         bool _table_rule = false;
         int _table_rows, _table_cells;
         std::vector< std::string > _table_class;
@@ -43,7 +44,7 @@ namespace umd::doc
         void meta_end() override
         {
             if ( _meta[ U"naked" ] == U"yes" )
-                return out.emit( "<div>" );
+                return;
 
             out.emit( "<!DOCTYPE html>" );
             out.emit( "<html lang=\"", _meta[ U"lang" ], "\"><head>" );
@@ -74,11 +75,11 @@ namespace umd::doc
         {
             if ( _meta[ U"naked" ] != U"yes" )
                 out.emit( "</div></body></html>" );
-            else
-                out.emit( "</div>" );
         }
 
-        void text( std::u32string_view t ) override
+        void text( std::u32string_view t ) override { return text( t, false ); }
+
+        void text( std::u32string_view t, bool code )
         {
             auto char_cb = [&]( auto flush, char32_t c )
             {
@@ -98,11 +99,15 @@ namespace umd::doc
             if ( _in_math || _in_mpost )
                 w_tex::text( t );
             else
+            {
+                if ( !code ) ensure_div();
                 process( t, char_cb, [&]( auto s ) { out.emit( s ); } );
+            }
         }
 
         void heading_start( int level, std::u32string_view num ) override
         {
+            paragraph();
             _heading = level;
             out.emit( "<h", level, ">" );
 
@@ -130,6 +135,7 @@ namespace umd::doc
         void heading_stop() override
         {
             out.emit( "</h", _heading, "> " );
+            _heading = 0;
         }
 
         /* spans ; may be also called within mpost btex/etex */
@@ -247,6 +253,7 @@ namespace umd::doc
 
         void list_start()
         {
+            ensure_div();
             _li_close.push( false );
             _li_count.push( 0 );
         }
@@ -260,18 +267,19 @@ namespace umd::doc
 
         void enum_start( int, int start ) override
         {
+            ensure_div();
             out.emit( "<ol start=\"", start, "\">" );
             list_start();
         }
 
         void enum_item()             override { list_item(); }
         void enum_stop( bool )       override { list_stop(); out.emit( "</ol>" ); }
-        void bullet_start( int )     override { out.emit( "<ul>" ); list_start(); }
+        void bullet_start( int )     override { ensure_div(); out.emit( "<ul>" ); list_start(); }
         void bullet_item()           override { list_item(); }
         void bullet_stop( bool )     override { list_stop(); out.emit( "</ul>" ); }
 
         void code_start( sv t ) override { out.emit( "<pre><code class=\"", t, "\">" ); }
-        void code_line( sv l )  override { text( l ); out.emit( "\n" ); }
+        void code_line( sv l )  override { text( l, true ); out.emit( "\n" ); }
         void code_stop()        override { out.emit( "</code></pre>\n" ); }
         void quote_start()      override { out.emit( "<blockquote>\n" ); }
         void quote_stop()       override { out.emit( "</blockquote>\n" ); }
@@ -282,7 +290,21 @@ namespace umd::doc
         void footnote_start() override { out.emit( "<!--" ); }
         void footnote_stop() override { out.emit( "-->" ); }
 
-        void paragraph() override { out.emit( "</div><div>\n" ); }
+        void paragraph() override
+        {
+            if ( _in_div )
+                out.emit( "</div>\n" );
+            _in_div = false;
+        }
+
+        void ensure_div()
+        {
+            if ( !_in_div && !_heading )
+            {
+                out.emit( "<div class=\"par\">" );
+                _in_div = true;
+            }
+        }
     };
 
 }

@@ -25,7 +25,10 @@
             {\hfill\footfont\rawcountervalue[slidenum]}}]
   \def\startslide{\blank[6pt]\incrementcounter[slidenum]
                   \startframed[align=width, width=96mm, frame=off, background={color,slideover},
-                               backgroundcolor=lightgray, offset=6pt]\switchtobodyfont[\bodysize]}
+                               backgroundcolor=lightgray, offset=6pt]
+                  \switchtobodyfont[\bodysize]
+                  \setupitemize[before={\blank[4pt]\switchtobodyfont[\listsize]}, after={\blank[2pt]},
+                                width=12pt]}
   \def\stopslide{\stopframed\blank[4pt]}
 \else
   \def\startslide{\startmakeup[slide]}
@@ -165,8 +168,11 @@
 % set up spacing in various objects
 %
 
-\setupitemize  [before={\blank[4pt]\switchtobodyfont[\listsize]},
-                after={\blank[2pt]}, width=16pt]
+\ifslides
+  \setupitemize[before={\blank[4pt]\switchtobodyfont[\listsize]}, after={\blank[2pt]}]
+\fi
+
+\ifnotes \setupitemize[width=16pt, before={\blank[4pt]}, after={\blank[2pt]}] \fi
 \setuptables   [distance=small, rulethickness=.4mm]
 \setuptabulate [distance=small, bodyfont=\notesize]
 \setupnarrower [middle=3mm]

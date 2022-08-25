@@ -70,6 +70,7 @@
 
 \ifnotes  \def\emcolor{\darkred} \fi
 \ifslides \def\emcolor{\orange} \fi
+\let\realbf\bf
 \ifbw
 \def\code{\tt}
 \def\em{\bf}
@@ -143,7 +144,7 @@
 \def\titlesize{18pt}
 \def\sectionsize{14.5pt} % only for notes
 \def\subsectionsize{13pt}
-\def\subsubsectionsize{11pt}
+\def\subsubsectionsize{8.6pt}
 \def\bodysize{11pt}
 \def\listsize{9.4pt}
 \ifslides \def\codesize{9.2pt} \fi
@@ -158,7 +159,8 @@
 \setuphead[section]       [align=center, sectionnumber=yes, placehead=yes, page=no,
                            aftersection={}, sectionstarter=\str!part\ , sectionstopper=:, number=yes]
 \setuphead[subsection]    [before={}, after={}, aftersection={}]
-\setuphead[subsubsection] [before={}, after={}, aftersection={}, sectionstarter={}, sectionstopper={}]
+\setuphead[subsubsection] [alternative=text, before={\blank[small]}, after={}, aftersection={}, sectionstarter={}, sectionstopper={} ]
+\definebar[sectionbar][rulethickness=.5pt, offset=-0.25]
 
 \ifslides
   \setuphead[section, subsection] [before={\startmakeup[titleslide]}, after={\stopmakeup}]
@@ -166,7 +168,7 @@
   \setuphead[section]       [style={\switchtobodyfont[\sectionsize]}]
   \setuphead[subsection]    [style={\switchtobodyfont[\subsectionsize]}, before={\blank[6pt]},
                              after={\vskip-4pt}]
-  \setuphead[subsubsection] [style={\switchtobodyfont[\subsubsectionsize]}, after={\vskip-6pt}]
+  \setuphead[subsubsection] [style={\switchtobodyfont[\subsubsectionsize]\realbf}, numberstyle={\sectionbar}, textdistance={3pt}, distance={3pt}]
 \fi
 
 %

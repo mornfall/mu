@@ -21,6 +21,7 @@
 \ifnotes % embedded slides
   \definecolor[slidebg] [r=.95, g=.95, b=.95]
   \definecounter[slidenum][]
+  \incrementcounter[slidenum] % the title slide is number 1
   \defineoverlay[slideover]
     [{\framed[width=\overlaywidth,height=\overlayheight,align={top,flushright},frame=no,roffset=2pt]
             {\hfill\footfont\rawcountervalue[slidenum]}}]
@@ -143,9 +144,9 @@
 \ifslides
   \setuphead[section, subsection] [before={\startmakeup[titleslide]}, after={\stopmakeup}]
 \else
-  \setuphead[section]       [style={\switchtobodyfont[\sectionsize]}]
+  \setuphead[section]       [style={\switchtobodyfont[\sectionsize]},after={\incrementcounter[slidenum]\blank[6pt]}]
   \setuphead[subsection]    [style={\switchtobodyfont[\subsectionsize]}, before={\blank[6pt]},
-                             after={\vskip-4pt}]
+                             after={\vskip-4pt\incrementcounter[slidenum]}]
   \setuphead[subsubsection] [style={\switchtobodyfont[\subsubsectionsize]\realbf}, numberstyle={\sectionbar}, textdistance={3pt}, distance={3pt}]
 \fi
 

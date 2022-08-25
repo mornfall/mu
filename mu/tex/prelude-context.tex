@@ -47,6 +47,7 @@
 
 \input{prelude-typescript.tex}
 \input{prelude-strings.tex}
+\input{prelude-style.tex}
 
 \definefontfeature[default][default][protrusion=quality,expansion=quality]
 \setupalign[hz,hanging]
@@ -63,23 +64,6 @@
 \definecolor[lightcoffee] [r=0.98, g=.406, b=.21]
 \definecolor[brownish]    [r=0.6, g=.3, b=.1]
 \definecolor[midgreen]    [r=0.2, g=.8, b=.2]
-
-%
-% emphasis and colours
-%
-
-\ifnotes  \def\emcolor{\darkred} \fi
-\ifslides \def\emcolor{\orange} \fi
-\let\realbf\bf
-\ifbw
-\def\code{\tt}
-\def\em{\bf}
-\else
-\def\bf{\red}
-\def\em{\emcolor}
-\ifslides \def\code{\midgreen\tt} \else \def\code{\darkgreen\tt} \fi
-\setuptype[color=midgreen]
-\fi
 
 \ifslides \startcolor[white] \fi % set the foreground (text) colour
 \ifslides \setupbackgrounds[page] [background=color, backgroundcolor=black] \fi

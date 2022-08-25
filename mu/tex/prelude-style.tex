@@ -1,0 +1,16 @@
+%
+% emphasis and colours
+%
+
+\ifnotes  \def\emcolor{\darkred} \fi
+\ifslides \def\emcolor{\orange} \fi
+\let\realbf\bf
+\ifbw
+\def\code{\tt}
+\def\em{\bf}
+\else
+\def\bf{\red}
+\def\em{\emcolor}
+\ifslides \def\code{\midgreen\tt} \else \def\code{\darkgreen\tt} \fi
+\setuptype[color=midgreen]
+\fi

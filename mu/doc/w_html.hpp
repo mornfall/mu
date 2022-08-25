@@ -292,6 +292,7 @@ namespace umd::doc
 
         void paragraph() override
         {
+            out.emit( "<!-- paragraph -->\n" );
             if ( _in_div )
                 out.emit( "</div>\n" );
             _in_div = false;

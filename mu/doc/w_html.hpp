@@ -24,6 +24,9 @@ namespace umd::doc
         std::vector< int > _sections;
         std::vector< sv > _section_num;
 
+        bool _in_foothead = false, _in_footnote = false;
+        std::u32string _foothead, _footnote;
+
         bool _in_div = false;
         bool _table_rule = false;
         int _table_rows, _table_cells;
@@ -98,6 +101,10 @@ namespace umd::doc
 
             if ( _in_math || _in_mpost )
                 w_tex::text( t );
+            else if ( _in_foothead )
+                _foothead += t;
+            else if ( _in_footnote )
+                _footnote += t;
             else
             {
                 if ( allow_div ) ensure_div();
@@ -287,8 +294,27 @@ namespace umd::doc
         void small_start() override {}
         void small_stop()  override {}
 
-        void footnote_start() override { out.emit( "<!--" ); }
-        void footnote_stop() override { out.emit( "-->" ); }
+        void footnote_head() override { _in_foothead = true; _foothead.clear(); }
+        void footnote_start() override
+        {
+            _in_foothead = false;
+            _in_footnote = true;
+            _footnote.clear();
+        }
+
+        void footnote_stop() override
+        {
+            ensure_div();
+
+            // FIXME check whether it looks like an ‹url›
+            out.emit( "<a href=\"" );
+            out.emit( _footnote );
+            out.emit( "\">" );
+            out.emit( _foothead );
+            out.emit( "</a>" );
+
+            _in_footnote = false;
+        }
 
         void paragraph() override
         {

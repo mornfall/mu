@@ -330,6 +330,7 @@ namespace umd::doc
             backup.emplace( todo.top() ), todo.pop();
         checkpoint();
         skip_to_addr( &*_last_footnote.end() + 1 );
+        while ( skip( U'\n' ) );
 
         while ( have_chars() )
         {

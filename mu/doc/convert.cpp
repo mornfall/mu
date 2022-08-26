@@ -7,6 +7,7 @@
 
 #include <set>
 #include <sstream>
+#include <iostream>
 #include <codecvt>
 #include <unicode/uchar.h>
 

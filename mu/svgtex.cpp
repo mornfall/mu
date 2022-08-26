@@ -247,7 +247,8 @@ void process( float scale )
     std::ifstream yshift( "yshift.txt" );
 
     auto pdf_data = brq::read_file( "tosvg.pdf" );
-    auto pdf = poppler_document_new_from_data( pdf_data.data(), pdf_data.size(), nullptr, nullptr );
+    auto pdf = poppler_document_new_from_bytes(
+                g_bytes_new_static( pdf_data.data(), pdf_data.size() ), nullptr, nullptr );
 
     if ( int( keep.size() - 1 ) != poppler_document_get_n_pages( pdf ) )
         throw std::runtime_error( "each <tex> must produce exactly 1 page" );

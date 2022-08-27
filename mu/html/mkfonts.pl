@@ -1,17 +1,19 @@
 use strict;
 use MIME::Base64;
 
+open OUT, $ARGV[0];
+
 sub font($$)
 {
     my ( $file, $family ) = @_;
-    open FILE, $file or die "could not read $file";
+    open FILE, "$ENV{srcdir}/mu/$file" or die "could not read $file";
     my ( $b64, $buf );
     while ( read( FILE, $buf, 57 ) )
     {
         $b64 .= encode_base64( $buf );
         chomp $b64;
     }
-    print <<EOF
+    print OUT <<EOF
     \@font-face {
         font-family: "$family";
         src: url('data:application/octet-stream;base64,$b64');

@@ -32,7 +32,7 @@
                   \def\codesize{9.2pt}%
                   \def\posttabskip{-3ex}%
                   \setupitemize[before={\blank[4pt]\switchtobodyfont[\listsize]}, after={\blank[2pt]},%
-                                width=12pt]}
+                                distance=1pt]}
   \def\stopslide{\stopframed\blank[4pt]}
 \else
   \def\startslide{\startmakeup[slide]}
@@ -159,7 +159,7 @@
   \setupTABLE  [style={\switchtobodyfont[\listsize]}]
 \fi
 
-\ifnotes \setupitemize[width=16pt, before={\blank[4pt]}, after={\blank[2pt]}] \fi
+\ifnotes \setupitemize[distance=1pt, before={\blank[4pt]}, after={\blank[2pt]}] \fi
 \setuptables   [distance=small, rulethickness=.4mm]
 \setuptabulate [distance=small, bodyfont=\notesize]
 \setupnarrower [middle=3mm]

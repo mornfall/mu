@@ -5,8 +5,7 @@ set cc  /usr/bin/cc
 set ar  /usr/bin/ar
 set obj
 
-set cxxflags -fdiagnostics-color -fmessage-length=100 -std=c++17 -g -ferror-limit=1
-add cxxflags -I$(srcdir)/mu -I$(srcdir)/bricks
+set cxxflags -fdiagnostics-color -fmessage-length=100 -g -ferror-limit=1
 set cflags
 set ldflags
 

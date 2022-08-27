@@ -92,14 +92,14 @@ namespace umd::doc
                         if ( _in_math )
                             out.emit( "\\left\\{" );
                         else
-                            out.emit( "\\textbraceleft");
+                            out.emit( "\\textbraceleft{}");
                         break;
                     case U'}':
                         flush();
                         if ( _in_math )
                             out.emit( "\\right\\}" );
                         else
-                            out.emit( "\\textbraceright" );
+                            out.emit( "\\textbraceright{}" );
                         break;
                     case U'~': flush(); out.emit( "\\textasciitilde{}" ); break;
                     case U'^': if ( !_in_math ) flush(), out.emit( "\\textasciicircum{}" ); break;

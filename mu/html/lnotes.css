@@ -40,6 +40,7 @@ div ol, div ul { margin-block-start: .7ex; margin-block-end: 1.4ex; }
 table { margin: auto; margin-top: 6pt; margin-bottom: 6pt; border-collapse: collapse; }
 td { padding: 2pt; }
 .center { text-align: center; margin-top: 6pt; margin-bottom: 6pt; }
+.right  { text-align: right; }
 h1, h2, h3 { font-family: "Aleo Regular"; font-weight: normal; }
 h3 { display: inline; font-size: 100%; font-weight: bold; }
 div { padding-bottom: .7ex; }

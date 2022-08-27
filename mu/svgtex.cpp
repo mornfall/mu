@@ -243,7 +243,20 @@ void process( float scale )
     if ( keep.size() == 1 )
         return write_sv( 1, keep[ 0 ] ), void();
 
-    run( "context", "tosvg.tex" );
+    try
+    {
+        run( "context", "tosvg.tex" );
+    }
+    catch ( const std::runtime_error &err )
+    {
+        std::string buffer;
+        std::ifstream ifs( "tosvg.log" );
+        while ( std::getline( ifs, buffer ) )
+            std::cerr << buffer;
+        std::cerr << std::endl << err.what() << std::endl;
+        exit( 1 );
+    }
+
     std::ifstream yshift( "yshift.txt" );
 
     auto pdf_data = brq::read_file( "tosvg.pdf" );

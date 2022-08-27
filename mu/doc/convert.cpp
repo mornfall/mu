@@ -424,7 +424,7 @@ namespace umd::doc
             return l.substr( f, t - f );
         };
 
-        if ( white_count() <= 3 && nonwhite() == U'⟦' )
+        if ( white_count() > 0 && white_count() <= 3 && nonwhite() == U'⟦' )
         {
             std::vector< std::u32string_view > lines;
             int offset = white_count() + 1;

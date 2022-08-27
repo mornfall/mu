@@ -4,6 +4,7 @@ cmd /bin/sh $(srcdir)/mu/pkgconfig.sh $(out)
 
 sub gib.mu-pkgconfig
 
+add cxxflags.mu -std=c++17 -I$(srcdir)/mu -I$(srcdir)/bricks
 set obj_mu
 
 for src $(sources:*.cpp)

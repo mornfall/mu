@@ -90,7 +90,7 @@ namespace umd::doc
         {
             out.emit( "\\startitemize[packed,",
                       level == 0 ? 'n' : level == 1 ? 'a' : 'r',
-                      "][distance=-2pt,start=", first, "]", "\n" );
+                      "][start=", first, "]", "\n" );
         }
 
         virtual void enum_stop( bool xspace )
@@ -102,7 +102,7 @@ namespace umd::doc
         {
             out.emit( "\\startitemize[packed,",
                       level == 0 ? 1 : level == 1 ? 5 : 4,
-                      "][distance=-4pt]", "\n" );
+                      "]", "\n" );
         }
 
         virtual void bullet_item() { out.emit( "\\item{}" ); }

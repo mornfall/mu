@@ -133,8 +133,8 @@ namespace umd::doc
         virtual void math_start() { out.emit( "\\math{" ); _in_math = true; }
         virtual void math_stop() { out.emit( "}" ); _in_math = false; }
 
-        virtual void enum_item() { out.emit( "\\item{} " ); }
-        virtual void bullet_item() { out.emit( "\\item{} " ); }
+        virtual void enum_item() { out.emit( "\\item{}" ); }
+        virtual void bullet_item() { out.emit( "\\item{}" ); }
 
         virtual void code_line( std::u32string_view l ) { out.emit( l, "\n" ); }
         virtual void paragraph() { out.emit( "\n" ); }

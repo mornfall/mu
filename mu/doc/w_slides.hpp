@@ -105,7 +105,7 @@ namespace umd::doc
                       "][distance=-4pt]", "\n" );
         }
 
-        virtual void bullet_item() { out.emit( "\\item " ); }
+        virtual void bullet_item() { out.emit( "\\item{}" ); }
         virtual void bullet_stop( bool xspace )
         {
             out.emit( "\\stopitemize", xspace ? "\\vskip3pt\n" : "\n" );

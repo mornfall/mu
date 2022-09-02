@@ -5,7 +5,7 @@ set cc  /usr/bin/cc
 set ar  /usr/bin/ar
 set obj
 
-set cxxflags -fdiagnostics-color -fmessage-length=100 -g -ferror-limit=1
+set cxxflags -fdiagnostics-color -fmessage-length=100 -g
 set cflags
 set ldflags
 

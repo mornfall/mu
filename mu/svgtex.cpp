@@ -252,7 +252,7 @@ void process( float scale )
         std::string buffer;
         std::ifstream ifs( "tosvg.log" );
         while ( std::getline( ifs, buffer ) )
-            std::cerr << buffer;
+            std::cerr << buffer << std::endl;
         std::cerr << std::endl << err.what() << std::endl;
         exit( 1 );
     }

@@ -10,7 +10,7 @@ set obj_mu
 for src $(sources:mu/*.cpp)
 out $(src:%.cpp:$1.o)
 dep $(src)
-dep create build directories
+dep make build directories
 add obj_mu $(out)
 cmd gib.wrapcc $(cxx) -c $(cxxflags) $(cxxflags.mu) -o $(out) $(srcdir)/$(src)
 

@@ -7,7 +7,7 @@ sub gib.mu-pkgconfig
 add cxxflags.mu -std=c++17 -I$(srcdir)/mu -I$(srcdir)/bricks
 set obj_mu
 
-for src $(sources:*.cpp)
+for src $(sources:mu/*.cpp)
 out $(src:%.cpp:$1.o)
 dep $(src)
 dep create build directories

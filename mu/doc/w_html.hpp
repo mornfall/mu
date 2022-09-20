@@ -1,10 +1,12 @@
 #pragma once
 #include "writer.hpp"
+#include "w_tex.hpp"
 #include "util.hpp"
 #include <vector>
 #include <sstream>
 #include <iostream>
 #include <map>
+#include <utility>
 
 namespace umd::doc
 {
@@ -26,6 +28,9 @@ namespace umd::doc
 
         bool _in_foothead = false, _in_footnote = false;
         std::u32string _foothead, _footnote;
+
+        int _last_footnote_num = 0;
+        std::vector< std::pair< int, std::u32string > > _outstanding_footnotes;
 
         bool _in_div = false;
         bool _table_rule = false;
@@ -76,6 +81,8 @@ namespace umd::doc
         void html( sv raw ) override { out.emit( raw ); }
         void end() override
         {
+            place_footnotes();
+
             if ( _meta[ U"naked" ] != U"yes" )
                 out.emit( "</div></body></html>" );
         }
@@ -114,6 +121,8 @@ namespace umd::doc
 
         void heading_start( int level, std::u32string_view num ) override
         {
+            place_footnotes();
+
             paragraph();
             _heading = level;
             out.emit( "<h", level, ">" );
@@ -306,16 +315,72 @@ namespace umd::doc
 
         void footnote_stop() override
         {
+            auto is_url = []( sv s )
+            {
+                return starts_with( s, U"http://"  )
+                    || starts_with( s, U"https://" )
+                    || starts_with( s, U"./"       );
+            };
+
             ensure_div();
 
-            // FIXME check whether it looks like an ‹url›
-            out.emit( "<a href=\"" );
-            out.emit( _footnote );
-            out.emit( "\">" );
-            out.emit( _foothead );
-            out.emit( "</a>" );
+            if ( is_url( _footnote ) )
+            {
+                out.emit( "<a href=\"" );
+                out.emit( _footnote );
+                out.emit( "\">" );
+                out.emit( _foothead );
+                out.emit( "</a>" );
+            }
+            else
+            {
+                // FIXME When we encounter footnote superscript without any
+                // accompanying emphasis block, some of the preceding text might
+                // have been assumed to be foothead.
+                out.emit( _foothead );
+
+                int num  = ++_last_footnote_num;
+
+                footnote_anchor( "foothead", "footnote", num );
+                _outstanding_footnotes.emplace_back( num, _footnote );
+            }
 
             _in_footnote = false;
+        }
+
+        void footnote_anchor( std::string_view id, std::string_view href, int num )
+        {
+            out.emit( "<a class=\"anchor\" id=\"" );
+            out.emit( id );
+            out.emit( num );
+            out.emit( "\" href=\"#" );
+            out.emit( href );
+            out.emit( num );
+            out.emit( "\"><sup>" );
+            out.emit( num );
+            out.emit( "</sup></a>" );
+        }
+
+        void place_footnotes()
+        {
+            paragraph();
+
+            out.emit( "<div class=\"par footnotes\">" );
+
+            for ( const auto &[ num, footnote ] : _outstanding_footnotes )
+            {
+                ensure_div();
+
+                footnote_anchor( "footnote", "foothead", num );
+                out.emit( " " );
+                out.emit( footnote );
+
+                paragraph();
+            }
+
+            out.emit( "</div>" );
+
+            _outstanding_footnotes.clear();
         }
 
         void paragraph() override

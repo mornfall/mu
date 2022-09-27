@@ -171,7 +171,9 @@ namespace umd::doc
         void eqn_start( int n, std::string ) override
         {
             _in_math = true;
-            out.emit( "<tex>\\startTEXpage\\startformula[packed]\\startmathalignment[n=", n, "]" );
+
+            out.emit( "<tex>\\startTEXpage\\startcolor[", fgcolor(),"]"
+                      "\\startformula[packed]\\startmathalignment[n=", n, "]" );
         }
 
         void eqn_new_cell() override { out.emit( "\\NC " ); }
@@ -179,7 +181,7 @@ namespace umd::doc
         void eqn_stop() override
         {
             _in_math = false;
-            out.emit( "\\stopmathalignment\\stopformula\\stopTEXpage</tex>" );
+            out.emit( "\\stopmathalignment\\stopformula\\stopcolor\\stopTEXpage</tex>" );
         }
 
         void math_start() override

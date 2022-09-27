@@ -78,7 +78,16 @@ namespace umd::doc
             out.emit( "</head><body onload=\"makeTOC()\"><ol id=\"toc\"></ol><div>" );
         }
 
-        void html( sv raw ) override { out.emit( raw ); }
+        void html( sv raw ) override
+        {
+            if ( _in_foothead )
+                _foothead += raw;
+            else if ( _in_footnote )
+                _footnote += raw;
+            else
+                out.emit( raw );
+        }
+
         void end() override
         {
             place_footnotes();
@@ -97,25 +106,23 @@ namespace umd::doc
                 {
                     case 0x0307:
                         if ( _in_math )
-                            flush( 2 ), out.emit( "\\dot " ), flush();
+                            flush( 2 ), html( U"\\dot " ), flush();
                         break;
-                    case U'&': flush(); out.emit( "&amp;" ); break;
-                    case U'<': flush(); out.emit( "&lt;" ); break;
-                    case U'>': flush(); out.emit( "&gt;" ); break;
+                    case U'&': flush(); html( U"&amp;" ); break;
+                    case U'<': flush(); html( U"&lt;" ); break;
+                    case U'>': flush(); html( U"&gt;" ); break;
                     default: ;
                 }
             };
 
-            if ( _in_math || _in_mpost )
+            if ( !_in_footnote && !_in_foothead && ( _in_math || _in_mpost ) )
                 w_tex::text( t );
-            else if ( _in_foothead )
-                _foothead += t;
-            else if ( _in_footnote )
-                _footnote += t;
             else
             {
-                if ( allow_div ) ensure_div();
-                process( t, char_cb, [&]( auto s ) { out.emit( s ); } );
+                if ( allow_div )
+                    ensure_div();
+
+                process( t, char_cb, [&]( auto s ) { html( s ); } );
             }
         }
 
@@ -155,10 +162,10 @@ namespace umd::doc
         }
 
         /* spans ; may be also called within mpost btex/etex */
-        void em_start()   override { out.emit( _in_mpost ? "{\\em{}" : "<em>" ); }
-        void em_stop()    override { out.emit( _in_mpost ? "}" : "</em>" ); }
-        void tt_start()   override { out.emit( _in_mpost ? "{\\tt{}" : "<code>" ); }
-        void tt_stop()    override { out.emit( _in_mpost ? "}" : "</code>" ); }
+        void em_start()   override { html( _in_mpost ? U"{\\em{}" : U"<em>" ); }
+        void em_stop()    override { html( _in_mpost ? U"}" : U"</em>" ); }
+        void tt_start()   override { html( _in_mpost ? U"{\\tt{}" : U"<code>" ); }
+        void tt_stop()    override { html( _in_mpost ? U"}" : U"</code>" ); }
 
         /* generate svgtex-compatible markup */
         void eqn_start( int n, std::string ) override
@@ -180,34 +187,38 @@ namespace umd::doc
             _in_math = true;
 
             if ( _in_mpost )
-                out.emit( "\\math{" );
+                html( U"\\math{" );
             else
-                out.emit( "<tex>\\setupMPinstance[mathfun][textcolor=", fgcolor(), "]\n"
-                          "\\startMPpage[instance=mathfun]\npicture p; p := btex \\math{" );
+            {
+                html( U"<tex>\\setupMPinstance[mathfun][textcolor=" );
+                html( fgcolor() );
+                html( U"]\n\\startMPpage[instance=mathfun]\npicture p; p := btex \\math{" );
+            }
         }
 
         void math_stop()  override
         {
             _in_math = false;
             if ( _in_mpost )
-                out.emit( "}" );
+                html( U"}" );
             else
-                out.emit( "} etex; write decimal ypart llcorner p to \"yshift.txt\";",
-                          " draw p;\n\\stopMPpage</tex>" );
+                html( U"} etex; write decimal ypart llcorner p to \"yshift.txt\";"
+                      " draw p;\n\\stopMPpage</tex>" );
         }
 
         void mpost_start() override
         {
-            out.emit( "<div class=\"center\"><tex>"
-                      "\\setupMPinstance[metafun][textcolor=", fgcolor(), "]"
-                      "\\startMPpage\n",
-                      "color fg; fg := ", fgcolor(),
-                      "; picture dotted; dotted := dashpattern( on 1 off 1.5 ); " );
+            html( U"<div class=\"center\"><tex>\\setupMPinstance[metafun][textcolor=" );
+            html( fgcolor() );
+            html( U"]\\startMPpage\ncolor fg; fg := " );
+            html( fgcolor() );
+            html( U"; picture dotted; dotted := dashpattern( on 1 off 1.5 ); " );
+
             _in_mpost = true;
         }
 
-        void mpost_stop()  override { out.emit( "\\stopMPpage</tex></div>" ); _in_mpost = false; }
-        void mpost_write( std::string_view s ) override { out.emit( s ); }
+        void mpost_stop()  override { html( U"\\stopMPpage</tex></div>" ); _in_mpost = false; }
+        void mpost_write( std::string_view s ) override { html( from_utf8( s ) ); }
 
         void table_start( columns ci, bool even = false ) override
         {
@@ -261,8 +272,8 @@ namespace umd::doc
 
         void list_item()
         {
-            if ( _li_close.top() ) out.emit( "</li>" );
-            out.emit( "<li>" );
+            if ( _li_close.top() ) html( U"</li>" );
+            html( U"<li>" );
             _li_close.top() = true;
             _li_count.top() ++;
         }
@@ -276,7 +287,7 @@ namespace umd::doc
 
         void list_stop()
         {
-            if ( _li_close.top() ) out.emit( "</li>" );
+            if ( _li_close.top() ) html( U"</li>" );
             _li_close.pop();
             _li_count.pop();
         }
@@ -290,9 +301,10 @@ namespace umd::doc
 
         void enum_item()             override { list_item(); }
         void enum_stop( bool )       override { list_stop(); out.emit( "</ol>" ); }
-        void bullet_start( int )     override { ensure_div(); out.emit( "<ul>" ); list_start(); }
+
+        void bullet_start( int )     override { ensure_div(); html( U"<ul>" ); list_start(); }
         void bullet_item()           override { list_item(); }
-        void bullet_stop( bool )     override { list_stop(); out.emit( "</ul>" ); }
+        void bullet_stop( bool )     override { list_stop(); html( U"</ul>" ); }
 
         void code_start( sv t ) override { out.emit( "<pre><code class=\"", t, "\">" ); }
         void code_line( sv l )  override { text( l, false ); out.emit( "\n" ); }
@@ -311,7 +323,7 @@ namespace umd::doc
             _footnote.clear();
         }
 
-        void linebreak() override { out.emit( "<br>" ); }
+        void linebreak() override { html( U"<br>" ); }
 
         void footnote_stop() override
         {
@@ -384,9 +396,9 @@ namespace umd::doc
 
         void paragraph() override
         {
-            out.emit( "<!-- paragraph -->\n" );
+            html( U"<!-- paragraph -->\n" );
             if ( _in_div )
-                out.emit( "</div>\n" );
+                html( U"</div>\n" );
             _in_div = false;
         }
 
@@ -394,7 +406,7 @@ namespace umd::doc
         {
             if ( !_in_div && !_heading && !_in_mpost )
             {
-                out.emit( "<div class=\"par\">" );
+                html( U"<div class=\"par\">" );
                 _in_div = true;
             }
         }

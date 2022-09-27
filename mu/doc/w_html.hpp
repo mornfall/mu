@@ -369,12 +369,11 @@ namespace umd::doc
 
             for ( const auto &[ num, footnote ] : _outstanding_footnotes )
             {
-                ensure_div();
-
                 footnote_anchor( "footnote", "foothead", num );
+
+                ensure_div();
                 out.emit( " " );
                 out.emit( footnote );
-
                 paragraph();
             }
 

@@ -4,6 +4,18 @@
 #include <codecvt>
 #include <fstream>
 
+static inline std::string to_utf8( std::u32string_view w )
+{
+    std::wstring_convert< std::codecvt_utf8< char32_t >, char32_t > conv;
+    return conv.to_bytes( w.begin(), w.end() );
+}
+
+static inline std::u32string from_utf8( std::string_view v )
+{
+    std::wstring_convert< std::codecvt_utf8< char32_t >, char32_t > conv;
+    return conv.from_bytes( v.begin(), v.end() );
+}
+
 static inline std::u32string read_file( std::istream &in )
 {
     std::string buffer;
@@ -19,20 +31,13 @@ static inline std::u32string read_file( std::istream &in )
         in.read( &buffer[ 0 ], length );
     }
 
-    std::wstring_convert< std::codecvt_utf8< char32_t >, char32_t > conv;
-    return conv.from_bytes( buffer );
+    return from_utf8( buffer );
 }
 
 static inline std::u32string read_file( std::string path )
 {
     std::ifstream ifs( path );
     return read_file( ifs );
-}
-
-static inline std::string to_utf8( std::u32string_view w )
-{
-    std::wstring_convert< std::codecvt_utf8< char32_t >, char32_t > conv;
-    return conv.to_bytes( w.begin(), w.end() );
 }
 
 template< typename SV >

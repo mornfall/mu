@@ -377,8 +377,10 @@ namespace umd::doc
 
         void place_footnotes()
         {
-            paragraph();
+            if ( _outstanding_footnotes.empty() )
+                return;
 
+            paragraph();
             out.emit( "<div class=\"par footnotes\">" );
 
             for ( const auto &[ num, footnote ] : _outstanding_footnotes )

@@ -7,6 +7,7 @@
 #include <iostream>
 #include <map>
 #include <utility>
+#include <brick-string>
 
 namespace umd::doc
 {
@@ -329,19 +330,28 @@ namespace umd::doc
 
         void footnote_stop() override
         {
-            auto is_url = []( sv s )
+            auto get_url = []( sv s )
             {
-                return starts_with( s, U"http://"  )
-                    || starts_with( s, U"https://" )
-                    || starts_with( s, U"./"       );
+                if ( !starts_with( s, U"<code>" ) || !brq::ends_with( s, U"</code>" ) )
+                    return sv();
+
+                s.remove_prefix( 6 );
+                s.remove_suffix( 7 );
+
+                if ( starts_with( s, U"http://"  ) ||
+                     starts_with( s, U"https://" ) ||
+                     starts_with( s, U"./"       ) )
+                    return s;
+                else
+                    return sv();
             };
 
             ensure_div();
 
-            if ( is_url( _footnote ) )
+            if ( auto url = get_url( _footnote ); !url.empty() )
             {
                 out.emit( "<a href=\"" );
-                out.emit( _footnote );
+                out.emit( url );
                 out.emit( "\">" );
                 out.emit( _foothead );
                 out.emit( "</a>" );

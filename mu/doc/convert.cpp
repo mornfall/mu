@@ -171,6 +171,8 @@ namespace umd::doc
 
         if ( int( _list.size() ) == l - 1 )
             start_list( t, indent, first );
+        else if ( _list.empty() )
+            brq::raise() << "inner list without an outer list";
         else
             indent = _list.top().indent;
 

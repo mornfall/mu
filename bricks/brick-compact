@@ -152,15 +152,13 @@ namespace brq
             auto it = sort::lower_bound( begin(), end() - 1, _container.back() );
             if ( it == end() - 1 || !eq( *it, _container.back() ) )
             {
-                auto item = _container.back();
                 sort::sort( begin(), end() );
-                return { find( item ), true };
+                return { it, true };
             }
             else
             {
-                auto item = *it;
                 _container.pop_back();
-                return { find( item ), false };
+                return { it, false };
             }
         }
 

@@ -89,6 +89,11 @@ namespace umd::doc
                 out.emit( raw );
         }
 
+        void pagebreak() override
+        {
+            place_footnotes();
+        }
+
         void end() override
         {
             place_footnotes();

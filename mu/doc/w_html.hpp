@@ -400,12 +400,14 @@ namespace umd::doc
 
             for ( const auto &[ num, footnote ] : _outstanding_footnotes )
             {
+                out.emit( "<div class=\"footnote\">" );
                 footnote_anchor( "footnote", "foothead", num );
 
                 ensure_div();
                 out.emit( " " );
                 out.emit( footnote );
                 paragraph();
+                out.emit( "</div>" );
             }
 
             out.emit( "</div>" );

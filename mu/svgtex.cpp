@@ -268,9 +268,10 @@ void process( float scale )
 
     for ( unsigned i = 0; i < keep.size() - 1; ++ i )
     {
+        bool yshifted = use_yshift.count( i );
         write_sv( 1, keep[ i ] );
 
-        if ( use_yshift.count( i ) )
+        if ( yshifted )
         {
             std::string yshift_amount;
             yshift >> yshift_amount;
@@ -279,9 +280,9 @@ void process( float scale )
             write_sv( 1, "pt\">" );
         }
 
-        convert_page( poppler_document_get_page( pdf, i ), i, scale );
+        convert_page( poppler_document_get_page( pdf, i ), i, yshifted ? 1 : scale );
 
-        if ( use_yshift.count( i ) )
+        if ( yshifted )
             write_sv( 1, "</span>" );
     }
 

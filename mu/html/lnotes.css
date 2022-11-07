@@ -36,6 +36,8 @@ a:link, a:visited { color: navy; text-decoration: none; }
 
 #toc ol { padding-inline-start: 1em; display: block; }
 div ol, div ul { margin-block-start: .7ex; margin-block-end: 1.4ex; }
+li > ol { padding-inline-start: 1.2em; list-style-type: lower-alpha; }
+
 .footnote { display: flex; flex-direction: row; font-size: smaller; }
 .footnote > a { padding-right: .5em; }
 .footnotes { border-top: 1px solid black; padding-top: .5ex; display: flex; flex-direction: column; }

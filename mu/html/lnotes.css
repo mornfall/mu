@@ -48,6 +48,8 @@ td { padding: 2pt; }
 .right  { text-align: right; }
 h1, h2, h3 { font-family: "Aleo Regular"; font-weight: normal; }
 h3 { display: inline; font-size: 100%; font-weight: bold; }
+h3 + .par { display: inline; }
+
 div { padding-bottom: .7ex; }
 pre { padding-top: 0; padding-bottom: .7ex; margin-top: .7ex; margin-bottom: .7ex; }
 img { display: block; max-width: 97%; margin: 1.5ex auto 1.5ex auto; }

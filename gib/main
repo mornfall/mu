@@ -18,7 +18,7 @@ cmd gib.findsrc $(srcdir) $(out)
 
 src sources dirs gib.manifest
 
-out create build directories
+out make build directories
 dep gib.manifest
 cmd gib.nochange /bin/mkdir -p $(dirs) bin
 

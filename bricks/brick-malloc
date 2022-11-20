@@ -254,6 +254,9 @@ namespace brq::mm
             return base() | index() * size();
         }
 
+        uint32_t tag() const { return _rep.tag; }
+        void set_tag( uint32_t t ) { _rep.tag = t; }
+
         type *get() const { return reinterpret_cast< type * >( raw() ); }
         type *operator->() const { return get(); }
 

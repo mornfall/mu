@@ -85,17 +85,13 @@ namespace brq
         std::string_view name;
         test_case( std::string_view n = "unnamed" ) : name( n ) {}
 
-        bool was_buffered = false, was_throwing = false;
+        bool was_throwing = false;
 
         void setup()
         {
-            was_buffered = trace()._use_buffer;
             was_throwing = singleton< assert_config >().throw_on_fail;
             singleton< test_summary >().total ++;
-            brq::trace().add_rule( "+", "trace" );
 
-            if ( !was_buffered )
-                trace().use_buffer( true );
             if ( !was_throwing )
                 singleton< assert_config >().throw_on_fail = true;
 
@@ -105,11 +101,6 @@ namespace brq
 
         void cleanup()
         {
-            brq::trace()._rules.pop_back();
-
-            if ( !was_buffered )
-                trace().use_buffer( false );
-
             singleton< assert_config >().throw_on_fail = was_throwing;
 
             for ( auto &f : test_fixtures )
@@ -139,14 +130,6 @@ namespace brq
             catch ( ... )
             {
                 ERROR( "uncaught exception, not derived from std::exception" );
-            }
-
-            if ( !was_buffered )
-            {
-                std::fprintf( stderr, "────────────────────────────────────────────\n" );
-                std::fwrite( trace()._buffer.buffer(), 1, trace()._buffer.size(), stderr );
-                std::fprintf( stderr, "────────────────────────────────────────────\n" );
-                std::fflush( stderr );
             }
 
             singleton< test_summary >().failed ++;

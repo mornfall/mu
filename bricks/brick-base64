@@ -56,9 +56,9 @@ namespace base64 {
 
 using namespace std::literals;
 
-static const char letters[] =
+inline constexpr char letters[] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-static const char padding = '=';
+inline constexpr char padding = '=';
 
 /* (From RFC1521 and draft-ietf-dnssec-secext-03.txt)
    The following encoding technique is taken from RFC 1521 by Borenstein

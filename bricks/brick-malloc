@@ -517,6 +517,8 @@ namespace brq::mm
 
 namespace brq
 {
+    using mm::ptr;
+
     inline void *malloc( size_t bytes )
     {
         if ( bytes > 1ull << 27 ) [[unlikely]]

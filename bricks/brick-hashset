@@ -366,10 +366,11 @@ namespace brq::impl
     template< typename cell_t, unsigned max_chain, unsigned Segment, bool concurrent >
     struct hash_table : brq::refcount_base< uint16_t, true >
     {
-        brq::refcount_ptr< hash_table, true > next;
+        std::atomic< int32_t > to_rehash;
         std::atomic< size_t > _size;
-        std::atomic< ssize_t > to_rehash;
-        uint8_t _data[];
+        brq::refcount_ptr< hash_table, true > next;
+
+        std::byte _data[];
         cell_t &data( int i = 0 ) { return reinterpret_cast< cell_t * >( _data )[ i ]; }
 
         using value_type = typename cell_t::value_type;
@@ -404,7 +405,7 @@ namespace brq::impl
         }
 
         hash_table( size_t size, ssize_t rehash )
-            : next( nullptr ), _size( size ), to_rehash( rehash )
+            : to_rehash( rehash ), _size( size ), next( nullptr )
         {
             std::uninitialized_default_construct( &data(), &data() + size );
         }
@@ -675,9 +676,9 @@ namespace brq::impl
         template< typename T, typename A = hash_adaptor< value_type > >
         int count( const T &x, const A &adaptor = A() ) { return find( x, adaptor ).valid() ? 1 : 0; }
 
-        static std::pair< ssize_t, bool > atomic_add_if_nonzero( std::atomic< ssize_t > &v, int off )
+        static std::pair< ssize_t, bool > atomic_add_if_nonzero( std::atomic< int32_t > &v, int off )
         {
-            ssize_t current = v.load(), next = current + off;
+            int32_t current = v.load(), next = current + off;
             if ( current )
                 while ( !v.compare_exchange_weak( current, next ) && current )
                     next = current + off;

@@ -337,13 +337,13 @@ namespace brq::impl
     using concurrent_cell =
         std::conditional_t< is_lock_free< T >::value, atomic_cell< T >, locked_cell< T > >;
 
-    template< typename Cell_ >
+    template< typename cell_t_ >
     struct hash_set_base
     {
-        using Cell = Cell_;
-        using value_type = typename Cell::value_type;
-        using pointer = typename Cell::pointer;
-        using reference = typename Cell::reference;
+        using cell_t = cell_t_;
+        using value_type = typename cell_t::value_type;
+        using pointer = typename cell_t::pointer;
+        using reference = typename cell_t::reference;
 
         struct iterator
         {
@@ -363,19 +363,19 @@ namespace brq::impl
         iterator end() { return iterator(); }
     };
 
-    template< typename Cell, unsigned max_chain, unsigned Segment, bool concurrent >
+    template< typename cell_t, unsigned max_chain, unsigned Segment, bool concurrent >
     struct hash_table : brq::refcount_base< uint16_t, true >
     {
         brq::refcount_ptr< hash_table, true > next;
         std::atomic< size_t > _size;
         std::atomic< ssize_t > to_rehash;
         uint8_t _data[];
-        Cell &data( int i = 0 ) { return reinterpret_cast< Cell * >( _data )[ i ]; }
+        cell_t &data( int i = 0 ) { return reinterpret_cast< cell_t * >( _data )[ i ]; }
 
-        using value_type = typename Cell::value_type;
+        using value_type = typename cell_t::value_type;
 
         enum LookupTag { Found, Empty, Invalid };
-        using Lookup = std::pair< typename Cell::pointer, LookupTag >;
+        using Lookup = std::pair< typename cell_t::pointer, LookupTag >;
         enum InsertMode { Rehash, Insert };
 
         template< typename stream >
@@ -392,7 +392,7 @@ namespace brq::impl
 
         static void *operator new( size_t objsize, size_t cellcount )
         {
-            auto rv = malloc( objsize + cellcount * sizeof( Cell ) );
+            auto rv = malloc( objsize + cellcount * sizeof( cell_t ) );
             if ( !rv )
                 throw std::bad_alloc();
             return rv;
@@ -413,21 +413,21 @@ namespace brq::impl
         {
             auto s = size();
             for ( decltype( s ) i = 0; i < s; ++i )
-                data( i ).~Cell();
+                data( i ).~cell_t();
         }
 
         size_t size() { return _size.load( std::memory_order_relaxed ); }
         size_t segment_size() { return Segment; }
         size_t segment_count() { return size() / segment_size(); }
-        Cell *segment_end( int id ) { return segment_begin( id ) + segment_size(); }
-        Cell *segment_begin( int id )
+        cell_t *segment_end( int id ) { return segment_begin( id ) + segment_size(); }
+        cell_t *segment_begin( int id )
         {
             ASSERT_LT( id, segment_count() );
             return &data() + segment_size() * id;
         }
 
         static constexpr const size_t cluster_bytes = 32;
-        static constexpr const size_t cluster_size = std::max( 1ul, cluster_bytes / sizeof( Cell ) );
+        static constexpr const size_t cluster_size = std::max( 1ul, cluster_bytes / sizeof( cell_t ) );
 
         static size_t index( hash64_t h, unsigned i, size_t mask )
         {
@@ -447,11 +447,11 @@ namespace brq::impl
             ASSERT_EQ( mask & size(), 0 );
             ASSERT_EQ( mask | size(), mask + size() );
 
-            Cell *tomb = nullptr;
+            cell_t *tomb = nullptr;
 
             for ( unsigned i = 0; i < max; ++i )
             {
-                Cell &cell = data( index( h, i, mask ) );
+                cell_t &cell = data( index( h, i, mask ) );
 
                 if ( cell.invalid() )
                     return { nullptr, Invalid };
@@ -481,12 +481,12 @@ namespace brq::impl
         template< typename X, typename F >
         auto find_generic( const X &x, hash64_t h, F match )
         {
-            using res_t = std::pair< decltype( match( std::declval< Cell & >(), x, h ) ), LookupTag >;
+            using res_t = std::pair< decltype( match( std::declval< cell_t & >(), x, h ) ), LookupTag >;
             const size_t mask = size() - 1;
 
             for ( size_t i = 0; i < max_chain; ++i )
             {
-                Cell &cell = data( index( h, i, mask ) );
+                cell_t &cell = data( index( h, i, mask ) );
                 if ( cell.invalid() )
                     return res_t{ nullptr, Invalid };
                 if ( cell.empty() )
@@ -500,7 +500,7 @@ namespace brq::impl
         template< typename X, typename A >
         Lookup find( const X &x, hash64_t h, const A &adaptor )
         {
-            auto m = [&]( Cell &c, const X &x, hash64_t h ) { return adaptor.match( c, x, h ); };
+            auto m = [&]( cell_t &c, const X &x, hash64_t h ) { return adaptor.match( c, x, h ); };
             return find_generic( x, h, m );
         }
     };

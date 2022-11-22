@@ -269,6 +269,11 @@ namespace brq::mm
             return brq::bitcast< uint64_t >( _rep ) == brq::bitcast< uint64_t >( o._rep );
         }
 
+        explicit operator bool() const
+        {
+            return _rep.a_group != 0 || _rep.s_bits != 0 || _rep.s_low != 0 || _rep.index != 0;
+        }
+
         explicit ptr_base( ptr_rep r ) : _rep( r ) {}
         ptr_base() = default;
     };

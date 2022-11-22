@@ -24,19 +24,54 @@
 
 namespace brq
 {
-    template< typename T, bool atomic = false >
+    template< typename type >
+    struct std_malloc
+    {
+        using value_type = type;
+        using pointer = type *;
+
+        template< typename newtype >
+        using rebind = std_malloc< newtype >;
+
+        static pointer allocate( size_t bytes )
+        {
+            if ( void *mem = std::malloc( bytes ); mem )
+                return static_cast< pointer >( mem );
+            else
+                throw std::bad_alloc();
+        }
+
+        static void free( pointer p )
+        {
+            std::free( p );
+        }
+    };
+
+    using std_bytealloc = std_malloc< std::byte >;
+
+    template< typename T, bool atomic = false, typename static_allocator = std_malloc< T > >
     struct refcount_ptr
     {
-        refcount_ptr() noexcept = default;
-        refcount_ptr( const refcount_ptr< T, atomic > &o ) noexcept : refcount_ptr( o._ptr ) {}
-        refcount_ptr( T *v ) noexcept : _ptr( v ) { _get(); }
-        template< typename D, typename = std::enable_if_t< std::is_convertible_v< D *, T * > > >
-        refcount_ptr( const refcount_ptr< D > &o ) noexcept : refcount_ptr( o._ptr ) {}
-        ~refcount_ptr() noexcept { _put(); }
-        T *operator->() const noexcept { return _ptr; }
-        T &operator*() const noexcept { return *_ptr; }
+        template< bool as_atomic >
+        using self_t = refcount_ptr< T, as_atomic, static_allocator >;
 
-        explicit operator bool() const noexcept { return ptr(); }
+        using rawptr_t = typename static_allocator::pointer;
+
+        refcount_ptr() noexcept : _ptr( rawptr_t() ) {}
+        refcount_ptr( const refcount_ptr &o ) noexcept : refcount_ptr( o._ptr ) {}
+        explicit refcount_ptr( rawptr_t v ) noexcept : _ptr( v ) { _get(); }
+
+        template< typename D, bool from_atomic,
+                  typename = std::enable_if_t< std::is_convertible_v< D *, T * > > >
+        refcount_ptr( const refcount_ptr< D, from_atomic, static_allocator > &o ) noexcept
+            : refcount_ptr( o._ptr )
+         {}
+
+        ~refcount_ptr() noexcept { _put(); }
+        rawptr_t operator->() const noexcept { return _ptr; }
+        T &operator*() const noexcept { return *ptr(); }
+
+        explicit operator bool() const noexcept { return bool( ptr() ); }
         bool operator !() const noexcept { return !ptr(); }
 
         bool operator==( const refcount_ptr &o ) const noexcept
@@ -55,7 +90,7 @@ namespace brq
         }
 
         template< bool o_atomic >
-        refcount_ptr< T, atomic > &operator=( const refcount_ptr< T, o_atomic > &o ) noexcept
+        refcount_ptr &operator=( const self_t< o_atomic> &o ) noexcept
         {
             if constexpr ( o_atomic == atomic ) /* atomic and !atomic can't alias each other */
                 if ( &o == this )
@@ -67,23 +102,23 @@ namespace brq
             return *this;
         }
 
-        refcount_ptr< T, atomic > &operator=( const refcount_ptr< T, atomic > &o ) noexcept
+        refcount_ptr &operator=( const refcount_ptr &o ) noexcept
         {
             return operator=< atomic >( o );
         }
 
-        T *ptr() const noexcept
+        rawptr_t ptr() const noexcept
         {
             if constexpr ( atomic )
             {
                 auto val = uintptr_t( _ptr.load() );
-                return reinterpret_cast< T * >( val & ~uintptr_t( 1 ) );
+                return rawptr_t( val & ~uintptr_t( 1 ) );
             }
             else
                 return _ptr;
         }
 
-        void ptr( T *p ) const noexcept { if constexpr ( atomic ) _ptr.store( p ); else _ptr = p; }
+        void ptr( rawptr_t p ) const noexcept { if constexpr ( atomic ) _ptr.store( p ); else _ptr = p; }
 
         void _get() const noexcept
         {
@@ -94,12 +129,15 @@ namespace brq
 
         void _put() const noexcept
         {
-            auto p = ptr();
-            if ( p && !p->ref_put() )
-                delete p, ptr( nullptr );
+            if ( auto p = ptr(); p && !p->ref_put() )
+            {
+                p->~T();
+                static_allocator::free( p );
+                ptr( rawptr_t() );
+            }
         }
 
-        void reset( T *p = nullptr ) noexcept
+        void reset( rawptr_t p = rawptr_t() ) noexcept
         {
             if ( p )
                 p->ref_get();
@@ -107,45 +145,61 @@ namespace brq
             ptr( p );
         }
 
-        bool compare_exchange_strong( refcount_ptr< T, false > &p, refcount_ptr< T, false > n )
+        bool compare_exchange_strong( self_t< false > &p, self_t< false > n )
         {
-            TRACE( "cmpxchg ", ptr(), p.ptr(), n.ptr() );
-            std::atomic< uintptr_t > &self = *reinterpret_cast< std::atomic< uintptr_t > * >( &_ptr );
-            uintptr_t expect = self.load() & ~uintptr_t( 1 );
-            uintptr_t want = expect | 1;
-
-            while ( !self.compare_exchange_weak( expect, want ) )
-                want = expect | 1, expect = expect & ~uintptr_t( 1 );
-
-            uintptr_t self_val = want & ~uintptr_t( 1 );
-            T *self_ptr = reinterpret_cast< T * >( self_val );
-
-            if ( p.ptr() == self_ptr ) /* success, update this */
+            if constexpr ( atomic )
             {
-                n._get();
-                p._put();
-                _ptr.store( n.ptr() );
-                return true;
+                TRACE( "cmpxchg ", ptr(), p.ptr(), n.ptr() );
+                std::atomic< uintptr_t > &self = *reinterpret_cast< std::atomic< uintptr_t > * >( &_ptr );
+                uintptr_t expect = self.load() & ~uintptr_t( 1 );
+                uintptr_t want = expect | 1;
+
+                while ( !self.compare_exchange_weak( expect, want ) )
+                    want = expect | 1, expect = expect & ~uintptr_t( 1 );
+
+                uintptr_t self_val = want & ~uintptr_t( 1 );
+                rawptr_t self_ptr = rawptr_t( self_val );
+
+                if ( p.ptr() == self_ptr ) /* success, update this */
+                {
+                    n._get();
+                    p._put();
+                    _ptr.store( n.ptr() );
+                    return true;
+                }
+                else /* failed, update p */
+                {
+                    if ( self_ptr )
+                        self_ptr->ref_get();
+                    p._put();
+                    p.ptr( self_ptr );
+                    _ptr.store( self_ptr );
+                    return false;
+                }
             }
-            else /* failed, update p */
+            else
             {
-                if ( self_ptr )
-                    self_ptr->ref_get();
-                p._put();
-                p.ptr( self_ptr );
-                _ptr.store( self_ptr );
-                return false;
+                if ( _ptr == p._ptr )
+                {
+                    *this = n;
+                    return true;
+                }
+                else
+                {
+                    p = *this;
+                    return false;
+                }
             }
         }
 
         template< typename stream >
-        friend auto operator<<( stream &o, const refcount_ptr< T, atomic > &p )
+        friend auto operator<<( stream &o, const refcount_ptr &p )
             -> decltype( o << std::declval< void * >() )
         {
             return o << p.ptr();
         }
 
-        mutable std::conditional_t< atomic, std::atomic< T * >, T * > _ptr = nullptr;
+        mutable std::conditional_t< atomic, std::atomic< rawptr_t >, rawptr_t > _ptr;
     };
 
     template< typename T = uint16_t, bool atomic = false >

@@ -19,13 +19,13 @@ void test_ptr()
 
     brq::test_case( "simple" ) = [=]
     {
-        auto a = brq::make_refcount_opt< obj, atomic_ptr >();
+        auto a = brq::make_refcount< obj, atomic_ptr >();
         ASSERT_EQ( a->_refcount, 1 );
     };
 
     brq::test_case( "dtor" ) = [=]
     {
-        auto a = brq::make_refcount_opt< obj, atomic_ptr >();
+        auto a = brq::make_refcount< obj, atomic_ptr >();
         ASSERT_EQ( a->_refcount, 1 );
         {
             auto b = a;
@@ -36,7 +36,7 @@ void test_ptr()
 
     brq::test_case( "assign" ) = [=]
     {
-        auto a = brq::make_refcount_opt< obj, atomic_ptr >();
+        auto a = brq::make_refcount< obj, atomic_ptr >();
         decltype( a ) b;
         ASSERT_EQ( a->_refcount, 1 );
         b = a;
@@ -49,7 +49,7 @@ void test_ptr()
     {
         int objs = 0;
         {
-            auto a = brq::make_refcount_opt< ref_test< atomic_cnt >, atomic_ptr >( objs );
+            auto a = brq::make_refcount< ref_test< atomic_cnt >, atomic_ptr >( objs );
             ASSERT_EQ( objs, 1 );
         }
         ASSERT_EQ( objs, 0 );

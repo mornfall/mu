@@ -33,7 +33,7 @@ namespace brq
         template< typename newtype >
         using rebind = std_malloc< newtype >;
 
-        static pointer allocate( size_t bytes )
+        static pointer allocate( size_t bytes = sizeof( type ) )
         {
             if ( void *mem = std::malloc( bytes ); mem )
                 return static_cast< pointer >( mem );

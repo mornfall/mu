@@ -337,6 +337,8 @@ namespace brq::mm
 
         template< typename type >
         ptr< type > cast() const { return ptr< type >( _rep ); }
+
+        explicit ptr( void *r ) : ptr_base< void >( from_raw( r ) ) {}
     };
 
     template< typename type >
@@ -346,6 +348,8 @@ namespace brq::mm
         using ptr_base< type >::get;
 
         type &operator*() const { return *get(); }
+
+        explicit ptr( type *r ) : ptr_base< type >( from_raw( r ) ) {}
     };
 
     /* We basically uncompress the pointers to print them. Much easier to

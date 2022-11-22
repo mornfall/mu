@@ -348,6 +348,7 @@ namespace brq::mm
         using ptr_base< type >::get;
 
         type &operator*() const { return *get(); }
+        ptr< void > as_void() const { return ptr< void >( this->_rep ); }
 
         explicit ptr( type *r ) : ptr_base< type >( from_raw( r ) ) {}
     };

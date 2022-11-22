@@ -229,18 +229,33 @@ namespace brq
         std::conditional_t< atomic, std::atomic< T >, T > _refcount = 0;
     };
 
-    template< typename T, typename... Args >
-    refcount_ptr< T > make_refcount( Args && ... args )
-    {
-        return refcount_ptr< T >( new T( std::forward< Args >( args )... ) );
-    }
-
-    template< typename type, bool atomic, typename static_alloc = std_malloc< type >,
-              typename... Args >
-    refcount_ptr< type, atomic, static_alloc > make_refcount_opt( Args && ... args )
+    template< typename type, bool atomic = false,
+              typename static_alloc = std_malloc< type >,
+              typename... alloc_args_t, typename... args_t >
+    auto make_refcount_opt( std::tuple< alloc_args_t... > alloc_args, args_t && ... args )
     {
         using ptr = refcount_ptr< type, atomic, static_alloc >;
-        return ptr( new ( static_alloc::allocate() ) type( std::forward< Args >( args )... ) );
+
+        auto alloc = [&]( auto... args ) { return static_alloc::allocate( args... ); };
+        auto mem = std::apply( alloc, alloc_args );
+
+        try
+        {
+            return ptr( new ( mem ) type( std::forward< args_t >( args )... ) );
+        }
+        catch ( ... )
+        {
+            static_alloc::free( mem );
+            throw;
+        }
+    }
+
+    template< typename type, bool atomic = false,
+              typename static_alloc = std_malloc< type >, typename... args_t >
+    auto make_refcount( args_t && ... args )
+    {
+        return make_refcount_opt< type, atomic, static_alloc >( std::tuple{},
+                                                                std::forward< args_t >( args )... );
     }
 }
 

@@ -225,6 +225,48 @@ namespace brq::mm
         ptr_rep() : tag( 0 ), a_group( 0 ), s_bits( 0 ), s_low( 0 ), index( 0 ) {}
     };
 
+    /* The following code computes the compressed form of the pointer, either
+     * directly from parts, or by reverse-mapping machine pointers. */
+
+    inline ptr_rep from_parts( uint32_t a_group, uint32_t s_group, uint32_t index )
+    {
+        ptr_rep r;
+        r.a_group = a_group;
+        r.s_bits = 8 * sizeof( unsigned ) - __builtin_clz( s_group ) - 1;
+        r.s_low  = s_group & 1;
+        r.index  = uint64_t( s_group & 254 ) << ( 31 - r.s_bits ) | index;
+        return r;
+    }
+
+    inline ptr_rep from_raw( uint64_t bits )
+    {
+        uint32_t a_group = bits >> 44 & 7;
+        uint32_t s_group = bits >> 36 & 255;
+        uint64_t offset  = bits & 0xfffffffffull;
+
+        return from_parts( a_group, s_group, offset / size( a_group, s_group ) );
+    }
+
+    inline ptr_rep from_raw( void *rawptr )
+    {
+        return from_raw( reinterpret_cast< uint64_t >( rawptr ) );
+    }
+
+    inline ptr_rep from_size( size_t bytes )
+    {
+        static_assert( sizeof( uint32_t ) == sizeof( unsigned ) );
+        ASSERT( bytes );
+
+        constexpr std::array< uint8_t, 18 > lgrp = { 1, 2, 2, 3, 3, 3, 4, 4, 4,
+                                                     4, 5, 5, 5, 5, 6, 6, 6, 6 };
+
+        uint32_t lbytes  = __builtin_clz( ( ( bytes - 1 ) >> 9 ) | 1 );
+        uint32_t a_group = lgrp[ 31 - lbytes ];
+        uint64_t s_group = ( bytes >> align[ a_group ] ) + bool( bytes & misalign[ a_group ] ) - 1;
+
+        return from_parts( a_group, s_group, 0 );
+    }
+
     template< typename type >
     struct ptr_base
     {
@@ -274,7 +316,12 @@ namespace brq::mm
             return _rep.a_group != 0 || _rep.s_bits != 0 || _rep.s_low != 0 || _rep.index != 0;
         }
 
+        explicit operator uint64_t() const { return raw(); }
+        explicit operator uintptr_t() const { return raw(); }
+
         explicit ptr_base( ptr_rep r ) : _rep( r ) {}
+        explicit ptr_base( uintptr_t r ) : _rep( from_raw( r ) ) {}
+
         ptr_base() = default;
     };
 
@@ -309,46 +356,6 @@ namespace brq::mm
     inline brq::string_builder &operator<<( brq::string_builder &b, ptr< type > p )
     {
         return b << p.a_group() << ":" << p.s_group() << ":" << p.index();
-    }
-
-    /* The following code computes the compressed form of the pointer, either
-     * directly from parts, or by reverse-mapping machine pointers. */
-
-    template< typename type = void >
-    inline ptr< type > from_parts( uint32_t a_group, uint32_t s_group, uint32_t index )
-    {
-        ptr< type > r;
-        r._rep.a_group = a_group;
-        r._rep.s_bits = 8 * sizeof( unsigned ) - __builtin_clz( s_group ) - 1;
-        r._rep.s_low  = s_group & 1;
-        r._rep.index  = uint64_t( s_group & 254 ) << ( 31 - r._rep.s_bits ) | index;
-        return r;
-    }
-
-    template< typename type >
-    ptr< type > from_ptr( type *ptr )
-    {
-        uint64_t bits = reinterpret_cast< uint64_t >( ptr );
-        uint32_t a_group = bits >> 44 & 7;
-        uint32_t s_group = bits >> 36 & 255;
-        uint64_t offset  = bits & 0xfffffffffull;
-
-        return from_parts< type >( a_group, s_group, offset / size( a_group, s_group ) );
-    }
-
-    inline ptr< void > from_size( size_t bytes )
-    {
-        static_assert( sizeof( uint32_t ) == sizeof( unsigned ) );
-        ASSERT( bytes );
-
-        constexpr std::array< uint8_t, 18 > lgrp = { 1, 2, 2, 3, 3, 3, 4, 4, 4,
-                                                     4, 5, 5, 5, 5, 6, 6, 6, 6 };
-
-        uint32_t lbytes  = __builtin_clz( ( ( bytes - 1 ) >> 9 ) | 1 );
-        uint32_t a_group = lgrp[ 31 - lbytes ];
-        uint64_t s_group = ( bytes >> align[ a_group ] ) + bool( bytes & misalign[ a_group ] ) - 1;
-
-        return from_parts( a_group, s_group, 0 );
     }
 
     /* The ‘boring’ slow paths for large allocations. The result is 16-byte
@@ -425,7 +432,7 @@ namespace brq::mm
          * getting the groups from that, with the hope that the optimizer will
          * remove the redundant part of the computation. */
 
-        auto r = from_size( bytes );
+        ptr< void > r( from_size( bytes ) );
         auto &thread = mm::thread[ r.a_group() ][ r.s_group() ];
         auto &global = mm::global[ r.a_group() ][ r.s_group() ];
 
@@ -511,9 +518,9 @@ namespace brq::mm
             thread.swap();
     }
 
-    inline void free_small( void *ptr )
+    inline void free_small( void *rawptr )
     {
-        free_small( from_ptr( ptr ) );
+        free_small( ptr< void >( from_raw( rawptr ) ) );
     }
 }
 

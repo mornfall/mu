@@ -235,10 +235,12 @@ namespace brq
         return refcount_ptr< T >( new T( std::forward< Args >( args )... ) );
     }
 
-    template< typename T, bool atomic, typename... Args >
-    refcount_ptr< T, atomic > make_refcount_opt( Args && ... args )
+    template< typename type, bool atomic, typename static_alloc = std_malloc< type >,
+              typename... Args >
+    refcount_ptr< type, atomic, static_alloc > make_refcount_opt( Args && ... args )
     {
-        return refcount_ptr< T, atomic >( new T( std::forward< Args >( args )... ) );
+        using ptr = refcount_ptr< type, atomic, static_alloc >;
+        return ptr( new ( static_alloc::allocate() ) type( std::forward< Args >( args )... ) );
     }
 }
 

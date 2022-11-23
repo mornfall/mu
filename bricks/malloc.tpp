@@ -8,10 +8,10 @@ int main()
 
     brq::test_case( "parts" ) = []
     {
-        auto b = from_parts( 1, 7, 13 );
+        ptr< void > b( from_parts( 1, 7, 13 ) );
         ASSERT_EQ( b.s_group(), 7 );
         ASSERT_EQ( b.a_group(), 1 );
-        ASSERT_EQ( b, from_ptr( b.get() ) );
+        ASSERT_EQ( b, ptr< void >( b.get() ) );
     };
 
     brq::test_case( "size" ) = []
@@ -23,17 +23,24 @@ int main()
                     i <= 32 * 1024  ? 128 :
                     i <= 512 * 1024 ? 2048 :
                     i <= 8192 * 1024 ? 32 * 1024 : 512 * 1024;
-            ASSERT_EQ( brq::align( i, a ), from_size( i ).size(), from_size( i ) );
+
+            ptr< void > p( from_size( i ) );
+            ASSERT_EQ( brq::align( i, a ), p.size(), p );
         }
 
         int max = 128 * 1024 * 1024;
-        ASSERT_EQ( max, from_size( max ).size(), from_size( max ) );
+        ptr< void > p( from_size( max ) );
+        ASSERT_EQ( max, p.size(), p );
     };
 
     brq::test_case( "from_ptr index 0" ) = []
     {
         for ( int i = 1; i < 8 * 1024 * 1024 + 10; ++i )
-            ASSERT_EQ( from_size( i ), from_ptr( from_size( i ).get() ) );
+        {
+            ptr< void > p( from_size( i ) );
+            ptr< void > q( p.get() );
+            ASSERT_EQ( p, q );
+        }
     };
 
     brq::test_case( "from_ptr" ) = []
@@ -45,8 +52,8 @@ int main()
                     if ( idx * size( a, s ) >= 1ull << 36 )
                         continue;
 
-                    auto ptr = from_parts( a, s, idx );
-                    ASSERT_EQ( ptr, from_ptr( ptr.get() ) );
+                    ptr< void > p( from_parts( a, s, idx ) );
+                    ASSERT_EQ( p, ptr< void >( p.get() ) );
                 }
     };
 

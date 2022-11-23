@@ -588,9 +588,9 @@ namespace brq::impl
 
         bool await_update()
         {
-            if ( auto next = _table->next )
+            if ( _table->next )
             {
-                _table = next;
+                _table = _table->next;
                 while ( _table->to_rehash.load() < 0 );
                 return true;
             }

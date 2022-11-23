@@ -408,8 +408,8 @@ namespace brq::impl
             static_allocator::free( v );
         }
 
-        hash_table( size_t size, ssize_t rehash )
-            : to_rehash( rehash ), _size( size ), next( nullptr )
+        hash_table( size_t size, int32_t rehash )
+            : to_rehash( rehash ), _size( size ), next()
         {
             std::uninitialized_default_construct( &data(), &data() + size );
         }

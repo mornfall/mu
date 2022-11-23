@@ -317,10 +317,9 @@ namespace brq::mm
         }
 
         explicit operator uint64_t() const { return raw(); }
-        explicit operator uintptr_t() const { return raw(); }
 
         explicit ptr_base( ptr_rep r ) : _rep( r ) {}
-        explicit ptr_base( uintptr_t r ) : _rep( from_raw( r ) ) {}
+        explicit ptr_base( uint64_t r ) : _rep( from_raw( r ) ) {}
 
         ptr_base() = default;
     };

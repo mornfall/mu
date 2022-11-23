@@ -111,8 +111,8 @@ namespace brq
         {
             if constexpr ( atomic )
             {
-                auto val = uintptr_t( _ptr.load() );
-                return rawptr_t( val & ~uintptr_t( 1 ) );
+                auto val = uint64_t( _ptr.load() ); /* FIXME */
+                return rawptr_t( val & ~uint64_t( 1 ) );
             }
             else
                 return _ptr;

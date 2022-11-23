@@ -1,4 +1,5 @@
 #include "brick-hashset"
+#include "brick-malloc"
 #include "brick-unit"
 
 #ifdef __divine__
@@ -20,10 +21,11 @@ struct big
     operator int() const { return v; }
 };
 
-template< template< typename, typename, int > class HS, typename V = int >
+template< template< typename, typename, int, typename > class hashset_t,
+          typename value_t, typename alloc_t >
 void test_sequential()
 {
-    using hashset = HS< V, brq::impl::quick, 24 >;
+    using hashset = hashset_t< value_t, brq::impl::quick, 24, alloc_t >;
 
     brq::test_case( "insert_basic" ) = [=]
     {
@@ -54,7 +56,7 @@ void test_sequential()
         }
     };
 
-    if constexpr ( hashset::Cell::can_tombstone() )
+    if constexpr ( hashset::cell_t::can_tombstone() )
     {
         brq::test_case( "erase_basic" ) = [=]
         {
@@ -170,10 +172,11 @@ auto test_multi( std::size_t count, int from, int to )
     return arr[ 0 ].set;
 }
 
-template< template< typename, typename, int > class HS, typename V = int >
+template< template< typename, typename, int, typename > class hashset_t,
+          typename value_t, typename alloc_t >
 void test_parallel()
 {
-    using hashset = HS< V, brq::impl::quick, 24 >;
+    using hashset = hashset_t< value_t, brq::impl::quick, 24, alloc_t >;
     using inserter = test_inserter< hashset >;
 
     brq::test_case( "insert_par" ) = [=]
@@ -239,17 +242,23 @@ void test_parallel()
 
 int main()
 {
-    test_sequential< brq::hash_set >();
-    test_sequential< brq::concurrent_hash_set >();
-    test_parallel< brq::concurrent_hash_set >();
+    using namespace brq;
 
-    test_sequential< brq::hash_set, int64_t >();
-    test_sequential< brq::concurrent_hash_set, int64_t >();
-    test_parallel< brq::concurrent_hash_set, int64_t >();
+    test_sequential< hash_set, int, std_bytealloc >();
+    test_sequential< concurrent_hash_set, int, std_bytealloc >();
+    test_parallel< concurrent_hash_set, int, std_bytealloc >();
 
-    test_sequential< brq::hash_set, big >();
-    test_sequential< brq::concurrent_hash_set, big >();
-    test_parallel< brq::concurrent_hash_set, big >();
+    test_sequential< hash_set, int64_t, std_bytealloc >();
+    test_sequential< concurrent_hash_set, int64_t, std_bytealloc >();
+    test_parallel< concurrent_hash_set, int64_t, std_bytealloc >();
+
+    test_sequential< hash_set, big, std_bytealloc >();
+    test_sequential< concurrent_hash_set, big, std_bytealloc >();
+    test_parallel< concurrent_hash_set, big, std_bytealloc >();
+
+    test_sequential< hash_set, int, mm_bytealloc >();
+    test_sequential< concurrent_hash_set, int, mm_bytealloc >();
+
 }
 
 #ifdef BRICK_BENCHMARK_REG

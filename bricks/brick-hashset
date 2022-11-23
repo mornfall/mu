@@ -363,12 +363,17 @@ namespace brq::impl
         iterator end() { return iterator(); }
     };
 
-    template< typename cell_t, unsigned max_chain, unsigned Segment, bool concurrent >
+    template< typename cell_t, unsigned max_chain, unsigned Segment, bool concurrent,
+              typename static_allocator >
     struct hash_table : brq::refcount_base< uint16_t, true >
     {
         std::atomic< int32_t > to_rehash;
         std::atomic< size_t > _size;
-        brq::refcount_ptr< hash_table, true > next;
+
+        using self_alloc = typename static_allocator::template rebind< hash_table >;
+        using self_ptr = typename self_alloc::pointer;
+        using next_ptr = brq::refcount_ptr< hash_table, concurrent, self_alloc >;
+        next_ptr next;
 
         std::byte _data[];
         cell_t &data( int i = 0 ) { return reinterpret_cast< cell_t * >( _data )[ i ]; }
@@ -391,17 +396,16 @@ namespace brq::impl
             }
         }
 
-        static void *operator new( size_t objsize, size_t cellcount )
+        static self_ptr construct( size_t cellcount, int32_t rehash )
         {
-            auto rv = malloc( objsize + cellcount * sizeof( cell_t ) );
-            if ( !rv )
-                throw std::bad_alloc();
-            return rv;
+            auto mem = self_alloc::allocate( sizeof( hash_table ) + cellcount * sizeof( cell_t ) );
+            new ( &*mem ) hash_table( cellcount, rehash );
+            return mem;
         }
 
         static void operator delete( void *v )
         {
-            free( v );
+            static_allocator::free( v );
         }
 
         hash_table( size_t size, ssize_t rehash )
@@ -532,7 +536,8 @@ namespace brq::impl
     using quick = grow< 0x100, 0x1000, 0x10000, 0x80000, 0x100000, 0x400000 >;
     using slow  = grow< 0x10 >;
 
-    template< typename cell, bool concurrent, typename grow_t = impl::quick, int max_chain = 24 >
+    template< typename cell, bool concurrent, typename grow_t = impl::quick, int max_chain = 24,
+              typename static_allocator = std_malloc< std::byte > >
     struct hash_set : hash_set_base< cell >
     {
         using Base = hash_set_base< cell >;
@@ -540,9 +545,10 @@ namespace brq::impl
 
         using typename Base::value_type;
         using typename Base::iterator;
-        using table = impl::hash_table< cell, max_chain, grow_t::Initial, concurrent >;
+        using table = impl::hash_table< cell, max_chain, grow_t::Initial, concurrent, static_allocator >;
+        using table_ptr = brq::refcount_ptr< table, false, typename table::self_alloc >;
 
-        brq::refcount_ptr< table > _table;
+        table_ptr _table;
 
         size_t capacity()
         {
@@ -730,14 +736,14 @@ namespace brq::impl
 
         auto make_table( size_t size, ssize_t rehash )
         {
-            return brq::refcount_ptr< table >( new ( size ) table( size, rehash ) );
+            return table_ptr( table::construct( size, rehash ) );
         }
 
         template< typename A >
         void grow( const A &adaptor )
         {
             auto next = make_table( grow_t::next_size( _table->size() ), -_table->segment_count() - 1 );
-            refcount_ptr< table > expect;
+            table_ptr expect;
 
             TRACE( _table, "grow from", _table->size(), "to", grow_t::next_size( _table->size() ) );
             if ( _table->next.compare_exchange_strong( expect, next ) )
@@ -810,12 +816,14 @@ namespace brq
         void invalidate( const cell & ) const {}
     };
 
-    template< typename T, typename grow = impl::quick, int max_chain = 24 >
-    using hash_set = impl::hash_set< impl::default_cell< T >, false, grow, max_chain >;
+    template< typename type, typename grow = impl::quick, int max_chain = 24,
+              typename alloc = std_malloc< type > >
+    using hash_set = impl::hash_set< impl::default_cell< type >, false, grow, max_chain, alloc >;
 
-    template< typename T, typename grow = impl::quick, int max_chain = 24 >
-    using concurrent_hash_set = impl::hash_set< impl::concurrent_cell< T >, true, grow, max_chain >;
-
+    template< typename type, typename grow = impl::quick, int max_chain = 24,
+              typename alloc = std_malloc< type > >
+    using concurrent_hash_set = impl::hash_set< impl::concurrent_cell< type >, true, grow,
+                                                max_chain, alloc >;
 }
 
 // vim: syntax=cpp tabstop=4 shiftwidth=4 expandtab ft=cpp

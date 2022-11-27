@@ -36,6 +36,7 @@ namespace brq
         refcount_ptr() noexcept : _ptr( rawptr_t() ) {}
         refcount_ptr( const refcount_ptr &o ) noexcept : refcount_ptr( o._ptr ) {}
         explicit refcount_ptr( rawptr_t v ) noexcept : _ptr( v ) { _get(); }
+        refcount_ptr( std::nullptr_t ) : refcount_ptr() {}
 
         template< typename D, bool from_atomic,
                   typename = std::enable_if_t< std::is_convertible_v< D *, T * > > >

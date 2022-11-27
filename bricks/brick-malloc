@@ -5,6 +5,7 @@
 
 #include "brick-min"
 #include "brick-bitlevel"
+#include "brick-salloc"
 
 namespace brq::mm
 {
@@ -536,15 +537,11 @@ namespace brq
     using mm::ptr;
 
     template< typename type >
-    struct mm_malloc
+    struct mm_malloc : static_allocator< mm_malloc, type >
     {
         static constexpr std::size_t max_size = 1ull << 27;
 
-        using value_type = type;
         using pointer = ptr< type >;
-
-        template< typename newtype >
-        using rebind = mm_malloc< newtype >;
 
         static pointer allocate()
         {

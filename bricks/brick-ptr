@@ -18,38 +18,14 @@
 
 #pragma once
 
-#include <brick-assert>
+#include "brick-assert"
+#include "brick-salloc"
 #include <atomic>
 #include <functional>
 
 namespace brq
 {
-    template< typename type >
-    struct std_malloc
-    {
-        using value_type = type;
-        using pointer = type *;
-
-        template< typename newtype >
-        using rebind = std_malloc< newtype >;
-
-        static pointer allocate( size_t bytes = sizeof( type ) )
-        {
-            if ( void *mem = std::malloc( bytes ); mem )
-                return static_cast< pointer >( mem );
-            else
-                throw std::bad_alloc();
-        }
-
-        static void free( pointer p )
-        {
-            std::free( p );
-        }
-    };
-
-    using std_bytealloc = std_malloc< std::byte >;
-
-    template< typename T, bool atomic = false, typename static_allocator = std_malloc< T > >
+    template< typename T, bool atomic = false, typename static_allocator = std_new< T > >
     struct refcount_ptr
     {
         template< bool as_atomic >
@@ -131,8 +107,7 @@ namespace brq
         {
             if ( auto p = ptr(); p && !p->ref_put() )
             {
-                p->~T();
-                static_allocator::free( p );
+                static_allocator::destroy( p );
                 ptr( rawptr_t() );
             }
         }
@@ -230,28 +205,16 @@ namespace brq
     };
 
     template< typename type, bool atomic = false,
-              typename static_alloc = std_malloc< type >,
+              typename static_alloc = std_new< type >,
               typename... alloc_args_t, typename... args_t >
     auto make_refcount_opt( std::tuple< alloc_args_t... > alloc_args, args_t && ... args )
     {
         using ptr = refcount_ptr< type, atomic, static_alloc >;
-
-        auto alloc = [&]( auto... args ) { return static_alloc::allocate( args... ); };
-        auto mem = std::apply( alloc, alloc_args );
-
-        try
-        {
-            return ptr( new ( mem ) type( std::forward< args_t >( args )... ) );
-        }
-        catch ( ... )
-        {
-            static_alloc::free( mem );
-            throw;
-        }
+        return ptr( static_alloc::construct_with( alloc_args, std::forward< args_t >( args )... ) );
     }
 
     template< typename type, bool atomic = false,
-              typename static_alloc = std_malloc< type >, typename... args_t >
+              typename static_alloc = std_new< type >, typename... args_t >
     auto make_refcount( args_t && ... args )
     {
         return make_refcount_opt< type, atomic, static_alloc >( std::tuple{},

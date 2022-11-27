@@ -1,0 +1,120 @@
+// -*- mode: C++; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+
+/*
+ * (c) 2022 Petr Ročkai <code@fixp.eu>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#pragma once
+
+#include <brick-assert>
+#include <tuple>
+
+namespace brq
+{
+    template< template< typename > class self_t_, typename type >
+    struct static_allocator
+    {
+        using value_type = type;
+
+        template< typename newtype >
+        using rebind = self_t_< newtype >;
+
+        using self_t = self_t_< type >;
+
+        template< typename... alloc_args_t, typename... args_t >
+        static auto construct_with( std::tuple< alloc_args_t... > alloc_args, args_t && ... args )
+        {
+            auto alloc = [&]( auto && ... args ) -> decltype( auto )
+            {
+                return self_t::allocate( std::forward< decltype( args ) >( args ) ... );
+            };
+
+            auto mem = std::apply( alloc, alloc_args );
+
+            try
+            {
+                return new ( mem ) type( std::forward< args_t >( args )... );
+            }
+            catch ( ... )
+            {
+                self_t::free( mem );
+                throw;
+            }
+        }
+
+        template< typename... args_t >
+        static auto construct( args_t && ... args )
+        {
+            return self_t::construct_with( std::tuple(), std::forward< args_t >( args )... );
+        }
+
+        template< typename ptr_t >
+        static void destroy( ptr_t p )
+        {
+            static_assert( std::is_same_v< ptr_t, typename self_t::pointer > );
+
+            try
+            {
+                p->~type();
+            }
+            catch ( ... )
+            {
+                self_t::free( p );
+                throw;
+            }
+
+            self_t::free( p );
+        }
+    };
+
+    template< typename type >
+    struct std_malloc : static_allocator< std_malloc, type >
+    {
+        using pointer = type *;
+        using static_allocator< std_malloc, type >::destroy;
+
+        static pointer allocate( size_t bytes = sizeof( type ) )
+        {
+            if ( void *mem = std::malloc( bytes ); mem )
+                return static_cast< pointer >( mem );
+            else
+                throw std::bad_alloc();
+        }
+
+        static void free( pointer p )
+        {
+            std::free( p );
+        }
+    };
+
+    template< typename type >
+    struct std_new : static_allocator< std_new, type >
+    {
+        using pointer = type *;
+
+        template< typename... args_t >
+        static pointer construct_with( std::tuple<>, args_t && ... args )
+        {
+            return new type( std::forward< args_t >( args )... );
+        }
+
+        static void destroy( pointer p )
+        {
+            delete p;
+        }
+    };
+
+    using std_bytealloc = std_malloc< std::byte >;
+}

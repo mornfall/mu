@@ -12,37 +12,33 @@ function makeTOC( doc )
 
     headings.forEach( function ( heading, index )
     {
-        name = heading.tagName.toLowerCase();
-
-        var anchor = doc.createElement( 'a' );
-        anchor.setAttribute( 'name', 'toc' + index );
-        anchor.setAttribute( 'id', 'toc' + index );
+        tagname = heading.tagName.toLowerCase();
+        anchor = heading.parentNode;
 
         var link = doc.createElement( 'a' );
-        link.setAttribute( 'href', '#toc' + index );
-        if ( name == 'h1' )
+        link.setAttribute( 'href', '#' + anchor.getAttribute( 'name' ) );
+        if ( tagname == 'h1' )
             link.setAttribute( 'onclick', 'clickTOC( event )' );
         link.textContent = heading.textContent;
 
-        if ( name > level )
+        if ( tagname > level )
         {
             var ol = doc.createElement( 'ol' );
             last.appendChild( ol );
             cur = ol;
         }
 
-        if ( name < level )
+        if ( tagname < level )
             cur = cur.parentNode.parentNode;
 
-        level = name;
+        level = tagname;
 
         var li = doc.createElement( 'li' );
-        li.setAttribute( 'class', name );
+        li.setAttribute( 'class', tagname );
         last = li;
 
         li.appendChild( link );
         cur.appendChild( li );
-        heading.parentNode.insertBefore( anchor, heading );
     } );
 }
 

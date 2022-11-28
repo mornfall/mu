@@ -40,6 +40,7 @@ namespace umd::doc
 
         bool _in_mpost = false;
         int _heading = 0; // currently open <hN> tag (must not be nested)
+        std::u32string _ref_prefix;
 
         sv fgcolor() const
         {
@@ -136,9 +137,17 @@ namespace umd::doc
         {
             place_footnotes();
 
+            if ( level == 1 )
+                _ref_prefix = ref;
+
             paragraph();
             _heading = level;
-            out.emit( "<h", level, ">" );
+
+            out.emit( "<a name=\"", _ref_prefix );
+            if ( level != 1 )
+                out.emit( "/", ref );
+
+            out.emit( "\"><h", level, ">" );
 
             for ( int i = 1; i < level; ++i )
                 if ( _section_num[ i ].empty() )
@@ -163,7 +172,7 @@ namespace umd::doc
 
         void heading_stop() override
         {
-            out.emit( "</h", _heading, "> " );
+            out.emit( "</h", _heading, "></a> " );
             _heading = 0;
         }
 
@@ -322,6 +331,16 @@ namespace umd::doc
 
         void small_start() override {}
         void small_stop()  override {}
+
+        void ref_start( sv ref, bool global ) override
+        {
+            out.emit( "<a href=\"#" );
+            if ( !global )
+                out.emit( _ref_prefix, "/" );
+            out.emit( ref, "\">" );
+        }
+
+        void ref_stop()  override { out.emit( "</a>" ); }
 
         void footnote_head() override { _in_foothead = true; _foothead.clear(); }
         void footnote_start() override

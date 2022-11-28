@@ -5,6 +5,7 @@
 #include <stack>
 #include <set>
 #include <cassert>
+#include <brick-min>
 
 namespace umd::doc
 {
@@ -14,6 +15,21 @@ namespace umd::doc
         return std::stoi( conv.to_bytes( n.begin(), n.end() ) );
     }
 
+    enum class span
+    {
+        tt, em, bf
+    };
+
+    inline auto &operator<<( brq::string_builder &b, span s )
+    {
+        switch ( s )
+        {
+            case span::tt: return b << "‹tt›";
+            case span::em: return b << "«em»";
+            case span::bf: return b << "❮bf❯";
+        }
+    }
+
     struct convert : pic::writer
     {
         using sv = std::u32string_view;
@@ -21,6 +37,7 @@ namespace umd::doc
         doc::writer &w;
         std::stack< sv > todo;
 
+        std::stack< span > _spans;
         std::set< const char32_t * > _footnotes;
         sv _last_footnote;
 
@@ -38,6 +55,7 @@ namespace umd::doc
         };
 
         std::stack< list > _list;
+
         int rec_list_depth = 0;
 
         bool in_picture = false;
@@ -116,6 +134,9 @@ namespace umd::doc
         bool end_list( int count = 1 );
         void ensure_list( int l, list::type t );
         bool try_enum();
+
+        void emit_quote();
+        void end_quote();
 
         auto code_types();
         void emit_code();

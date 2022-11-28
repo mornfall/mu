@@ -237,6 +237,37 @@ namespace umd::doc
         return digits || alpha != none;
     }
 
+    template< typename flush_t >
+    void convert::span_start( flush_t flush, span s )
+    {
+        _spans.push( s );
+        flush();
+
+        switch ( s )
+        {
+            case span::tt: w.tt_start(); break;
+            case span::em: w.em_start(); break;
+            case span::bf: w.bf_start(); break;
+        }
+    }
+
+    template< typename flush_t >
+    void convert::span_stop( flush_t flush, span s )
+    {
+        if ( _spans.top() != s )
+            brq::raise() << "mismatched span: tried to close " << s << " but expected " << _spans.top();
+
+        flush();
+        _spans.pop();
+
+        switch ( s )
+        {
+            case span::tt: w.tt_stop(); break;
+            case span::em: w.em_stop(); break;
+            case span::bf: w.bf_stop(); break;
+        }
+    }
+
     void convert::emit_text( std::u32string_view v )
     {
         sv sup = U"¹²³⁴⁵⁶⁷⁸⁹";
@@ -245,12 +276,12 @@ namespace umd::doc
         {
             switch ( c )
             {
-                case U'‹': if ( !in_math ) flush(), w.tt_start(); break;
-                case U'›': if ( !in_math ) flush(), w.tt_stop(); break;
-                case U'«': flush(); w.em_start(); break;
-                case U'»': flush(); w.em_stop(); break;
-                case U'❮': flush(); w.bf_start(); break;
-                case U'❯': flush(); w.bf_stop(); break;
+                case U'‹': if ( !in_math ) span_start( flush, span::tt ); break;
+                case U'›': if ( !in_math ) span_stop( flush, span::tt ); break;
+                case U'«': span_start( flush, span::em ); break;
+                case U'»': span_stop( flush, span::em ); break;
+                case U'❮': span_start( flush, span::bf ); break;
+                case U'❯': span_stop( flush, span::bf ); break;
                 case U'⟦':
                     if ( !in_math )
                         flush(), w.math_start();

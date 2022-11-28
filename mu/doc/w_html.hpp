@@ -132,7 +132,7 @@ namespace umd::doc
             }
         }
 
-        void heading_start( int level, std::u32string_view num ) override
+        void heading_start( int level, sv num, sv ref ) override
         {
             place_footnotes();
 

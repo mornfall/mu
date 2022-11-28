@@ -12,7 +12,7 @@ namespace umd::doc
         w_lnotes( stream &out ) : w_context( out ) { doctype = U"lnotes"; }
         int nest_level = 0;
 
-        void heading_start( int level, std::u32string_view num ) override
+        void heading_start( int level, sv num, sv ref ) override
         {
             close_sections( level );
             if ( level == 3 )

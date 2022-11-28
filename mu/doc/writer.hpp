@@ -95,7 +95,7 @@ namespace umd::doc
         virtual void meta_end() {}
         virtual void html( sv ) {}
         virtual void text( std::u32string_view ) = 0;
-        virtual void heading_start( int level, std::u32string_view num = U"" ) = 0;
+        virtual void heading_start( int level, sv num = U"", sv ref = U"" ) = 0;
         virtual void heading_stop() = 0;
 
         /* spans ; may be also called within mpost btex/etex */
@@ -163,7 +163,7 @@ namespace umd::doc
     struct w_noop : writer
     {
         virtual void text( std::u32string_view ) {}
-        virtual void heading_start( int, std::u32string_view ) {}
+        virtual void heading_start( int, sv, sv ) {}
         virtual void heading_stop() {}
 
         virtual void math_start() {}

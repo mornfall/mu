@@ -49,11 +49,23 @@ namespace umd::doc
     void process( SV string, C char_cb, S seg_cb )
     {
         int start = 0, end;
-        auto flush = [&]( int n = 0 )
+
+        auto flush = [&]( int n = 0, bool emit = true )
         {
+            SV seg;
+
             if ( start < end - n )
-                seg_cb( string.substr( start, end - start - n ) );
-            start = std::max( start, end + 1 - n );
+            {
+                seg = string.substr( start, end - start - n );
+
+                if ( emit )
+                    seg_cb( seg );
+            }
+
+            if ( emit )
+                start = std::max( start, end + 1 - n );
+
+            return seg;
         };
 
         for ( end = 0; end < int( string.size() ); ++end )
@@ -97,6 +109,9 @@ namespace umd::doc
         virtual void math_stop() = 0;
         virtual void small_start() {}
         virtual void small_stop() {}
+
+        virtual void ref_start( sv ) {}
+        virtual void ref_stop() {}
 
         /* aligned equations */
         virtual void eqn_start( int, std::string ) = 0;

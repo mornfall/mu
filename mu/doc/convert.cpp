@@ -240,6 +240,9 @@ namespace umd::doc
     template< typename flush_t >
     void convert::span_start( flush_t flush, span s )
     {
+        if ( !_spans.empty() && _spans.top() == span::ref )
+            span_stop( flush, span::ref );
+
         _spans.push( s );
         flush();
 
@@ -248,14 +251,21 @@ namespace umd::doc
             case span::tt: w.tt_start(); break;
             case span::em: w.em_start(); break;
             case span::bf: w.bf_start(); break;
+            case span::ref: break;
         }
     }
 
     template< typename flush_t >
     void convert::span_stop( flush_t flush, span s )
     {
+        if ( _spans.top() == span::ref && s != span::ref )
+            span_stop( flush, span::ref );
+
         if ( _spans.top() != s )
             brq::raise() << "mismatched span: tried to close " << s << " but expected " << _spans.top();
+
+        if ( _spans.top() == span::ref )
+            w.ref_start( flush( 0, false ) );
 
         flush();
         _spans.pop();
@@ -265,6 +275,7 @@ namespace umd::doc
             case span::tt: w.tt_stop(); break;
             case span::em: w.em_stop(); break;
             case span::bf: w.bf_stop(); break;
+            case span::ref: w.ref_stop(); break;
         }
     }
 
@@ -278,6 +289,7 @@ namespace umd::doc
             {
                 case U'‹': if ( !in_math ) span_start( flush, span::tt ); break;
                 case U'›': if ( !in_math ) span_stop( flush, span::tt ); break;
+                case U'▷': span_start( flush, span::ref ); break;
                 case U'«': span_start( flush, span::em ); break;
                 case U'»': span_stop( flush, span::em ); break;
                 case U'❮': span_start( flush, span::bf ); break;
@@ -294,8 +306,6 @@ namespace umd::doc
                     break;
                 case 0x2028:
                     flush(); w.linebreak(); break;
-                case '\t':
-                    flush(); w.tab(); break;
                 default:
                     if ( !in_math && sup.find( c ) != sup.npos )
                         emit_footnote( flush, c );

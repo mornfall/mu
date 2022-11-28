@@ -17,7 +17,7 @@ namespace umd::doc
 
     enum class span
     {
-        tt, em, bf
+        tt, em, bf, ref
     };
 
     inline auto &operator<<( brq::string_builder &b, span s )
@@ -27,6 +27,7 @@ namespace umd::doc
             case span::tt: return b << "‹tt›";
             case span::em: return b << "«em»";
             case span::bf: return b << "❮bf❯";
+            case span::ref: return b << "▷ref";
         }
     }
 

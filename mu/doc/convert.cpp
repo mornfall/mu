@@ -118,19 +118,27 @@ namespace umd::doc
         while ( skip( U'#' ) )
             ++ level;
         skip_white();
-        auto first = fetch_word();
+
+        auto line = fetch_line();
+        auto [ first, rest ] = brq::split( line, U' ' );
+
         if ( first.back() == '.' )
         {
             first.remove_suffix( 1 );
-            w.heading_start( level, first );
+            w.heading_start( level, first, rest );
         }
         else
         {
-            w.heading_start( level );
+            if ( brq::starts_with( line, U"‹" ) && brq::ends_with( line, U"›" ) )
+                line = line.substr( 1, line.size() - 2 );
+
+            w.heading_start( level, U"", line );
             emit_text( first );
             emit_text( U" " );
         }
-        emit_text( fetch_line() );
+
+        emit_text( rest );
+
         while ( skip( U'\n' ) );
         w.heading_stop();
     }

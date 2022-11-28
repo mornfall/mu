@@ -17,17 +17,18 @@ namespace umd::doc
 
     enum class span
     {
-        tt, em, bf, ref
+        tt, em, bf, lref, gref
     };
 
     inline auto &operator<<( brq::string_builder &b, span s )
     {
         switch ( s )
         {
-            case span::tt: return b << "‹tt›";
-            case span::em: return b << "«em»";
-            case span::bf: return b << "❮bf❯";
-            case span::ref: return b << "▷ref";
+            case span::tt: return b << "monospace ‹tt›";
+            case span::em: return b << "emphasis «em»";
+            case span::bf: return b << "boldface ❮bf❯";
+            case span::lref: return b << "local reference ▷";
+            case span::gref: return b << "global reference ▶";
         }
     }
 

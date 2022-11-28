@@ -110,7 +110,7 @@ namespace umd::doc
         virtual void small_start() {}
         virtual void small_stop() {}
 
-        virtual void ref_start( sv ) {}
+        virtual void ref_start( sv, bool ) {}
         virtual void ref_stop() {}
 
         /* aligned equations */

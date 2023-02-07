@@ -116,5 +116,37 @@ namespace brq
         }
     };
 
+    template< typename type >
+    struct std_malloc_with_size : static_allocator< std_malloc_with_size, type >
+    {
+        using pointer = type *;
+        using static_allocator< std_malloc_with_size, type >::destroy;
+
+        static constexpr auto size_bytes = sizeof( std::size_t );
+
+        static pointer allocate( std::size_t bytes = sizeof( type ) )
+        {
+            if ( char *mem = static_cast< char * >( std::malloc( bytes + size_bytes ) ); mem )
+            {
+                std::memcpy( mem, &bytes, size_bytes );
+                return static_cast< pointer >( static_cast< void * >( mem + size_bytes ) );
+            }
+            else
+                throw std::bad_alloc();
+        }
+
+        static std::size_t size( pointer p )
+        {
+            std::size_t r;
+            std::memcpy( &r, reinterpret_cast< char * >( p ) - size_bytes, size_bytes );
+            return r;
+        }
+
+        static void free( pointer p )
+        {
+            std::free( p );
+        }
+    };
+
     using std_bytealloc = std_malloc< std::byte >;
 }

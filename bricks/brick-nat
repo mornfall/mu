@@ -1,0 +1,256 @@
+#include <brick-salloc>
+#include <brick-bitlevel>
+
+namespace brq
+{
+    template< template< typename > class alloc_t = std_malloc_with_size >
+    struct nat
+    {
+        using digit_t = uint64_t;
+        using double_t = __uint128_t;
+
+        using alloc = alloc_t< digit_t >;
+        using ptr_t = typename alloc::pointer;
+        using rep_t = std::array< std::byte, std::max( sizeof( digit_t ), sizeof( ptr_t ) ) >;
+        static constexpr int digit_bits = sizeof( digit_t ) * 8;
+        static constexpr digit_t short_max = digit_t( 1 ) << ( digit_bits - 1 );
+        static constexpr digit_t digit_max = std::numeric_limits< digit_t >::max();
+
+        rep_t _rep;
+
+        digit_t short_rep() const { return std::bit_cast< digit_t >( _rep ); }
+        digit_t short_digit() const { return short_rep() >> 1; }
+        ptr_t long_rep() const { return std::bit_cast< ptr_t >( _rep ); }
+
+        bool is_short() const { return short_rep() & 1; }
+        bool is_long()  const { return !is_short(); }
+
+        int capacity() const
+        {
+            return is_long() ? alloc::size( long_rep() ) / sizeof( digit_t ) : 1;
+        }
+
+        void allocate( int count )
+        {
+            _rep = std::bit_cast< rep_t >( alloc::allocate( count * sizeof( digit_t ) ) );
+        }
+
+        template< bool shrink = false >
+        void reallocate( int count )
+        {
+            ASSERT( is_long() );
+            ptr_t old = long_rep();
+            allocate( count );
+            auto size = shrink ? count * sizeof( digit_t ) : alloc::size( old );
+            std::memcpy( &*long_rep(), &*old, size );
+        }
+
+        void make_long()
+        {
+            ASSERT( is_short() );
+
+            digit_t d = short_digit();
+            allocate( 2 );
+            set_digit( 0, d );
+
+            for ( int i = 1; i < capacity(); ++ i )
+                set_digit( i, 0 );
+        }
+
+        template< typename int_t = digit_t >
+        explicit nat( int_t n = 0 )
+        {
+            ASSERT_LEQ( 0, n );
+            std::make_unsigned_t< int_t > conv = n;
+
+            if ( n < short_max )
+                _rep = std::bit_cast< rep_t >( digit_t( conv << 1 | 1 ) );
+            else
+            {
+                allocate( sizeof( int_t ) / sizeof( digit_t ) + 1 );
+
+                for ( int i = 0; i < capacity(); ++ i )
+                {
+                    set_digit( i, conv );
+
+                    if constexpr ( sizeof( n ) > sizeof( digit_t ) )
+                        conv >>= digit_bits;
+                    else
+                        conv = 0;
+                }
+            }
+        }
+
+        nat( const nat &o ) : _rep( o._rep )
+        {
+            if ( is_short() )
+                return;
+
+            auto cap = capacity();
+            for ( ; cap >= 1 && !digit_fast( cap - 1 ); -- cap );
+
+            if ( cap <= 1 && digit_fast( 0 ) < short_max )
+                _rep = std::bit_cast< rep_t >( digit_t( digit_fast( 0 ) << 1 | 1 ) );
+            else
+                reallocate< true >( cap );
+        }
+
+        digit_t digit_fast( int idx ) const
+        {
+            ASSERT( is_long() );
+            ASSERT_LT( idx, capacity() );
+            return long_rep()[ idx ];
+        }
+
+        void set_digit_fast( int idx, digit_t d )
+        {
+            ASSERT( is_long() );
+            ASSERT_LT( idx, capacity() );
+            long_rep()[ idx ] = d;
+        }
+
+        digit_t digit( int idx ) const
+        {
+            if ( is_short() )
+                return idx == 0 ? short_digit() : 0;
+            else if ( idx < capacity() )
+                return digit_fast( idx );
+            else
+                return 0;
+        }
+
+        void set_digit( int idx, digit_t d )
+        {
+            if ( is_short() && idx == 0 && d < short_max )
+                _rep = std::bit_cast< rep_t >( d << 1 | 1 );
+            else
+            {
+                if ( idx >= capacity() )
+                    reallocate( idx + idx / 2 + 1 );
+
+                set_digit_fast( idx, d );
+            }
+        }
+
+        friend auto operator<=>( const nat &a, const nat &b )
+        {
+            auto len = std::max( a.capacity(), b.capacity() );
+
+            for ( int i = len; i >= 0; --i )
+                if ( a.digit( i ) != b.digit( i ) )
+                    return a.digit( i ) <=> b.digit( i );
+
+            return std::strong_ordering::equal;
+        }
+
+        friend bool operator==( const nat &a, const nat &b ) /* optimize? */
+        {
+            return ( a <=> b ) == std::strong_ordering::equal;
+        }
+
+        void add_long( const nat &b, int b_offset = 0 )
+        {
+            ASSERT( is_long() );
+            auto cap = b.capacity() + b_offset + 1; // ( b.digit( b.capacity() - 1 ) != 0 );
+            digit_t carry = 0;
+
+            if ( cap > capacity() )
+                reallocate( cap );
+
+            for ( int i = 0; i < b.capacity(); ++i )
+            {
+                auto &rd = long_rep()[ i + b_offset ];
+                carry  = __builtin_add_overflow( rd, carry, &rd );
+                carry |= __builtin_add_overflow( rd, b.digit( i ), &rd );
+            }
+
+            for ( int i = b.capacity(); carry; ++ i )
+            {
+                if ( i >= capacity() ) [[unlikely]]
+                {
+                    reallocate( i + 1 );
+                    set_digit( i, 0 );
+                }
+
+                carry = __builtin_add_overflow( digit_fast( i ), carry, &long_rep()[ i ] );
+            }
+        }
+
+        friend nat operator+( const nat &a, const nat &b )
+        {
+            if ( a.is_short() && b.is_short() )
+                return nat( a.short_digit() + b.short_digit() );
+
+            if ( a.capacity() >= b.capacity() )
+            {
+                nat out = a;
+
+                if ( out.is_short() )
+                    return b + out;
+
+                out.add_long( b );
+                return out;
+            }
+            else
+                return b + a;
+        }
+
+        friend nat operator-( const nat &a, const nat &b )
+        {
+            ASSERT( b <= a );
+
+            if ( a.is_short() )
+                return nat( a.short_digit() - b.digit( 0 ) );
+
+            nat out;
+            int cap = a.capacity();
+            digit_t borrow = 0;
+            out.allocate( cap );
+
+            for ( int i = 0; i < cap; ++i )
+            {
+                digit_t rd;
+                borrow  = __builtin_sub_overflow( a.digit( i ), borrow, &rd );
+                borrow |= __builtin_sub_overflow( rd, b.digit( i ), &rd );
+                out.set_digit_fast( i, rd );
+            }
+
+            return out;
+        }
+
+        friend nat operator*( const nat &a, const nat &b )
+        {
+            if ( a.is_short() && b.is_short() )
+                 return nat( double_t( a.short_digit() ) * double_t( b.short_digit() ) );
+
+            nat out;
+            nat x;
+
+            x.allocate( a.capacity() + 1 );
+            out.allocate( a.capacity() + b.capacity() );
+
+            for ( int i = 0; i < out.capacity(); ++i )
+                out.set_digit_fast( i, 0 );
+
+            int shift = 0;
+
+            for ( int i = 0; i < b.capacity(); ++i, ++shift )
+            {
+                double_t carry = 0;
+
+                for ( int j = 0; j < a.capacity(); ++j )
+                {
+                    double_t prod = double_t( a.digit( j ) ) * double_t( b.digit( i ) ) + carry;
+                    carry = prod >> digit_bits;
+                    x.set_digit_fast( j, prod );
+                }
+
+                ASSERT_LEQ( carry, digit_max );
+                x.set_digit_fast( a.capacity(), carry );
+                out.add_long( x, shift );
+            }
+
+            return out;
+        }
+    };
+}

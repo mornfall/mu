@@ -555,6 +555,11 @@ namespace brq
             return mm::malloc_small( bytes ).cast< type >();
         }
 
+        static std::size_t size( pointer p )
+        {
+            return p.size();
+        }
+
         static void free( pointer p )
         {
             return mm::free_small( p.as_void() );

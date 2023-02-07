@@ -23,6 +23,21 @@
  */
 
 #pragma once
+#include <bit>
+
+#ifndef __cpp_lib_bit_cast
+namespace std
+{
+    template< typename to_t, typename from_t >
+    std::enable_if_t< std::is_trivially_copyable_v< from_t > &&
+                      std::is_trivially_copyable_v< to_t > &&
+                      sizeof( from_t ) == sizeof( to_t ), to_t >
+    bit_cast( const from_t &from )
+    {
+        return __builtin_bit_cast( to_t, from );
+    }
+}
+#endif
 
 #include <brick-assert>
 

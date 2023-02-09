@@ -26,8 +26,13 @@ namespace brq::enumerate
 
     nat tuple_block_size( nat b, int n, nat d )
     {
-        ASSERT_LT( d, n );
-        return b.pow( d ) * ( b - 1 ).pow( n - d - 1 );
+        if ( n == 0 && b == 0 )
+            return 1;
+        else
+        {
+            ASSERT_LT( d, n );
+            return ( b + 1 ).pow( d ) * b.pow( n - d - 1 );
+        }
     }
 
     nat tuple_block_size( nat b, int n, nat d, auto bounds )
@@ -37,7 +42,10 @@ namespace brq::enumerate
 
     nat tuple_count( nat b, int n )
     {
-        return b == 0 ? 1 : b.pow( n ) - ( b - 1 ).pow( n );
+        if ( n == 0 && b == 0 )
+            return 1;
+        else
+            return ( b + 1 ).pow( n ) - b.pow( n );
     }
 
     nat tuple_count( nat b, int n, auto bounds )
@@ -53,10 +61,10 @@ namespace brq::enumerate
     auto tuple_item( nat b, nat index, int i, nat d )
     {
         if ( i == d )
-            return std::pair{ index, b - 1 };
+            return std::pair{ index, b };
         else
         {
-            auto choices = i < d ? b : b - 1;
+            auto choices = i < d ? b + 1 : b;
             return divmod( index, choices );
         }
     }
@@ -86,11 +94,8 @@ namespace brq::enumerate
     template< int n >
     auto tuple( nat index )
     {
-        if ( index == 0 )
-            return tuple_param< n >( 1, 0 );
-
         auto b = index.nth_root( n );
-        index -= ( b - 1 ).pow( n );
+        index -= b.pow( n );
         std::tie( index, b ) = find_block( index, b, []( auto b ) { return tuple_count( b, n ); } );
         return tuple_param< n >( b, index );
     }

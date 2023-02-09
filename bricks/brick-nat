@@ -413,6 +413,9 @@ namespace brq
             return { q, u >> bitshift };
         }
 
+        friend nat operator/( const nat &a, const nat &b ) { return std::get< 0 >( divmod( a, b ) ); }
+        friend nat operator%( const nat &a, const nat &b ) { return std::get< 1 >( divmod( a, b ) ); }
+
         friend string_builder &operator<<( string_builder &b, const nat &n )
         {
             b << "0x";

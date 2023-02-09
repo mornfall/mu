@@ -167,6 +167,14 @@ namespace brq
         bool operator!() const { return *this == 0; }
         explicit operator bool() const { return !!*this; }
 
+        void operator++()
+        {
+            if ( is_short() && short_digit() < short_max - 1 )
+                set_short( short_digit() + 1 );
+            else
+                NOT_IMPLEMENTED();
+        }
+
         void add_long( const nat &b, int b_offset = 0, int max_digits = 0 )
         {
             ASSERT( is_long() );

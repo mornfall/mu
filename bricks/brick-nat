@@ -3,7 +3,7 @@
 #include <brick-bitlevel>
 #include <brick-string>
 
-namespace brq
+namespace brq::numeric
 {
     template< template< typename > class alloc_t = std_malloc_with_size >
     struct nat
@@ -471,4 +471,9 @@ namespace brq
             return b;
         }
     };
+}
+
+namespace brq
+{
+    using nat = numeric::nat<>;
 }

@@ -196,6 +196,32 @@ namespace brq
                 return b + a;
         }
 
+        bool sub_long( const nat &b, int b_offset = 0 )
+        {
+            digit_t borrow = 0;
+
+            for ( int i = 0; i < b.capacity(); ++i )
+            {
+                if ( i + b_offset >= capacity() )
+                    NOT_IMPLEMENTED();
+
+                digit_t rd;
+                borrow  = __builtin_sub_overflow( digit_fast( i + b_offset ), borrow, &rd );
+                borrow |= __builtin_sub_overflow( rd, b.digit( i ), &rd );
+                set_digit_fast( i + b_offset, rd );
+            }
+
+            for ( int i = b.capacity() + b_offset; borrow; ++ i )
+            {
+                if ( i >= capacity() )
+                    break;
+
+                borrow = __builtin_sub_overflow( digit_fast( i ), borrow, &long_rep()[ i ] );
+            }
+
+            return borrow;
+        }
+
         friend nat operator-( const nat &a, const nat &b )
         {
             ASSERT( b <= a );
@@ -203,19 +229,8 @@ namespace brq
             if ( a.is_short() )
                 return nat( a.short_digit() - b.digit( 0 ) );
 
-            nat out;
-            int cap = a.capacity();
-            digit_t borrow = 0;
-            out.allocate( cap );
-
-            for ( int i = 0; i < cap; ++i )
-            {
-                digit_t rd;
-                borrow  = __builtin_sub_overflow( a.digit( i ), borrow, &rd );
-                borrow |= __builtin_sub_overflow( rd, b.digit( i ), &rd );
-                out.set_digit_fast( i, rd );
-            }
-
+            nat out = a;
+            out.sub_long( b );
             return out;
         }
 

@@ -268,5 +268,44 @@ namespace brq
 
             return out;
         }
+
+        friend nat operator<<( const nat &a, int total_bits )
+        {
+            nat out;
+            int digits = total_bits / digit_bits;
+            int bits = total_bits % digit_bits;
+
+            out.allocate( a.capacity() + digits + ( bits ? 1 : 0 ) );
+
+            for ( int i = 0; i < a.capacity() + ( bits ? 1 : 0 ); ++i )
+            {
+                digit_t d = a.digit( i ) << bits;
+                if ( bits )
+                    d |= a.digit( i - 1 ) >> ( digit_bits - bits );
+                out.set_digit_fast( i + digits, d );
+            }
+
+            return { out };
+        }
+
+        friend nat operator>>( const nat &a, int total_bits )
+        {
+            nat out;
+            int digits = total_bits / digit_bits;
+            int bits = total_bits % digit_bits;
+            int cap = a.capacity() - digits;
+
+            out.allocate( cap );
+
+            for ( int i = 0; i < cap; ++i )
+            {
+                digit_t d = a.digit( i + digits ) >> bits;
+                if ( bits )
+                    d |= a.digit( i + digits + 1 ) << ( digit_bits - bits );
+                out.set_digit_fast( i, d );
+            }
+
+            return out;
+        }
     };
 }

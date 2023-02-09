@@ -15,6 +15,7 @@ namespace brq
         static constexpr int digit_bits = sizeof( digit_t ) * 8;
         static constexpr digit_t short_max = digit_t( 1 ) << ( digit_bits - 1 );
         static constexpr digit_t digit_max = std::numeric_limits< digit_t >::max();
+        static constexpr double_t base = double_t( digit_max ) + 1;
 
         rep_t _rep;
 
@@ -317,6 +318,63 @@ namespace brq
             }
 
             return out;
+        }
+
+        friend std::pair< nat, nat > divmod( const nat &a, const nat &b )
+        {
+            if ( a.is_short() && b.is_short() )
+                return { nat( a.short_digit() / b.short_digit() ),
+                         nat( a.short_digit() % b.short_digit() ) };
+
+            int a_digits = a.capacity(), b_digits = b.capacity();
+
+            for ( ; !b.digit( b_digits - 1 ); -- b_digits );
+            for ( ; !a.digit( a_digits - 1 ); -- a_digits );
+
+            int bitshift = std::countl_zero( b.digit( b_digits - 1 ) );
+
+            auto u = a << bitshift;
+            auto v = b << bitshift;
+
+            auto n = b_digits;
+            auto m = a_digits - b_digits;
+
+            nat q;
+            q.allocate( m + 1 );
+
+            for ( int j = m; j >= 0; --j )
+            {
+                double_t nom = double_t( u.digit( j + n ) ) << digit_bits | u.digit( j + n - 1 );
+                double_t den = v.digit( n - 1 );
+                double_t q_hat = nom / den, r_hat = nom % den;
+
+                auto overshot = [&]
+                {
+                    ASSERT_LT( q_hat, base );
+                    ASSERT_LT( r_hat, base );
+                    return q_hat * v.digit( n - 2 ) > base * r_hat + u.digit( j + n - 2 );
+                };
+
+                auto correct = [&]{ q_hat -= 1; r_hat += v.digit( n - 1 ); };
+
+                if ( q_hat == base || overshot() )
+                {
+                    correct();
+
+                    if ( r_hat < base && overshot() )
+                        correct();
+                }
+
+                if ( u.sub_long( nat( q_hat ) * v, j ) )
+                {
+                    q_hat -= 1;
+                    u.add_long( v, j, n + 1 );
+                }
+
+                q.set_digit( j, q_hat );
+            }
+
+            return { q, u >> bitshift };
         }
     };
 }

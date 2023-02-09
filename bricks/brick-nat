@@ -1,5 +1,6 @@
 #include <brick-salloc>
 #include <brick-bitlevel>
+#include <brick-string>
 
 namespace brq
 {
@@ -400,6 +401,14 @@ namespace brq
             }
 
             return { q, u >> bitshift };
+        }
+
+        friend string_builder &operator<<( string_builder &b, const nat &n )
+        {
+            b << "0x";
+            for ( int j = n.capacity() - 1; j >= 0; -- j )
+                b << std::hex << pad( 16, '0' ) << n.digit( j ) << mark;
+            return b;
         }
     };
 }

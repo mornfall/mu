@@ -99,9 +99,34 @@ namespace brq::enumerate
         std::tie( index, b ) = find_block( index, b, []( auto b ) { return tuple_count( b, n ); } );
         return tuple_param< n >( b, index );
     }
+
+    auto list( nat index )
+    {
+        std::vector< nat > r;
+        nat d, val, b_idx;
+
+        auto block_size = []( nat b_idx )
+        {
+            auto [ b, n ] = tuple< 2 >( b_idx );
+            return tuple_count( b, n.short_digit() );
+        };
+
+        std::tie( index, b_idx ) = find_block( index, 0, block_size );
+        auto [ b, n ] = tuple< 2 >( b_idx );
+        std::tie( index, d ) = tuple_block( b, n.short_digit(), index );
+
+        for ( int i = n.short_digit() - 1; i >= 0; --i )
+        {
+            std::tie( index, val ) = tuple_item( b, index, i, d );
+            r.push_back( val );
+        }
+
+        return r;
+    }
 }
 
 namespace brq
 {
     template< int n > auto tuple_enum( nat index ) { return enumerate::tuple< n >( index ); }
+    std::vector< nat > list_enum( nat index ) { return enumerate::list( index ); }
 }

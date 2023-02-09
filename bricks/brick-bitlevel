@@ -84,14 +84,14 @@ namespace brq
     void maybe_bitcast( const F &f, T &t )
     {
         ASSERT( sizeof( T ) == sizeof( F ) );
-        memcpy( &t, &f, sizeof( T ) );
+        std::memcpy( &t, &f, sizeof( T ) );
     }
 
     template< typename F, typename T >
     void bitcast( const F &f, T &t )
     {
         static_assert( sizeof( F ) == sizeof( T ) );
-        maybe_bitcast( f, t );
+        std::memcpy( &t, &f, sizeof( T ) );
     }
 
     template< typename T, typename F >

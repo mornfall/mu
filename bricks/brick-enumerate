@@ -22,19 +22,6 @@ namespace brq::enumerate
         return find_block_gen( index, std::tuple{ block }, size, []( auto &b ) { ++ b; } );
     }
 
-    auto find_block( nat index, std::tuple< nat, nat > block, auto size, nat bound )
-    {
-        auto update = [&]( nat &a, nat &b )
-        {
-            if ( a == b && !bound || a < bound )
-                ++ a, b = 1;
-            else
-                ++ b;
-        };
-
-        return find_block_gen( index, block, size, update );
-    }
-
     nat nat_enum( nat index ) { return index; }
 
     template< int n >

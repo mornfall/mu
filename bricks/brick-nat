@@ -435,6 +435,33 @@ namespace brq
             return n * odd;
         }
 
+        int log2() const
+        {
+            int digits = capacity();
+            for ( ; !digit( digits - 1 ); -- digits );
+            return digits * digit_bits - std::countl_zero( digit( digits - 1 ) );
+        }
+
+        nat nth_root( int n )
+        {
+            nat k = *this;
+
+            if ( n == 1 || k == 0 )
+                return k;
+
+            nat u = 2 << ( k.log2() / n );
+            nat s = u + 1;
+
+            while ( u < s )
+            {
+                s = u;
+                auto t = ( n - 1 ) * s + k / s.pow( n - 1 );
+                u = t / n;
+            }
+
+            return s;
+        }
+
         friend string_builder &operator<<( string_builder &b, const nat &n )
         {
             b << "0x";

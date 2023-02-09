@@ -33,7 +33,9 @@ namespace brq
 
         void allocate( int count )
         {
-            _rep = std::bit_cast< rep_t >( alloc::allocate( count * sizeof( digit_t ) ) );
+            auto size = count * sizeof( digit_t );
+            _rep = std::bit_cast< rep_t >( alloc::allocate( size ) );
+            std::memset( &*long_rep(), 0, size );
         }
 
         template< bool shrink = false >
@@ -41,9 +43,15 @@ namespace brq
         {
             ASSERT( is_long() );
             ptr_t old = long_rep();
+            auto new_size = count * sizeof( digit_t );
+            auto copy_size = shrink ? new_size : alloc::size( old );
+            ASSERT_LEQ( copy_size, new_size );
+
             allocate( count );
-            auto size = shrink ? count * sizeof( digit_t ) : alloc::size( old );
-            std::memcpy( &*long_rep(), &*old, size );
+            char *mem = static_cast< char * >( static_cast< void * >( &*long_rep() ) );
+
+            std::memcpy( mem, &*old, copy_size );
+            std::memset( mem + copy_size, 0, new_size - copy_size );
         }
 
         void make_long()

@@ -1,0 +1,115 @@
+#include "brick-nat"
+
+namespace brq::enumerate
+{
+    auto find_block_gen( nat index, auto block, auto size, auto update_block )
+    {
+        while ( true )
+        {
+            auto skip = std::apply( size, block );
+
+            if ( skip <= index )
+                index -= skip;
+            else
+                return std::tuple_cat( std::tuple{ index }, block );
+
+            std::apply( update_block, block );
+        }
+    }
+
+    auto find_block( nat index, nat block, auto size )
+    {
+        return find_block_gen( index, std::tuple{ block }, size, []( auto &b ) { ++ b; } );
+    }
+
+    auto find_block( nat index, std::tuple< nat, nat > block, auto size, nat bound )
+    {
+        auto update = [&]( nat &a, nat &b )
+        {
+            if ( a == b && !bound || a < bound )
+                ++ a, b = 1;
+            else
+                ++ b;
+        };
+
+        return find_block_gen( index, block, size, update );
+    }
+
+    nat nat_enum( nat index ) { return index; }
+
+    template< int n >
+    nat tuple_block_size( nat b, nat d )
+    {
+        ASSERT_LT( d, n );
+        return b.pow( d ) * ( b - 1 ).pow( n - d - 1 );
+    }
+
+    template< int n >
+    nat tuple_block_size( nat b, nat d, auto bounds )
+    {
+        NOT_IMPLEMENTED();
+    }
+
+    template< int n >
+    nat tuple_count( nat b )
+    {
+        return b == 0 ? 1 : b.pow( n ) - ( b - 1 ).pow( n );
+    }
+
+    template< int n >
+    nat tuple_count( nat b, auto bounds )
+    {
+        NOT_IMPLEMENTED();
+    }
+
+    nat tuple_bound( auto bounds )
+    {
+        NOT_IMPLEMENTED();
+    }
+
+    template< int n, int i = 0 >
+    auto tuple_param( nat b, nat index, nat d = 0 )
+    {
+        ASSERT_LT( index, tuple_count< n >( b ) );
+
+        if constexpr ( i == 0 )
+        {
+            std::tie( index, d ) =
+                find_block( index, 0, [&]( auto d ) { return tuple_block_size< n >( b, d ); } );
+        }
+
+        if constexpr ( i == n )
+            return std::tuple{};
+        else
+        {
+            nat r;
+
+            if ( i == d )
+                r = b - 1;
+            else
+            {
+                auto choices = i < d ? b : b - 1;
+                std::tie( index, r ) = divmod( index, choices );
+            }
+
+            return std::tuple_cat( tuple_param< n, i + 1 >( b, index, d ), std::tuple{ r } );
+        }
+    }
+
+    template< int n >
+    auto tuple( nat index )
+    {
+        if ( index == 0 )
+            return tuple_param< n >( 1, 0 );
+
+        auto b = index.nth_root( n );
+        index -= ( b - 1 ).pow( n );
+        std::tie( index, b ) = find_block( index, b, []( auto b ) { return tuple_count< n >( b ); } );
+        return tuple_param< n >( b, index );
+    }
+}
+
+namespace brq
+{
+    template< int n > auto tuple_enum( nat index ) { return enumerate::tuple< n >( index ); }
+}

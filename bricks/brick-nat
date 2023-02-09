@@ -149,31 +149,42 @@ namespace brq
             return ( a <=> b ) == std::strong_ordering::equal;
         }
 
-        void add_long( const nat &b, int b_offset = 0 )
+        void add_long( const nat &b, int b_offset = 0, int max_digits = 0 )
         {
             ASSERT( is_long() );
             auto cap = b.capacity() + b_offset + 1; // ( b.digit( b.capacity() - 1 ) != 0 );
+
+            auto b_digits = b.capacity();
+            if ( max_digits && max_digits < b_digits )
+                b_digits = max_digits;
+
             digit_t carry = 0;
 
             if ( cap > capacity() )
                 reallocate( cap );
 
-            for ( int i = 0; i < b.capacity(); ++i )
+            for ( int i = 0; i < b_digits; ++i )
             {
-                auto &rd = long_rep()[ i + b_offset ];
+                int j = i + b_offset;
+                auto &rd = long_rep()[ j ];
                 carry  = __builtin_add_overflow( rd, carry, &rd );
                 carry |= __builtin_add_overflow( rd, b.digit( i ), &rd );
             }
 
-            for ( int i = b.capacity(); carry; ++ i )
+            for ( int i = b_digits; carry; ++ i )
             {
-                if ( i >= capacity() ) [[unlikely]]
+                int j = i + b_offset;
+
+                if ( max_digits && i >= max_digits )
+                    break;
+
+                if ( j >= capacity() )
                 {
-                    reallocate( i + 1 );
-                    set_digit( i, 0 );
+                    reallocate( j + 1 );
+                    set_digit( j, 0 );
                 }
 
-                carry = __builtin_add_overflow( digit_fast( i ), carry, &long_rep()[ i ] );
+                carry = __builtin_add_overflow( digit_fast( j ), carry, &long_rep()[ j ] );
             }
         }
 

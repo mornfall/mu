@@ -262,7 +262,7 @@ namespace brq
 
         friend nat operator-( const nat &a, const nat &b )
         {
-            ASSERT( b <= a );
+            ASSERT_LEQ( b, a );
 
             if ( a.is_short() )
                 return nat( a.short_digit() - b.digit( 0 ) );

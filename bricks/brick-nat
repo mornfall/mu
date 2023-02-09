@@ -164,6 +164,9 @@ namespace brq
             return ( a <=> b ) == std::strong_ordering::equal;
         }
 
+        bool operator!() const { return *this == 0; }
+        explicit operator bool() const { return !!*this; }
+
         void add_long( const nat &b, int b_offset = 0, int max_digits = 0 )
         {
             ASSERT( is_long() );

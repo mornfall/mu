@@ -1,3 +1,4 @@
+#pragma once
 #include <brick-salloc>
 #include <brick-bitlevel>
 #include <brick-string>

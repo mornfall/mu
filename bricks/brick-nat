@@ -23,6 +23,12 @@ namespace brq
         digit_t short_digit() const { return short_rep() >> 1; }
         ptr_t long_rep() const { return std::bit_cast< ptr_t >( _rep ); }
 
+        void set_short( digit_t d )
+        {
+            ASSERT_LEQ( d, short_max );
+            _rep = std::bit_cast< rep_t >( d << 1 | 1 );
+        }
+
         bool is_short() const { return short_rep() & 1; }
         bool is_long()  const { return !is_short(); }
 
@@ -74,7 +80,7 @@ namespace brq
             std::make_unsigned_t< int_t > conv = n;
 
             if ( n < short_max )
-                _rep = std::bit_cast< rep_t >( digit_t( conv << 1 | 1 ) );
+                set_short( conv );
             else
             {
                 allocate( sizeof( int_t ) / sizeof( digit_t ) + 1 );
@@ -100,7 +106,7 @@ namespace brq
             for ( ; cap >= 1 && !digit_fast( cap - 1 ); -- cap );
 
             if ( cap <= 1 && digit_fast( 0 ) < short_max )
-                _rep = std::bit_cast< rep_t >( digit_t( digit_fast( 0 ) << 1 | 1 ) );
+                set_short( digit_fast( 0 ) );
             else
                 reallocate< true >( cap );
         }
@@ -132,7 +138,7 @@ namespace brq
         void set_digit( int idx, digit_t d )
         {
             if ( is_short() && idx == 0 && d < short_max )
-                _rep = std::bit_cast< rep_t >( d << 1 | 1 );
+                set_short( d );
             else
             {
                 if ( idx >= capacity() )

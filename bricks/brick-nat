@@ -57,8 +57,9 @@ namespace brq
                 set_digit( i, 0 );
         }
 
-        template< typename int_t = digit_t >
-        explicit nat( int_t n = 0 )
+        template< typename int_t = digit_t,
+                  typename = std::enable_if_t< std::is_integral_v< int_t > > >
+        nat( int_t n = 0 )
         {
             ASSERT_LEQ( 0, n );
             std::make_unsigned_t< int_t > conv = n;

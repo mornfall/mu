@@ -272,6 +272,16 @@ namespace brq
             return out;
         }
 
+        nat &operator-=( const nat &b )
+        {
+            if ( is_short() )
+                set_short( short_digit() - b.digit( 0 ) );
+            else
+                sub_long( b );
+
+            return *this;
+        }
+
         friend nat operator*( const nat &a, const nat &b )
         {
             if ( a.is_short() && b.is_short() )

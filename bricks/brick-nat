@@ -114,7 +114,7 @@ namespace brq
         {
             if ( is_short() )
                 return idx == 0 ? short_digit() : 0;
-            else if ( idx < capacity() )
+            else if ( idx >= 0 && idx < capacity() )
                 return digit_fast( idx );
             else
                 return 0;

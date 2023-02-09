@@ -24,27 +24,23 @@ namespace brq::enumerate
 
     nat nat_enum( nat index ) { return index; }
 
-    template< int n >
-    nat tuple_block_size( nat b, nat d )
+    nat tuple_block_size( nat b, int n, nat d )
     {
         ASSERT_LT( d, n );
         return b.pow( d ) * ( b - 1 ).pow( n - d - 1 );
     }
 
-    template< int n >
-    nat tuple_block_size( nat b, nat d, auto bounds )
+    nat tuple_block_size( nat b, int n, nat d, auto bounds )
     {
         NOT_IMPLEMENTED();
     }
 
-    template< int n >
-    nat tuple_count( nat b )
+    nat tuple_count( nat b, int n )
     {
         return b == 0 ? 1 : b.pow( n ) - ( b - 1 ).pow( n );
     }
 
-    template< int n >
-    nat tuple_count( nat b, auto bounds )
+    nat tuple_count( nat b, int n, auto bounds )
     {
         NOT_IMPLEMENTED();
     }
@@ -54,32 +50,36 @@ namespace brq::enumerate
         NOT_IMPLEMENTED();
     }
 
+    auto tuple_item( nat b, nat index, int i, nat d )
+    {
+        if ( i == d )
+            return std::pair{ index, b - 1 };
+        else
+        {
+            auto choices = i < d ? b : b - 1;
+            return divmod( index, choices );
+        }
+    }
+
+    auto tuple_block( nat b, int n, nat index )
+    {
+        return find_block( index, 0, [&]( auto d ) { return tuple_block_size( b, n, d ); } );
+    }
+
     template< int n, int i = 0 >
     auto tuple_param( nat b, nat index, nat d = 0 )
     {
-        ASSERT_LT( index, tuple_count< n >( b ) );
+        ASSERT_LT( index, tuple_count( b, n ) );
 
         if constexpr ( i == 0 )
-        {
-            std::tie( index, d ) =
-                find_block( index, 0, [&]( auto d ) { return tuple_block_size< n >( b, d ); } );
-        }
+            std::tie( index, d ) = tuple_block( b, n, index );
 
         if constexpr ( i == n )
             return std::tuple{};
         else
         {
-            nat r;
-
-            if ( i == d )
-                r = b - 1;
-            else
-            {
-                auto choices = i < d ? b : b - 1;
-                std::tie( index, r ) = divmod( index, choices );
-            }
-
-            return std::tuple_cat( tuple_param< n, i + 1 >( b, index, d ), std::tuple{ r } );
+            auto [ i_next, r ] = tuple_item( b, index, i, d );
+            return std::tuple_cat( tuple_param< n, i + 1 >( b, i_next, d ), std::tuple{ r } );
         }
     }
 
@@ -91,7 +91,7 @@ namespace brq::enumerate
 
         auto b = index.nth_root( n );
         index -= ( b - 1 ).pow( n );
-        std::tie( index, b ) = find_block( index, b, []( auto b ) { return tuple_count< n >( b ); } );
+        std::tie( index, b ) = find_block( index, b, []( auto b ) { return tuple_count( b, n ); } );
         return tuple_param< n >( b, index );
     }
 }

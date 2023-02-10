@@ -470,6 +470,28 @@ namespace brq::numeric
                 b << std::hex << pad( 16, '0' ) << n.digit( j ) << mark;
             return b;
         }
+
+        friend nat comb( const nat &n, const nat &k )
+        {
+            if ( k > n )
+                return 0;
+
+            nat r = 1;
+            nat nom_f = n, denom_f = 1;
+
+            while ( nom_f > std::max( k, n - k ) )
+            {
+                ASSERT_LEQ( denom_f, std::min( k, n - k ) );
+                r = r * nom_f;
+                ASSERT_EQ( r % denom_f, 0 );
+                r = r / denom_f;
+
+                nom_f -= 1;
+                ++ denom_f;
+            }
+
+            return r;
+        }
     };
 }
 

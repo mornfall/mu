@@ -1,4 +1,6 @@
 #include "brick-nat"
+#include <set>
+#include <vector>
 
 namespace brq::enumerate
 {

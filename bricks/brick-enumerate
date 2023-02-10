@@ -123,10 +123,52 @@ namespace brq::enumerate
 
         return r;
     }
+
+    auto set_param( nat b, nat n, nat index )
+    {
+        std::set< nat > r;
+
+        nat u = b;
+        nat v = n;
+        ASSERT_LT( index, comb( b, n ) );
+
+        nat x = comb( b, n ) - index - 1;
+
+        for ( nat i = 0; i < n; ++i )
+        {
+            do
+                u -= 1;
+            while ( comb( u, v ) > x );
+            r.insert( b - 1 - u );
+            x -= comb( u, v );
+            v -= 1;
+        }
+
+        return r;
+    }
+
+    auto set( nat index )
+    {
+        std::set< nat > r;
+
+        if ( index == 0 )
+            return r;
+
+        nat b = 0;
+        for ( ; nat( 2 ).pow( b + 1 ) <= index; ++b );
+        ASSERT_LEQ( nat( 2 ).pow( b ), index );
+        index -= nat( 2 ).pow( b );
+        auto [ i_block, n ] = find_block( index, 0, [&]( auto n ) { return comb( b, n ); } );
+
+        r = set_param( b, n, i_block );
+        r.insert( b );
+        return r;
+    }
 }
 
 namespace brq
 {
     template< int n > auto tuple_enum( nat index ) { return enumerate::tuple< n >( index ); }
     std::vector< nat > list_enum( nat index ) { return enumerate::list( index ); }
+    std::set< nat > set_enum( nat index ) { return enumerate::set( index ); }
 }

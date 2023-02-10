@@ -102,10 +102,23 @@ namespace brq::enumerate
         return tuple_param< n >( b, index );
     }
 
+    nat list_count( nat n )
+    {
+        return n <= 1 ? n + 1 : ( n.pow( n + 1 ) - 1 ) / ( n - 1 ); /* ∑₀ᵏnᵏ */
+    };
+
     auto list( nat index )
     {
         std::vector< nat > r;
-        nat d, val, b_idx;
+        nat d, val, b_idx, b_skip, deduct = 0;
+
+        for ( ; index > list_count( b_skip + 1 ); ++ b_skip );
+
+        if ( b_skip >= 1 )
+        {
+            index -= list_count( b_skip ) + 1;
+            b_idx = 2 + b_skip * ( b_skip + 1 );
+        }
 
         auto block_size = []( nat b_idx )
         {
@@ -113,7 +126,7 @@ namespace brq::enumerate
             return tuple_count( b, n.short_digit() );
         };
 
-        std::tie( index, b_idx ) = find_block( index, 0, block_size );
+        std::tie( index, b_idx ) = find_block( index, b_idx, block_size );
         auto [ b, n ] = tuple< 2 >( b_idx );
         std::tie( index, d ) = tuple_block( b, n.short_digit(), index );
 

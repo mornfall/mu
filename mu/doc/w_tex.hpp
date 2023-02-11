@@ -43,13 +43,13 @@ namespace umd::doc
         virtual void text( std::u32string_view t )
         {
             bool in_sub = false, in_sup = false;
-            sv sub = U"₀₁₂₃₄₅₆₇₈₉ᵢⱼₖₘₙ₌₋₊",
-               sup = U"⁰¹²³⁴⁵⁶⁷⁸⁹ⁱʲᵏᵐⁿ⁼⁻⁺",
-               nom = U"0123456789ijkmn=-+";
+            sv sub = U"₀₁₂₃₄₅₆₇₈₉________ᵢⱼₖ_ₘₙ___________₌₋₊",
+               sup = U"⁰¹²³⁴⁵⁶⁷⁸⁹ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖʳˢᵗᵘᵛʷˣʸᶻ⁼⁻⁺",
+               nom = U"0123456789abcdefghijklmnoprstuvwxyz=-+";
 
             auto char_cb = [&]( auto flush, char32_t c )
             {
-                auto subi = sub.find( c );
+                auto subi = c == U'_' ? sub.npos : sub.find( c );
                 auto supi = sup.find( c );
 
                 if ( _in_math )

@@ -72,7 +72,8 @@ namespace umd::doc
         {
             if ( lstr.empty() ) return 0;
             if ( std::isdigit( lstr[ 0 ] ) ) return stoi( lstr );
-            if ( std::isalpha( lstr[ 0 ] ) ) return int( lstr[ 0 ] - U'a' + 1 );
+            if ( std::islower( lstr[ 0 ] ) ) return int( lstr[ 0 ] - U'a' + 1 );
+            if ( std::isupper( lstr[ 0 ] ) ) return int( lstr[ 0 ] - U'A' + 1 );
             return int( lstr[ 0 ] - U'α' + 1 );
         };
 
@@ -103,7 +104,8 @@ namespace umd::doc
         switch ( t )
         {
             case list::bullets:  return { skip_bullet_lead(), 1 };
-            case list::numbered: return skip_enum_lead();
+            case list::numbered:
+            case list::lettered: return skip_enum_lead();
         }
         __builtin_trap();
     }
@@ -144,7 +146,8 @@ namespace umd::doc
         switch ( type )
         {
             case list::bullets: w.bullet_stop( _list.empty() ? xspace : false ); break;
-            case list::numbered: w.enum_stop( _list.empty() ? xspace : false ); break;
+            case list::numbered:
+            case list::lettered: w.enum_stop( _list.empty() ? xspace : false ); break;
         }
 
         end_list( count - 1, xspace );
@@ -156,7 +159,8 @@ namespace umd::doc
         switch ( l )
         {
             case list::bullets:  w.bullet_start( _list.size() ); break;
-            case list::numbered: w.enum_start( _list.size(), first ); break;
+            case list::numbered:
+            case list::lettered: w.enum_start( _list.size(), first, l == list::lettered ); break;
         }
 
         _list.emplace( l, indent );
@@ -181,7 +185,8 @@ namespace umd::doc
         switch ( t )
         {
             case list::bullets:  w.bullet_item(); break;
-            case list::numbered: w.enum_item(); break;
+            case list::numbered:
+            case list::lettered: w.enum_item(); break;
         }
 
         std::u32string buf{ fetch_line() };
@@ -207,23 +212,29 @@ namespace umd::doc
         skip_white( l );
 
         int digits = 0;
-        bool alpha = false;
+        enum { none, upper, lower } alpha = none;
 
         while ( !l.empty() && std::isdigit( l[ 0 ] ) )
             l.remove_prefix( 1 ), ++ digits;
 
-        if ( !digits && !l.empty() && std::islower( l[ 0 ] ) )
-            l.remove_prefix( 1 ), alpha = true;
+        if ( !digits && !l.empty() )
+            if ( auto letter = l[ 0 ]; std::isalpha( letter ) )
+            {
+                l.remove_prefix( 1 );
+                alpha = std::islower( letter ) ? lower : upper;
+            }
 
         if ( l.size() < 2 || l[ 0 ] != U'.' || l[ 1 ] != U' ' )
             return false;
 
-        if ( digits )
-            ensure_list( 1, list::numbered );
-        if ( alpha )
+        if ( digits || alpha == upper )
+            ensure_list( 1, alpha == upper ? list::lettered : list::numbered );
+        else if ( alpha == lower )
             ensure_list( 2, list::numbered );
+        else
+            UNREACHABLE( digits, alpha, l );
 
-        return digits || alpha;
+        return digits || alpha != none;
     }
 
     void convert::emit_text( std::u32string_view v )

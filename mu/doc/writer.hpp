@@ -88,7 +88,7 @@ namespace umd::doc
         virtual void eqn_stop() = 0;
 
         /* lists */
-        virtual void enum_start( int level, int first ) = 0;
+        virtual void enum_start( int level, int first, bool alpha = false ) = 0;
         virtual void enum_item() = 0;
         virtual void enum_stop( bool xspace = false ) = 0;
         virtual void bullet_start( int level ) = 0;
@@ -143,7 +143,7 @@ namespace umd::doc
         virtual void eqn_stop() {}
 
         /* lists */
-        virtual void enum_start( int, int ) {}
+        virtual void enum_start( int, int, bool ) {}
         virtual void enum_item() {}
         virtual void enum_stop( bool ) {}
         virtual void bullet_start( int ) {}

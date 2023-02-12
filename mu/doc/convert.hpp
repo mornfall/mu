@@ -32,7 +32,7 @@ namespace umd::doc
 
         struct list
         {
-            enum type { bullets, numbered } t;
+            enum type { bullets, numbered, lettered } t;
             int indent;
             list( type t, int i ) : t( t ), indent( i ) {}
         };

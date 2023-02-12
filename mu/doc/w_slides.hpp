@@ -5,6 +5,7 @@
 #include <sstream>
 #include <iostream>
 #include <cassert>
+#include <brick-assert>
 
 /* Writer for ConTeXt-based PDF slides. */
 
@@ -88,9 +89,16 @@ namespace umd::doc
         /* lists */
         void enum_start( int level, int first, bool alpha = false ) override
         {
-            out.emit( "\\startitemize[packed,",
-                      level == 0 ? 'n' : level == 1 ? 'a' : 'r',
-                      "][start=", first, "]", "\n" );
+            const char *type;
+            switch ( level )
+            {
+                case 0: type = alpha ? "A" : "n"; break;
+                case 1: type = "a"; break;
+                case 2: type = "r"; break;
+                default: NOT_IMPLEMENTED();
+            }
+
+            out.emit( "\\startitemize[packed,", type, "][start=", first, "]", "\n" );
         }
 
         void enum_stop( bool xspace ) override

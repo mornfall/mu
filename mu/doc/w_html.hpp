@@ -300,10 +300,10 @@ namespace umd::doc
             _li_count.pop();
         }
 
-        void enum_start( int, int start ) override
+        void enum_start( int, int start, bool alpha ) override
         {
             ensure_div();
-            out.emit( "<ol start=\"", start, "\">" );
+            out.emit( "<ol start=\"", start, "\"", alpha ? " class=\"alpha\"" : "", ">" );
             list_start();
         }
 

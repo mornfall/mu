@@ -41,19 +41,19 @@ namespace umd::doc
             section_level.push( level );
         }
 
-        virtual void heading_start( int level, std::u32string_view num )
+        void heading_start( int level, std::u32string_view num ) override
         {
             close_sections( level );
             open_section( level, num );
         }
 
-        virtual void heading_stop()
+        void heading_stop() override
         {
             out.emit( "}]\n" );
         }
 
         /* display math */
-        virtual void eqn_start( int n, std::string astr )
+        void eqn_start( int n, std::string astr ) override
         {
             out.emit( "\\startformula\\startmathalignment[n=", n, ",align={" );
             for ( char c : astr )
@@ -69,15 +69,15 @@ namespace umd::doc
             math_negspace = 2;
         }
 
-        virtual void eqn_new_cell() { assert( _in_math ); out.emit( "\\NC " ); }
-        virtual void eqn_new_row()
+        void eqn_new_cell() override { assert( _in_math ); out.emit( "\\NC " ); }
+        void eqn_new_row() override
         {
             assert( _in_math );
             out.emit( "\\NR\\noalign{\\blank[-.3ex]}\n" );
             if ( math_negspace ) -- math_negspace;
         }
 
-        virtual void eqn_stop()
+        void eqn_stop() override
         {
             if ( math_negspace )
                 out.emit( "\\noalign{\\blank[-1.5ex]}" );
@@ -86,49 +86,49 @@ namespace umd::doc
         }
 
         /* lists */
-        virtual void enum_start( int level, int first )
+        void enum_start( int level, int first, bool alpha = false ) override
         {
             out.emit( "\\startitemize[packed,",
                       level == 0 ? 'n' : level == 1 ? 'a' : 'r',
                       "][start=", first, "]", "\n" );
         }
 
-        virtual void enum_stop( bool xspace )
+        void enum_stop( bool xspace ) override
         {
             out.emit( "\\stopitemize", xspace ? "\\vskip3pt\n" : "\n" );
         }
 
-        virtual void bullet_start( int level )
+        void bullet_start( int level ) override
         {
             out.emit( "\\startitemize[packed,",
                       level == 0 ? 1 : level == 1 ? 5 : 4,
                       "]", "\n" );
         }
 
-        virtual void bullet_item() { out.emit( "\\item{}" ); }
-        virtual void bullet_stop( bool xspace )
+        void bullet_item() override { out.emit( "\\item{}" ); }
+        void bullet_stop( bool xspace ) override
         {
             out.emit( "\\stopitemize", xspace ? "\\vskip3pt\n" : "\n" );
         }
 
         /* metapost figures */
-        virtual void mpost_start()
+        void mpost_start() override
         {
             out.emit( "\\blank[medium]\\startalignment[center]\\strut\\startMPcode", "\n" );
         }
 
-        virtual void mpost_write( std::string_view sv )
+        void mpost_write( std::string_view sv ) override
         {
             out.emit( sv );
         }
 
-        virtual void mpost_stop()
+        void mpost_stop() override
         {
             out.emit( "\\stopMPcode\\stopalignment\\blank[medium]", "\n" );
         }
 
         /* tables */
-        virtual void table_start( columns ci, bool even = false )
+        void table_start( columns ci, bool even = false ) override
         {
             table_rules = false;
             table_rows = table_cells = 0;
@@ -159,7 +159,7 @@ namespace umd::doc
                       table_rules ? "[bottomframe=on]" : "" );
         }
 
-        virtual void table_new_cell( int span )
+        void table_new_cell( int span ) override
         {
             if ( ++table_cells > 1 )
                 out.emit( "\\eTD " );
@@ -167,46 +167,46 @@ namespace umd::doc
                       table_rules ? ",topframe=on" : ",toffset=-3pt", "]" );
         }
 
-        virtual void table_new_row( bool rule = false )
+        void table_new_row( bool rule = false ) override
         {
             out.emit( "\\eTD\\eTR\\bTR\n" );
             table_rules = rule;
             table_cells = 0;
         }
 
-        virtual void table_stop()
+        void table_stop() override
         {
             out.emit( "\\eTD\\eTR" );
             out.emit( "\\eTABLE\\blank[\\posttabskip]}", "\n" );
         }
 
         /* blocks */
-        virtual void code_start( sv type )
+        void code_start( sv type ) override
         {
             out.emit( "\\starttyping[margin=10pt,option=", type, "]\n" );
         }
 
-        virtual void code_line( sv l ) { out.emit( l, "\n" ); }
-        virtual void code_stop() { out.emit( "\\stoptyping\n" ); }
-        virtual void quote_start() { out.emit( "\\startblockquote\n" ); }
-        virtual void quote_stop() { out.emit( "\\stopblockquote\n" );  }
+        void code_line( sv l ) override { out.emit( l, "\n" ); }
+        void code_stop() override { out.emit( "\\stoptyping\n" ); }
+        void quote_start() override { out.emit( "\\startblockquote\n" ); }
+        void quote_stop() override { out.emit( "\\stopblockquote\n" );  }
 
-        virtual void footnote_start() { out.emit( "\\footnote{" ); }
-        virtual void footnote_stop() { out.emit( "}" ); }
+        void footnote_start() override { out.emit( "\\footnote{" ); }
+        void footnote_stop() override { out.emit( "}" ); }
 
-        virtual void small_start() { out.emit( "\\switchtobodyfont[sans,\\codesize]" ); }
-        virtual void small_stop() { out.emit( "\\switchtobodyfont[\\bodysize]" ); }
+        void small_start() override { out.emit( "\\switchtobodyfont[sans,\\codesize]" ); }
+        void small_stop() override { out.emit( "\\switchtobodyfont[\\bodysize]" ); }
 
         /* paging */
-        virtual void pagebreak() { out.emit( "\\stopmakeup\\startmakeup[slide]", "\n" ); }
-        virtual void hrule( char32_t )
+        void pagebreak() override { out.emit( "\\stopmakeup\\startmakeup[slide]", "\n" ); }
+        void hrule( char32_t ) override
         {
             out.emit( "\\vskip-8pt\\startalignment[center]\\startMPcode\n",
                       "pickup pencircle scaled .2pt;"
                       " draw (0, 0) -- (\\the\\textwidth, 0) dashed evenly withcolor (.3, .3, .3);"
                       " \\stopMPcode\\stopalignment");
         }
-        virtual void end()
+        void end() override
         {
             out.emit( "\\stopmakeup\\stoptext", "\n" );
         }

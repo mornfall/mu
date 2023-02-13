@@ -210,3 +210,10 @@ dotted := dashpattern( on 1 off 1.5 );
 \ifnotes\switchtobodyfont[\notesize]\fi
 \ifslides\switchtobodyfont[\bodysize]\fi
 \protect
+
+\setupcombinedlist[content][list={section}, alternative=c,]
+\setuplist[section][width=12mm]
+\blank[big]
+\startsectioncolumns
+\placecontent
+\stopsectioncolumns

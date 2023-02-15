@@ -144,9 +144,9 @@
 \ifslides
   \setuphead[section, subsection] [before={\startmakeup[titleslide]}, after={\stopmakeup}]
 \else
-  \setuphead[section]       [style={\switchtobodyfont[\sectionsize]},after={\incrementcounter[slidenum]\blank[6pt]}]
-  \setuphead[subsection]    [style={\switchtobodyfont[\subsectionsize]}, before={\blank[6pt]},
-                             after={\incrementcounter[slidenum]}]
+  \setuphead[section]       [style={\switchtobodyfont[\sectionsize]},after={\incrementcounter[slidenum]\blank[10pt]}]
+  \setuphead[subsection]    [style={\switchtobodyfont[\subsectionsize]}, before={\blank[8pt]},
+                             after={\incrementcounter[slidenum]\blank[big]}, align=right, sectionstarter=]
   \setuphead[subsubsection] [style={\switchtobodyfont[\subsubsectionsize]\realbf}, numberstyle={\sectionbar}, textdistance={3pt}, distance={3pt}]
 \fi
 

@@ -1,4 +1,6 @@
 #pragma once
+#include <brick-min>
+#include <map>
 #include <vector>
 #include <codecvt> // codecvt_utf8
 #include <locale>  // wstring_convert
@@ -9,6 +11,18 @@ namespace umd::doc
     struct stream
     {
         std::ostream &ostr;
+        std::map< std::string, brq::string_builder > _buffers;
+        std::string _buffer;
+
+        void buffer( std::string n ) { _buffer = n; }
+        void resume() { _buffer = ""; }
+
+        void flush( std::string n )
+        {
+            emit( _buffers[ n ].data() );
+            _buffers.erase( n );
+        }
+
         stream( std::ostream &o ) : ostr( o ) {}
 
         void emit() {}
@@ -20,8 +34,7 @@ namespace umd::doc
         void emit( const std::u32string_view &u, const Ts & ... ts )
         {
             std::wstring_convert< std::codecvt_utf8< char32_t >, char32_t > conv;
-            ostr << conv.to_bytes( u.begin(), u.end() );
-            emit( ts... );
+            emit( conv.to_bytes( u.begin(), u.end() ), ts... );
         }
 
         template< typename... Ts >
@@ -53,7 +66,11 @@ namespace umd::doc
     template< typename T, typename... Ts >
     void stream::emit( const T &t, const Ts & ... ts )
     {
-        ostr << t;
+        if ( _buffer.empty() )
+            ostr << t;
+        else
+            _buffers[ _buffer ] << t;
+
         emit( ts... );
     }
 

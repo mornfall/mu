@@ -137,8 +137,8 @@
 
 \setuphead[section]       [align=center, sectionnumber=yes, placehead=yes, page=no,
                            aftersection={}, sectionstarter=\str!part\ , sectionstopper=:, number=yes]
-\setuphead[subsection]    [before={}, after={}, aftersection={}]
-\setuphead[subsubsection] [alternative=text, before={\blank[small]}, after={}, aftersection={}, sectionstarter={}, sectionstopper={} ]
+\setuphead[subsection]    [before={}, after={\blank[big]}, aftersection={}]
+\setuphead[subsubsection] [alternative=text, before={\blank[small]}, after={}, aftersection={}, sectionstarter={}, sectionstopper={}, aligntitle=float]
 \definebar[sectionbar][rulethickness=.5pt, offset=-0.25]
 
 \ifslides
@@ -206,6 +206,9 @@ dotted := dashpattern( on 1 off 1.5 );
 \else
   \setupfootertexts [{\footfont{\foottext}}]
 \fi
+
+\definefloat[slideflt]
+\setupcaption[slideflt][location=none]
 
 \ifnotes\switchtobodyfont[\notesize]\fi
 \ifslides\switchtobodyfont[\bodysize]\fi

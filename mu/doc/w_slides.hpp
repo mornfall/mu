@@ -50,7 +50,7 @@ namespace umd::doc
 
         void heading_stop() override
         {
-            out.emit( "}]\n" );
+            out.emit( "}]" );
         }
 
         /* display math */

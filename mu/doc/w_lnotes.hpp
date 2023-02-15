@@ -14,44 +14,36 @@ namespace umd::doc
     {
         w_lnotes( stream &out ) : w_slides( out ) { format = U"lnotes"; }
         int nest_level = 0;
-        bool in_cols = false;
-
-        void meta_end() override
-        {
-            w_slides::meta_end();
-            out.emit( "\\ifnotes" );
-        }
 
         void heading_start( int level, std::u32string_view num ) override
         {
             close_sections( level );
-            if ( level == 1 && in_cols )
-                out.emit( "\\stopsectioncolumns" );
-            out.emit( "\\fi" );
+            if ( level == 3 )
+                out.buffer( "heading" );
             open_section( level, num );
         }
 
         void heading_stop() override
         {
-            out.emit( "}]\\ifnotes{}\n" );
-            if ( section_level.top() == 1 )
-                in_cols = true, out.emit( "\\startsectioncolumns\n" );
+            w_slides::heading_stop();
+            out.resume();
         }
 
         void nest_start() override
         {
-            out.emit( "\\fi\\startslide", "\n" );
+            ASSERT_LEQ( nest_level, 1 );
+            out.emit( "\\placefloat[slideflt][rightmargin][]{}{\\vskip-.6cm\\notefont\n" );
             nest_level ++;
         }
 
         void nest_end() override
         {
-            out.emit( "\\stopslide\\ifnotes\n" );
+            out.emit( "}\n" );
             nest_level --;
+            out.flush( "heading" );
         }
 
         void pagebreak() override { out.emit( "\\page", "\n" ); }
-        void end() override { out.emit( "\\stopsectioncolumns\\fi\\stoptext", "\n" ); }
     };
 
 }

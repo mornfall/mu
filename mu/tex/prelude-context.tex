@@ -41,9 +41,11 @@
 
 \definemixedcolumns [sectioncolumns] [n=2, balance=yes, distance=24pt, separator=rule,
                                       rulethickness=.5pt, rulecolor=gray]
+\definemixedcolumns [footnotecolumns] [n=2, balance=yes, distance=24pt, separator=rule,
+                                      rulethickness=.5pt, rulecolor=gray, maxwidth=18cm]
 \setcounter         [userpage] [1]
 \setupfooter        [state=start]
-\setupfootnotes     [bodyfont=\footsize]
+\setupfootnotes[bodyfont=\footsize,location=text,width=20cm]
 \setuppagenumbering [state=start]
 \setuptolerance     [verytolerant, stretch]
 
@@ -144,10 +146,27 @@
 \ifslides
   \setuphead[section, subsection] [before={\startmakeup[titleslide]}, after={\stopmakeup}]
 \else
-  \setuphead[section]       [style={\switchtobodyfont[\sectionsize]},after={\incrementcounter[slidenum]\blank[10pt]}]
-  \setuphead[subsection]    [style={\switchtobodyfont[\subsectionsize]}, before={\blank[8pt]},
-                             after={\incrementcounter[slidenum]\blank[big]}, align=right, sectionstarter=]
-  \setuphead[subsubsection] [style={\switchtobodyfont[\subsubsectionsize]\realbf}, numberstyle={\sectionbar}, textdistance={3pt}, distance={3pt}]
+  \def\footnoteblock{\blank[big]\startfootnotecolumns\placefootnotes\stopfootnotecolumns}
+  \setuphead[section]
+            [style={\switchtobodyfont[\sectionsize]},
+             before={\footnoteblock\blank[2*big]},
+             margin=3cm,
+             after={\incrementcounter[slidenum]\blank[10pt]},
+             aftersection={}]
+
+  \setuphead[subsection]
+            [style={\switchtobodyfont[\subsectionsize]},
+             before={\footnoteblock\blank[10pt]},
+             after={\incrementcounter[slidenum]\blank[big]},
+             align=right,
+             margin=0pt,
+             sectionstarter=]
+
+  \setuphead[subsubsection]
+            [style={\switchtobodyfont[\subsubsectionsize]\realbf},
+             numberstyle={\sectionbar},
+             textdistance={3pt},
+             distance={3pt}]
 \fi
 
 %

@@ -272,18 +272,27 @@ namespace umd::doc
         process( v, char_cb, [&]( auto s ) { w.text( s ); } );
     }
 
-    void convert::emit_quote()
+    void convert::try_quote()
     {
-        if ( !in_quote )
-            w.quote_start(), in_quote = true;
-        skip( U'>' );
-        emit_text( fetch_line() );
-    }
+        std::u32string buf;
 
-    void convert::end_quote()
-    {
-        if ( in_quote )
-            w.quote_stop(), in_quote = false;
+        while ( true )
+        {
+            if ( todo.empty() ) break;
+            if ( !starts_with( U'>' ) ) break;
+
+            auto l = fetch_line();
+            l.remove_prefix( std::min( 2lu, l.size() ) );
+            buf += l;
+            buf += U"\n";
+        }
+
+        if ( !buf.empty() )
+        {
+            w.quote_start();
+            recurse( buf );
+            w.quote_stop();
+        }
     }
 
     auto convert::code_types()
@@ -709,9 +718,12 @@ namespace umd::doc
         try_table();
 
         while ( try_dispmath() );
+
         if ( !in_code )
             try_picture();
+
         try_nested();
+        try_quote();
 
         if ( todo.empty() )
         {
@@ -731,11 +743,6 @@ namespace umd::doc
 
         if ( starts_with( U'' ) )
             return end_list( -1 ), w.pagebreak(), fetch_line(), body();
-
-        if ( starts_with( U'>' ) )
-            return emit_quote(), body();
-        else
-            end_quote();
 
         if ( white_count() >= 4 )
             return emit_code(), body();

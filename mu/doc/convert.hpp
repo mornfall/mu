@@ -117,9 +117,6 @@ namespace umd::doc
         void ensure_list( int l, list::type t );
         bool try_enum();
 
-        void emit_quote();
-        void end_quote();
-
         auto code_types();
         void emit_code();
         void end_code();
@@ -129,6 +126,7 @@ namespace umd::doc
         bool try_dispmath();
         void try_nested();
         bool try_directive();
+        void try_quote();
 
         void recurse( const std::u32string &data );
 

@@ -19,7 +19,10 @@ namespace umd::doc
         {
             close_sections( level );
             if ( level == 3 )
+            {
+                out.emit( "\\blank[big]" );
                 out.buffer( "heading" );
+            }
             open_section( level, num );
         }
 

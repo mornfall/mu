@@ -1,18 +1,15 @@
 #pragma once
 #include "writer.hpp"
-#include "w_tex.hpp"
+#include "w_context.hpp"
 #include <vector>
 #include <sstream>
 #include <iostream>
 
-/* Writer for ConTeXt-based PDF lecture notes (slides interspersed with free
- * text). */
-
 namespace umd::doc
 {
-    struct w_lnotes : w_slides
+    struct w_lnotes : w_context
     {
-        w_lnotes( stream &out ) : w_slides( out ) { format = U"lnotes"; }
+        w_lnotes( stream &out ) : w_context( out ) { format = U"lnotes"; }
         int nest_level = 0;
 
         void heading_start( int level, std::u32string_view num ) override
@@ -28,7 +25,7 @@ namespace umd::doc
 
         void heading_stop() override
         {
-            w_slides::heading_stop();
+            w_context::heading_stop();
             out.resume();
         }
 

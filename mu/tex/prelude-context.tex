@@ -6,9 +6,9 @@
 % page geometry, layout and numbering
 %
 
-\definepapersize[A7w][width=65mm,height=97.5mm]
+\definepapersize[slidepage][width=78mm,height=117mm]
 \ifnotes  \setuppapersize[A4][A4] \fi
-\ifslides \setuppapersize[A7w,landscape][A7w,landscape] \fi
+\ifslides \setuppapersize[slidepage,landscape][slidepage,landscape] \fi
 
 \setuplayout [width=middle, height=middle, grid=no, header=0cm]
 \ifnotes  \setuplayout [width=fit, backspace=.75cm, topspace=.9cm, bottomspace=.30cm, footer=.8cm, margin=7cm] \fi

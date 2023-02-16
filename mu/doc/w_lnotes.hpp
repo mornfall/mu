@@ -32,7 +32,7 @@ namespace umd::doc
         void nest_start() override
         {
             ASSERT_LEQ( nest_level, 1 );
-            out.emit( "\\placefloat[slideflt][rightmargin][]{}{\\vskip-.6cm\\notefont\n" );
+            out.emit( "\\placefloat[slideflt][rightmargin][]{}{\n" );
             nest_level ++;
         }
 

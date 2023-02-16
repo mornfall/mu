@@ -215,10 +215,28 @@ dotted := dashpattern( on 1 off 1.5 );
   \blank[24pt, force]
 \fi
 
+\definefloat[slideflt]
+\setupfloat[slideflt][inner={\vskip-4.5mm\notefont}]
+\setupcaption[slideflt][location=none]
+
+\ifnotes\switchtobodyfont[\notesize]\fi
+\startnarrow[right=-6cm,left=0pt][right]
+
 \startalignment[center]
 \switchtobodyfont[\titlesize]      \mmtitle   \ifslides \blank[medium] \else \blank[small] \fi
 \switchtobodyfont[\subsectionsize] \mmauthors \ifslides \blank[big] \fi
 \stopalignment
+
+\setupcombinedlist[content][list={section}, alternative=c,]
+\setuplist[section][width=12mm]
+\blank[big]
+\startsectioncolumns
+\placecontent
+\stopsectioncolumns
+\stopnarrow
+
+\setupsidebar[distance=-0.5mm,rulecolor=darkgray]
+\setupdelimitedtext[blockquote][leftmargin=3mm,rightmargin=no]
 
 \ifslides
   \stopmakeup
@@ -227,16 +245,5 @@ dotted := dashpattern( on 1 off 1.5 );
   \setupfootertexts [{\footfont{\foottext}}]
 \fi
 
-\definefloat[slideflt]
-\setupcaption[slideflt][location=none]
-
-\ifnotes\switchtobodyfont[\notesize]\fi
 \ifslides\switchtobodyfont[\bodysize]\fi
 \protect
-
-\setupcombinedlist[content][list={section}, alternative=c,]
-\setuplist[section][width=12mm]
-\blank[big]
-\startsectioncolumns
-\placecontent
-\stopsectioncolumns

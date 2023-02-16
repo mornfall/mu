@@ -47,6 +47,15 @@ namespace umd::doc
         }
 
         void pagebreak() override { out.emit( "\\page", "\n" ); }
-    };
 
+        void quote_start() override
+        {
+            out.emit( "\\blank\\startnarrow[left=3mm][left]\\startsidebar\n" );
+        }
+
+        void quote_stop() override
+        {
+            out.emit( "\\stopsidebar\\stopnarrow\\blank\n" );
+        }
+    };
 }

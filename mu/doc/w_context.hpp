@@ -17,7 +17,6 @@ namespace umd::doc
 
         bool table_rules;
         int table_rows, table_cells;
-        int math_negspace = 0;
 
         void close_sections( int level )
         {
@@ -62,23 +61,18 @@ namespace umd::doc
                     case 'r': out.emit( "right," ); break;
                 }
             out.emit( "}]\n" );
-            out.emit( "\\noalign{\\blank[-1.5ex]}\n" );
             _in_math = true;
-            math_negspace = 2;
         }
 
         void eqn_new_cell() override { assert( _in_math ); out.emit( "\\NC " ); }
         void eqn_new_row() override
         {
             assert( _in_math );
-            out.emit( "\\NR\\noalign{\\blank[-.3ex]}\n" );
-            if ( math_negspace ) -- math_negspace;
+            out.emit( "\\NR\n" );
         }
 
         void eqn_stop() override
         {
-            if ( math_negspace )
-                out.emit( "\\noalign{\\blank[-1.5ex]}" );
             out.emit( "\\stopmathalignment\\stopformula\n" );
             _in_math = false;
         }
@@ -137,7 +131,7 @@ namespace umd::doc
         {
             table_rules = false;
             table_rows = table_cells = 0;
-            out.emit( "\\placetable[force,none]{}{\\blank[\\pretabskip]\n" );
+            out.emit( "\\placetable[force,none]{}{\n" );
             int i = 0;
             auto setup = []( char c )
             {
@@ -169,7 +163,7 @@ namespace umd::doc
             if ( ++table_cells > 1 )
                 out.emit( "\\eTD " );
             out.emit( "\\bTD[nc=", std::to_string( span ), span > 1 ? ",align={center}" : "",
-                      table_rules ? ",topframe=on" : ",toffset=-3pt", "]" );
+                      table_rules ? ",topframe=on" : ",toffset=0pt", "]" );
         }
 
         void table_new_row( bool rule = false ) override
@@ -182,7 +176,7 @@ namespace umd::doc
         void table_stop() override
         {
             out.emit( "\\eTD\\eTR" );
-            out.emit( "\\eTABLE\\blank[\\posttabskip]}", "\n" );
+            out.emit( "\\eTABLE", "\n" );
         }
 
         /* blocks */
@@ -206,7 +200,7 @@ namespace umd::doc
         void pagebreak() override { out.emit( "\\stopmakeup\\startmakeup[slide]", "\n" ); }
         void hrule( char32_t ) override
         {
-            out.emit( "\\vskip-8pt\\startalignment[center]\\startMPcode\n",
+            out.emit( "\\startalignment[center]\\startMPcode\n",
                       "pickup pencircle scaled .2pt;"
                       " draw (0, 0) -- (\\the\\textwidth, 0) dashed evenly withcolor (.3, .3, .3);"
                       " \\stopMPcode\\stopalignment");

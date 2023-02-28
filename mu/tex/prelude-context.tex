@@ -1,53 +1,50 @@
-\unprotect
-\newif\ifslides
-\ifnotes\else\slidestrue\fi
+\setuplayout
+  [width=middle,
+   height=middle,
+   grid=no,
+   header=0cm]
 
-%
-% page geometry, layout and numbering
-%
+\setuphead
+  [section]
+  [align=center,
+   sectionnumber=yes,
+   placehead=yes,
+   page=no,
+   aftersection={},
+   sectionstarter=\str!part\ ,
+   sectionstopper=:,
+   number=yes]
 
-\definepapersize[slidepage][width=78mm,height=117mm]
-\ifnotes  \setuppapersize[A4][A4] \fi
-\ifslides \setuppapersize[slidepage,landscape][slidepage,landscape] \fi
+\setuphead
+  [subsection]
+  [before={},
+   after={\blank[big]},
+   aftersection={}]
 
-\setuplayout [width=middle, height=middle, grid=no, header=0cm]
-\ifnotes  \setuplayout [width=fit, backspace=.75cm, topspace=.9cm, bottomspace=.30cm, footer=.8cm, margin=7cm] \fi
-\ifslides \setuplayout [backspace=.35cm, topspace=.0cm, bottomspace=.10cm, footer=.2cm] \fi
+\setuphead
+  [subsubsection]
+  [alternative=text,
+   before={\blank[small]},
+   after={},
+   aftersection={},
+   sectionstarter={},
+   sectionstopper={},
+   aligntitle=float]
 
-\definemakeup [slide] [pagestate=start, top=\vfill, bottom=\vfill,
-                       headerstate=start, footerstate=start, page=yes]
-\definemakeup [titleslide] [pagestate=start, headerstate=stop, footerstate=start, page=yes]
+\definebar[sectionbar][rulethickness=.5pt, offset=-0.25]
 
-\ifnotes % embedded slides
-  \definecolor[slidebg] [r=.95, g=.95, b=.95]
-  \definecounter[slidenum][]
-  \incrementcounter[slidenum] % the title slide is number 1
-  \defineoverlay[slideover]
-    [{\framed[width=\overlaywidth,height=\overlayheight,align={top,flushright},frame=no,roffset=2pt]
-            {\hfill\footfont\rawcountervalue[slidenum]}}]
-  \def\startslide{\blank[6pt]\incrementcounter[slidenum]%
-                  \startframed[align=width, width=93mm, frame=off, background={color,slideover},%
-                               backgroundcolor=slidebg, offset=8pt]%
-                  \switchtobodyfont[\bodysize]%
-                  \def\codesize{9.2pt}%
-                  \def\posttabskip{-3ex}%
-                  \setupitemize[before={\blank[4pt]\switchtobodyfont[\listsize]}, after={\blank[2pt]},%
-                                distance=1pt]}
-  \def\stopslide{\stopframed\blank[4pt]}
-\else
-  \def\startslide{\startmakeup[slide]}
-  \def\stopslide{\stopmakeup}
-\fi
+\def\footfont{\switchtobodyfont[sans, \footsize]}
+\def\notefont{\switchtobodyfont[sans, 7.5pt]}
+\def\foottext{\rlap{\mmtitle}\hfill\pagenumber/\lastpagenumber\hfill\llap{\currentdate}}
 
-\definemixedcolumns [sectioncolumns] [n=2, balance=yes, distance=24pt, separator=rule,
-                                      rulethickness=.5pt, rulecolor=gray]
-\definemixedcolumns [footnotecolumns] [n=2, balance=yes, distance=24pt, separator=rule,
-                                      rulethickness=.5pt, rulecolor=gray, maxwidth=18cm]
 \setcounter         [userpage] [1]
 \setupfooter        [state=start]
-\setupfootnotes[bodyfont=\footsize,location=text,width=20cm]
 \setuppagenumbering [state=start]
-\setuptolerance     [verytolerant, stretch]
+\setupfootertexts   [{\footfont{\foottext}}]
+
+\setuptyping
+  [before={\switchtobodyfont[\codesize]\blank[8pt]},
+   after={\blank[8pt]}]
 
 \input{prelude-typescript.tex}
 \input{prelude-strings.tex}
@@ -56,24 +53,20 @@
 \language[\mmlang]
 
 %
-% slide setup
+% colors
 %
 
-\definecolor[blackcoffee] [r=0.1, g=.04, b=.02]
-\definecolor[coffee]      [r=0.7, g=.29, b=.15]
-\definecolor[dark]        [r=0.27, g=0.27, b=0.27]
+\definecolor[blackcoffee] [r=0.10, g=.040, b=.02]
+\definecolor[coffee]      [r=0.70, g=.290, b=.15]
+\definecolor[dark]        [r=0.27, g=.270, b=.27]
 \definecolor[lightcoffee] [r=0.98, g=.406, b=.21]
-\definecolor[brownish]    [r=0.6, g=.3, b=.1]
-\definecolor[midgreen]    [r=0.2, g=.8, b=.2]
-
-\ifslides \startcolor[white] \fi % set the foreground (text) colour
-\ifslides \setupbackgrounds[page] [background=color, backgroundcolor=black] \fi
+\definecolor[brownish]    [r=0.60, g=.300, b=.10]
+\definecolor[midgreen]    [r=0.20, g=.800, b=.20]
 
 %
 % source code syntax highlighting
 %
 
-\ifbw
 \definestartstop[SynSnippetKeyword]  [\c!style=boldface]
 \definestartstop[SynSnippetOperator] []
 \definestartstop[SynSnippetBoundary] [] % [\c!style=boldface]
@@ -84,104 +77,13 @@
 \definestartstop[SynSnippetQuote]    []
 \definestartstop[SynSnippetString]   []
 \definestartstop[SynSnippetComment]  [\c!style=italic]
-\else\ifslides
-\definestartstop[SynSnippetKeyword]  [\c!color=orange,\c!style=boldface]
-\definestartstop[SynSnippetOperator] [\c!color=yellow]
-\definestartstop[SynSnippetBoundary] [\c!color=cyan,\c!style=boldface]
-\definestartstop[SynSnippet]         [DefaultSnippet]
-\definestartstop[SynSnippetName]     [\c!color=,before={\it}]
-\definestartstop[SynSnippetType]     [\c!color=blue]
-\definestartstop[SynSnippetMagic]    [\c!color=magenta]
-\definestartstop[SynSnippetQuote]    [\c!color=midgreen]
-\definestartstop[SynSnippetString]   [\c!color=midgreen]
-\definestartstop[SynSnippetComment]  [\c!color=brownish]
-\else
-\definestartstop[SynSnippetKeyword]  [\c!color=darkred,\c!style=boldface]
-\definestartstop[SynSnippetOperator] [\c!color=darkyellow]
-\definestartstop[SynSnippetBoundary] [\c!color=darkcyan,\c!style=boldface]
-\definestartstop[SynSnippet]         [DefaultSnippet]
-\definestartstop[SynSnippetName]     [\c!color=,before={\it}]
-\definestartstop[SynSnippetType]     [\c!color=darkblue]
-\definestartstop[SynSnippetMagic]    [\c!color=darkmagenta]
-\definestartstop[SynSnippetQuote]    [\c!color=darkgreen]
-\definestartstop[SynSnippetString]   [\c!color=darkgreen]
-\definestartstop[SynSnippetComment]  [\c!color=brownish]
-\fi\fi
 
 \registerctxluafile{syn-cxx.lua}    {1.001}
 \registerctxluafile{syn-python.lua} {1.001}
 \registerctxluafile{syn-llvm.lua}   {1.001}
 \registerctxluafile{syn-shell}      {1.001}
 
-\setuptyping[before={\switchtobodyfont[\codesize]\blank[8pt]}, after={\blank[8pt]}]
-
-%
-% helper macros
-%
-
 \let\center\raggedcenter
-\define[1]\d{{\mathrm d}#1} % differential
-
-%
-% named font sizes
-%
-
-\ifslides
- \def\codesize{9.2pt}
-\fi
-
-\def\pretabskip{-5ex}
-\def\posttabskip{-1.5ex}
-
-%
-% sectioning
-%
-
-\setuphead[section]       [align=center, sectionnumber=yes, placehead=yes, page=no,
-                           aftersection={}, sectionstarter=\str!part\ , sectionstopper=:, number=yes]
-\setuphead[subsection]    [before={}, after={\blank[big]}, aftersection={}]
-\setuphead[subsubsection] [alternative=text, before={\blank[small]}, after={}, aftersection={}, sectionstarter={}, sectionstopper={}, aligntitle=float]
-\definebar[sectionbar][rulethickness=.5pt, offset=-0.25]
-
-\ifslides
-  \setuphead[section, subsection] [before={\startmakeup[titleslide]}, after={\stopmakeup}]
-\else
-  \def\footnoteblock{\blank[big]\startfootnotecolumns\placefootnotes\stopfootnotecolumns}
-  \setuphead[section]
-            [style={\switchtobodyfont[\sectionsize]},
-             before={\footnoteblock\blank[2*big]},
-             margin=3cm,
-             after={\incrementcounter[slidenum]\blank[10pt]},
-             aftersection={}]
-
-  \setuphead[subsection]
-            [style={\switchtobodyfont[\subsectionsize]},
-             before={\footnoteblock\blank[10pt]},
-             after={\incrementcounter[slidenum]\blank[big]},
-             align=right,
-             margin=0pt,
-             sectionstarter=]
-
-  \setuphead[subsubsection]
-            [style={\switchtobodyfont[\subsubsectionsize]\realbf},
-             numberstyle={\sectionbar},
-             textdistance={3pt},
-             distance={3pt}]
-\fi
-
-%
-% set up spacing in various objects
-%
-
-\ifslides
-  \setupitemize[before={\blank[4pt]\switchtobodyfont[\listsize]}, after={\blank[2pt]}]
-  \setupTABLE  [style={\switchtobodyfont[\listsize]}]
-\fi
-
-\ifnotes \setupitemize[distance=1pt, before={\blank[4pt]}, after={\blank[2pt]}] \fi
-\setuptables   [distance=small, rulethickness=.4mm]
-\setuptabulate [distance=small, bodyfont=\notesize]
-\setupnarrower [middle=3mm]
 
 %
 % metapost graphics
@@ -189,67 +91,12 @@
 
 \startMPinclusions[+]
 input roundrect;
-
-color fg;
+color fg, shade_a, shade_b, shade_c, shade_d;
 fg := black;
+shade_d := (0.52, 0.52, 0.52);
+shade_c := (0.64, 0.64, 0.64);
+shade_b := (0.76, 0.76, 0.76);
+shade_a := (0.88, 0.88, 0.88);
 picture dotted;
 dotted := dashpattern( on 1 off 1.5 );
 \stopMPinclusions
-
-\ifslides \startMPinclusions[+] fg := white \stopMPinclusions
-          \setupMPinstance[metafun][textcolor=white] \fi
-
-%
-% title (top of first page if notes, a separate slide for slides)
-%
-
-\starttext
-
-\def\footfont{\switchtobodyfont[sans, \footsize]}
-\def\notefont{\switchtobodyfont[sans, 7.5pt]}
-\def\foottext{\rlap{\mmtitle}\hfill\pagenumber/\lastpagenumber\hfill\llap{\currentdate}}
-
-\ifslides
-  \setupfootertexts [{\footfont\color[white]{\hfill\currentdate}}]
-  \startmakeup[titleslide]
-  \blank[24pt, force]
-  \startalignment[center]
-   \switchtobodyfont[\titlesize]      \mmtitle   \blank[medium]
-   \switchtobodyfont[\subsectionsize] \mmauthors \blank[big]
-  \stopalignment
-\fi
-
-\definefloat[slideflt]
-\setupfloat[slideflt][inner={\vskip-4.5mm\notefont}]
-\setupcaption[slideflt][location=none]
-
-\ifnotes
-    \switchtobodyfont[\notesize]
-    \startnarrow[right=-6cm,left=0pt][right]
-
-    \startalignment[center]
-    \switchtobodyfont[\titlesize]      \mmtitle   \ifslides \blank[medium] \else \blank[small] \fi
-    \switchtobodyfont[\subsectionsize] \mmauthors \ifslides \blank[big] \fi
-    \stopalignment
-
-    \setupcombinedlist[content][list={section}, alternative=c,]
-    \setuplist[section][width=12mm]
-    \blank[big]
-    \startsectioncolumns
-    \placecontent
-    \stopsectioncolumns
-    \stopnarrow
-\fi
-
-\setupsidebar[distance=-0.5mm,rulecolor=darkgray]
-\setupdelimitedtext[blockquote][leftmargin=3mm,rightmargin=no]
-
-\ifslides
-  \stopmakeup
-  \setupfootertexts [{\footfont\color[white]{\foottext}}]
-\else
-  \setupfootertexts [{\footfont{\foottext}}]
-\fi
-
-\ifslides\switchtobodyfont[\bodysize]\fi
-\protect

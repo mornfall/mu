@@ -1,5 +1,94 @@
-\newif\ifnotes
-\notestrue
-\newif\ifbw
-\bwfalse
+\def\emcolor{\darkred}
+\def\code{\darkgreen\tt}
+
 \input{prelude-context.tex}
+
+\setuppapersize[A4][A4]
+
+\setuplayout
+  [width=fit,
+   backspace=10mm,
+   topspace=.9cm,
+   bottomspace=.30cm,
+   footer=.8cm,
+   margin=7cm]
+
+\setupfootnotes
+  [bodyfont=\footsize,
+   location=bottom,
+   rule=off,
+   before={\blank\hrule\blank[small]}]
+
+\definemixedcolumns
+  [sectioncolumns]
+  [n=2,
+   balance=yes,
+   distance=24pt,
+   separator=rule,
+   rulethickness=.5pt,
+   rulecolor=gray]
+
+\setuphead
+  [section]
+  [style={\switchtobodyfont[\sectionsize]},
+   before={\blank[2*big]},
+   margin=3cm,
+   after={\blank[10pt]},
+   aftersection={}]
+
+\setuphead
+  [subsection]
+  [style={\switchtobodyfont[\subsectionsize]},
+   before={\blank[10pt]},
+   after={\blank[big]},
+   align=right,
+   margin=0pt,
+   sectionstarter=]
+
+\setuphead
+  [subsubsection]
+  [style={\switchtobodyfont[\subsubsectionsize]\realbf},
+   numberstyle={\sectionbar},
+   textdistance=3pt,
+   distance=3pt]
+
+\setupmargindata
+  [inouter]
+  [style=\notefont]
+
+\setupitemize
+  [distance=1pt,
+   before={\blank[4pt]},
+   after={\blank[2pt]}]
+
+\definestartstop[SynSnippetKeyword]  [\c!color=darkred,\c!style=boldface]
+\definestartstop[SynSnippetOperator] [\c!color=darkyellow]
+\definestartstop[SynSnippetBoundary] [\c!color=darkcyan,\c!style=boldface]
+\definestartstop[SynSnippet]         [DefaultSnippet]
+\definestartstop[SynSnippetName]     [\c!color=,before={\it}]
+\definestartstop[SynSnippetType]     [\c!color=darkblue]
+\definestartstop[SynSnippetMagic]    [\c!color=darkmagenta]
+\definestartstop[SynSnippetQuote]    [\c!color=darkgreen]
+\definestartstop[SynSnippetString]   [\c!color=darkgreen]
+\definestartstop[SynSnippetComment]  [\c!color=brownish]
+
+\starttext
+
+\switchtobodyfont[\notesize]
+
+\startnarrow[right=-6cm,left=0pt][right]
+
+  \startalignment[center]
+    \switchtobodyfont[\titlesize]      \mmtitle   \blank[small]
+    \switchtobodyfont[\subsectionsize] \mmauthors \blank[big]
+  \stopalignment
+
+  \setupcombinedlist[content][list={section}, alternative=c,]
+  \setuplist[section][width=12mm]
+  \blank[big]
+
+  \startsectioncolumns
+    \placecontent
+  \stopsectioncolumns
+
+\stopnarrow

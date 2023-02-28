@@ -307,12 +307,12 @@ namespace umd::doc
             list_start();
         }
 
-        void enum_item()             override { list_item(); }
-        void enum_stop( bool )       override { list_stop(); out.emit( "</ol>" ); }
+        void enum_item()         override { list_item(); }
+        void enum_stop()         override { list_stop(); out.emit( "</ol>" ); }
 
-        void bullet_start( int )     override { ensure_div(); html( U"<ul>" ); list_start(); }
-        void bullet_item()           override { list_item(); }
-        void bullet_stop( bool )     override { list_stop(); html( U"</ul>" ); }
+        void bullet_start( int ) override { ensure_div(); html( U"<ul>" ); list_start(); }
+        void bullet_item()       override { list_item(); }
+        void bullet_stop()       override { list_stop(); html( U"</ul>" ); }
 
         void code_start( sv t ) override { out.emit( "<pre><code class=\"", t, "\">" ); }
         void code_line( sv l )  override { text( l, false ); out.emit( "\n" ); }

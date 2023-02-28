@@ -98,9 +98,9 @@ namespace umd::doc
             out.emit( "\\startitemize[packed,", type, "][start=", first, "]", "\n" );
         }
 
-        void enum_stop( bool xspace ) override
+        void enum_stop() override
         {
-            out.emit( "\\stopitemize", xspace ? "\\vskip3pt\n" : "\n" );
+            out.emit( "\\stopitemize\n" );
         }
 
         void bullet_start( int level ) override
@@ -111,9 +111,9 @@ namespace umd::doc
         }
 
         void bullet_item() override { out.emit( "\\item{}" ); }
-        void bullet_stop( bool xspace ) override
+        void bullet_stop() override
         {
-            out.emit( "\\stopitemize", xspace ? "\\vskip3pt\n" : "\n" );
+            out.emit( "\\stopitemize\n" );
         }
 
         /* metapost figures */

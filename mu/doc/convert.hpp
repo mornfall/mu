@@ -113,7 +113,7 @@ namespace umd::doc
 
         void heading();
         void start_list( list::type l, int indent, int first );
-        bool end_list( int count = 1, bool xspace = true );
+        bool end_list( int count = 1 );
         void ensure_list( int l, list::type t );
         bool try_enum();
 

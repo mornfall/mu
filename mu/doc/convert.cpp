@@ -112,7 +112,7 @@ namespace umd::doc
 
     void convert::heading()
     {
-        end_list( -1, false );
+        end_list( -1 );
         int level = 0;
         skip_white();
         while ( skip( U'#' ) )
@@ -135,7 +135,7 @@ namespace umd::doc
         w.heading_stop();
     }
 
-    bool convert::end_list( int count, bool xspace )
+    bool convert::end_list( int count )
     {
         if ( _list.empty() || !count )
             return false;
@@ -145,12 +145,12 @@ namespace umd::doc
 
         switch ( type )
         {
-            case list::bullets: w.bullet_stop( _list.empty() ? xspace : false ); break;
+            case list::bullets: w.bullet_stop(); break;
             case list::numbered:
-            case list::lettered: w.enum_stop( _list.empty() ? xspace : false ); break;
+            case list::lettered: w.enum_stop(); break;
         }
 
-        end_list( count - 1, xspace );
+        end_list( count - 1 );
         return true;
     }
 

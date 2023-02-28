@@ -42,6 +42,19 @@ namespace umd::doc
         void nest_start() override  { slide_start(); w_context::nest_start(); }
         void nest_end() override    { w_context::nest_end(); slide_end(); }
 
+        void table_start( columns ci, bool even = false ) override
+        {
+            slide_start();
+            w_context::table_start( ci, even );
+            out.emit( "\\switchtobodyfont[6pt]\n" );
+        }
+
+        void table_stop() override
+        {
+            w_context::table_stop();
+            slide_end();
+        }
+
         void slide_start()
         {
             if ( !in_slide )

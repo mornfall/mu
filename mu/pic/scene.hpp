@@ -314,9 +314,7 @@ namespace umd::pic
             {
                 o << "fill ";
                 path( o, false );
-                o << " withcolor (" << std::to_string( col ) << ", "
-                                    << std::to_string( col ) << ", "
-                                    << std::to_string( col ) << ");\n";
+                o << " withcolor shade_" << std::string( 1, "abcd"[ _shaded - 1 ] ) << ";\n";
             }
         }
     };

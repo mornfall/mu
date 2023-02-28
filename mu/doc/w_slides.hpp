@@ -30,7 +30,7 @@ namespace umd::doc
             w_context::heading_start( l, num );
         }
 
-        void heading_stop()
+        void heading_stop() override
         {
             w_context::heading_stop();
             if ( last_head < 3 )

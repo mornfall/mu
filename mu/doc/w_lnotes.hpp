@@ -47,12 +47,12 @@ namespace umd::doc
 
         void quote_start() override
         {
-            out.emit( "\\blank\\startnarrow[left=3mm][left]\\startsidebar\n" );
+            out.emit( "\\blank\\startsidebar\n" );
         }
 
         void quote_stop() override
         {
-            out.emit( "\\stopsidebar\\stopnarrow\\blank\n" );
+            out.emit( "\\stopsidebar\\blank\n" );
         }
     };
 }

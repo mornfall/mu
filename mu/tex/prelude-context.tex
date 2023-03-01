@@ -33,6 +33,11 @@
 
 \definebar[sectionbar][rulethickness=.5pt, offset=-0.25]
 
+\def\beforetable{\blank[small]\strut\hfill}
+\def\aftertable{\hfill\strut\blank[small]}
+\def\beforepicture{\blank[big]\strut\hfill}
+\def\afterpicture{\hfill\strut\blank[medium]}
+
 \def\footfont{\switchtobodyfont[sans, \footsize]}
 \def\notefont{\switchtobodyfont[sans, 7.5pt]}
 \def\foottext{\rlap{\mmtitle}\hfill\pagenumber/\lastpagenumber\hfill\llap{\currentdate}}

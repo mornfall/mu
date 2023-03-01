@@ -131,7 +131,6 @@ namespace umd::doc
         {
             table_rules = false;
             table_rows = table_cells = 0;
-            out.emit( "\\placetable[force,none]{}{\n" );
             int i = 0;
             auto setup = []( char c )
             {
@@ -154,7 +153,7 @@ namespace umd::doc
             for ( auto c : ci )
                 out.emit( "\\setupTABLE[c][", std::to_string( ++i ), "][", setup( c ), "]\n" );
 
-            out.emit( "\\bTABLE[toffset=0pt,boffset=0pt,loffset=2pt,roffset=2pt]\\bTR",
+            out.emit( "\\beforetable\\bTABLE[boffset=0pt,loffset=2pt,roffset=2pt]",
                       table_rules ? "[bottomframe=on]" : "" );
         }
 
@@ -168,7 +167,11 @@ namespace umd::doc
 
         void table_new_row( bool rule = false ) override
         {
-            out.emit( "\\eTD\\eTR\\bTR\n" );
+            if ( table_cells > 0 )
+                out.emit( "\\eTD" );
+            if ( ++table_rows > 1 )
+                out.emit( "\\eTR" );
+            out.emit( "\\bTR\n" );
             table_rules = rule;
             table_cells = 0;
         }
@@ -176,7 +179,7 @@ namespace umd::doc
         void table_stop() override
         {
             out.emit( "\\eTD\\eTR" );
-            out.emit( "\\eTABLE", "\n" );
+            out.emit( "\\eTABLE\\aftertable", "\n" );
         }
 
         /* blocks */

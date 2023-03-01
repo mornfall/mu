@@ -113,7 +113,7 @@ namespace umd::doc
         /* metapost figures */
         void mpost_start() override
         {
-            out.emit( "\\blank[medium]\\startalignment[center]\\strut\\startMPcode", "\n" );
+            out.emit( "\\beforepicture\\startMPcode", "\n" );
         }
 
         void mpost_write( std::string_view sv ) override
@@ -123,7 +123,7 @@ namespace umd::doc
 
         void mpost_stop() override
         {
-            out.emit( "\\stopMPcode\\stopalignment\\blank[medium]", "\n" );
+            out.emit( "\\stopMPcode\\afterpicture", "\n" );
         }
 
         /* tables */

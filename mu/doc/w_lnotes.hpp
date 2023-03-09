@@ -32,7 +32,7 @@ namespace umd::doc
         void nest_start() override
         {
             ASSERT_LEQ( nest_level, 1 );
-            out.emit( "\\inouter{\\vskip-16pt\n" );
+            out.emit( "\\margindata[summary]{\\vskip-14.5pt\n" );
             nest_level ++;
         }
 

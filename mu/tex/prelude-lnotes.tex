@@ -4,14 +4,15 @@
 \input{prelude-context.tex}
 
 \setuppapersize[A4][A4]
+\setuppagenumbering[alternative=doublesided]
 
 \setuplayout
   [width=fit,
-   backspace=10mm,
-   topspace=.9cm,
-   bottomspace=.30cm,
-   footer=.8cm,
-   margin=7cm]
+   backspace=20mm,
+   topspace=15mm,
+   bottomspace=8mm,
+   footer=8mm,
+   margin=65mm]
 
 \setupfootnotes
   [bodyfont=\footsize,
@@ -32,7 +33,6 @@
   [section]
   [style={\switchtobodyfont[\sectionsize]},
    before={\blank[2*big]},
-   margin=3cm,
    after={\blank[10pt]},
    aftersection={}]
 
@@ -52,9 +52,9 @@
    textdistance=3pt,
    distance=3pt]
 
-\setupmargindata
-  [inouter]
-  [style=\notefont]
+\definemargindata
+  [summary]
+  [style=\notefont,location=outer,width=58mm,align=flushleft,distance=3.5mm]
 
 \setupitemize
   [distance=-2pt,

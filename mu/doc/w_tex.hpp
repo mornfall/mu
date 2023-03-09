@@ -52,26 +52,23 @@ namespace umd::doc
                 auto subi = c == U'_' ? sub.npos : sub.find( c );
                 auto supi = sup.find( c );
 
-                if ( _in_math )
-                {
-                    if ( ( in_sup && supi == sup.npos ) || ( in_sub && subi == sub.npos ) )
-                        flush( 1 ), out.emit( "}" );
+                if ( ( in_sup && supi == sup.npos ) || ( in_sub && subi == sub.npos ) )
+                    flush( 1 ), out.emit( _in_math ? "}" : "}$" );
 
-                    if ( !in_sub && subi != sub.npos )
-                        flush(), out.emit( "_{" ), in_sub = true;
+                if ( !in_sub && subi != sub.npos )
+                    flush(), out.emit( _in_math ? "_{" : "$_{" ), in_sub = true;
 
-                    if ( !in_sup && supi != sup.npos )
-                        flush(), out.emit( "^{" ), in_sup = true;
+                if ( !in_sup && supi != sup.npos )
+                    flush(), out.emit( _in_math ? "^{" : "$^{" ), in_sup = true;
 
-                    if ( in_sub || in_sup )
-                        flush( 1 );
+                if ( in_sub || in_sup )
+                    flush( 1 );
 
-                    if ( ( in_sub && subi != sub.npos ) || ( in_sup && supi != sup.npos ) )
-                        out.emit( nom.substr( in_sup ? supi : subi, 1 ) );
+                if ( ( in_sub && subi != sub.npos ) || ( in_sup && supi != sup.npos ) )
+                    out.emit( nom.substr( in_sup ? supi : subi, 1 ) );
 
-                    if ( subi == sub.npos ) in_sub = false;
-                    if ( supi == sup.npos ) in_sup = false;
-                }
+                if ( subi == sub.npos ) in_sub = false;
+                if ( supi == sup.npos ) in_sup = false;
 
                 switch ( c )
                 {
@@ -111,13 +108,17 @@ namespace umd::doc
             process( t, char_cb, [&]( auto s )
             {
                 if ( in_sub || in_sup )
-                    assert( s.size() == 1 ), out.emit( "}" ), in_sub = in_sup = false;
+                {
+                    assert( s.size() == 1 );
+                    out.emit( _in_math ? "}" : "}$" );
+                    in_sub = in_sup = false;
+                }
                 else
                     out.emit( s );
             } );
 
             if ( in_sub || in_sup )
-                out.emit( "}" );
+                out.emit( _in_math ? "}" : "}$" );
         }
 
         /* spans ; may be also called within mpost btex/etex */

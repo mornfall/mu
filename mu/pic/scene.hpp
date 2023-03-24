@@ -147,7 +147,8 @@ namespace umd::pic
                 emit_curved( o );
             else
                 emit_angled( o );
-            o << ( _dashed ? " dashed dotted" : "" ) << " withcolor fg;\n";
+            o << ( _dashed ? " dashed dotted" : "" )
+              << " withcolor fg_" << std::string( 1, "abcde"[ _shade ] ) << ";\n";
         }
     };
 

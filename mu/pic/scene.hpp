@@ -190,7 +190,7 @@ namespace umd::pic
             {
                 double rad = _radius + 1, xr = x * rad, yr = y * rad;
                 double len = std::sqrt( xr * xr + yr * yr );
-                return pic::port( _position + point( xr / len, yr / len ), deg );
+                return pic::port( _position + point( xr, yr ), deg );
             };
 
             switch ( p )

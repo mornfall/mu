@@ -70,6 +70,7 @@ namespace umd::pic::convert
             auto to_obj = objects.at( to );
             std::vector< pic::point > points;
             bool dashed = false, curved = false;
+            int shade = 0;
 
             auto to_port = port( conv( to ), to_dir );
 
@@ -89,6 +90,9 @@ namespace umd::pic::convert
                     curved = true;
 
                 processed.insert( p );
+
+                if ( grid[ p ].arrow() )
+                    shade = grid[ p ].shade();
 
                 auto cell = grid[ next ];
                 auto ndir = at_dir;
@@ -116,6 +120,7 @@ namespace umd::pic::convert
             arrow._dashed = dashed;
             arrow._curved = curved;
             arrow._head   = head;
+            arrow._shade  = shade;
             std::copy( points.rbegin(), points.rend(), std::back_inserter( arrow._controls ) );
         }
 

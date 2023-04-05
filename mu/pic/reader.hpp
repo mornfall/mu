@@ -45,7 +45,7 @@ namespace umd::pic::reader
         bool text() const { return ( _char < 0x2500 || _char > 0x2580 ) &&
                                    !attach() && !arrow() && !empty(); }
         bool empty() const { return _char == U' '; }
-        bool node() const { return _char == U'●'; }
+        bool node() const { return _char == U'●' || _char == U'○'; }
         bool rounded() const { return _rounded; }
         bool dashed() const { return _dashed; }
         bool attach( dir_t dir ) const { return _attach[ dir ]; }
@@ -140,7 +140,8 @@ namespace umd::pic::reader
                 case U'╱': set_attach( north_east ); set_attach( south_west ); break;
                 case U'╲': set_attach( north_west ); set_attach( south_east ); break;
 
-                case U'●':
+                case U'●': set_shade( 4 );
+                case U'○':
                     set_attach( north_east ); set_attach( north_west );
                     set_attach( south_east ); set_attach( south_west );
                 case U'┼':

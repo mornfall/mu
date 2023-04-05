@@ -276,7 +276,11 @@ namespace umd::pic::convert
             if ( objects.at( p ) ) return; /* already taken up by an object */
 
             if ( c.node() )
-                objects[ p ] = group.add< pic::node >( xpitch * p.x(), -ypitch * p.y(), 2 );
+            {
+                auto node = group.add< pic::node >( xpitch * p.x(), -ypitch * p.y(), 2 );
+                node->_shade = c.shade();
+                objects[ p ] = node;
+            }
 
             if ( c.attach( south ) && c.attach( east ) )
                 box( p );

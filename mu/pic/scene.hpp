@@ -180,6 +180,7 @@ namespace umd::pic
     {
         point _position;
         int _radius = 5;
+        int _shade = 0;
 
         node( point p, int r = 5 ) : _position( p ), _radius( r ) {}
         node( double x, double y, int r = 5 ) : _position( x, y ), _radius( r ) {}
@@ -209,7 +210,8 @@ namespace umd::pic
 
         void emit( writer &o ) const override
         {
-            o << "fill fullcircle scaled " << std::to_string( 2 * _radius )
+            o << ( _shade ? "fill" : "draw" )
+              << " fullcircle scaled " << std::to_string( 2 * _radius )
               << " shifted " << _position << " withcolor fg;\n";
         }
     };

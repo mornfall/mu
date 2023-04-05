@@ -1,5 +1,5 @@
-\def\emcolor{\orange}
-\def\code{\midgreen\tt}
+\def\emcolor{\fgyellow}
+\def\code{\fgblue\tt}
 
 \input{prelude-context.tex}
 
@@ -67,14 +67,20 @@
 \definestartstop[SynSnippetString]   [\c!color=midgreen]
 \definestartstop[SynSnippetComment]  [\c!color=brownish]
 
+\definecolor[fgteal] [r=0.12, g=0.60, b=0.60]
+\definecolor[fgblue] [r=0.40, g=0.40, b=1.00]
+\definecolor[fgred] [r=0.62, g=0.12, b=0.12]
+\definecolor[fggreen] [r=0.12, g=0.62, b=0.12]
+\definecolor[fgyellow] [r=0.70, g=0.70, b=0.12]
+
 \startMPinclusions[+]
 fg := white;
 
 fg_a := (0.12, 0.60, 0.60);
-fg_b := (0.62, 0.12, 0.12);
-fg_c := (0.40, 0.40, 1.00);
-fg_e := (0.70, 0.70, 0.12);
+fg_b := (0.40, 0.40, 1.00);
+fg_c := (0.62, 0.12, 0.12);
 fg_d := (0.12, 0.62, 0.12);
+fg_e := (0.70, 0.70, 0.12);
 
 shade_a := (0.12, 0.12, 0.12);
 shade_b := (0.24, 0.24, 0.24);

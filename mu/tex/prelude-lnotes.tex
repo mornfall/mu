@@ -5,6 +5,9 @@
 
 \setuppapersize[A4][A4]
 \setuppagenumbering[alternative=doublesided]
+\def\lfoottext{\pagenumber/\lastpagenumber\hfill\mmtitle, \currentdate}
+\def\rfoottext{\hfill\pagenumber/\lastpagenumber}
+\setupfootertexts[\footfont{\rfoottext}\hskip-61mm][][][\hskip-61mm\footfont{\lfoottext}]
 
 \setuplayout
   [width=fit,

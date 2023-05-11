@@ -124,7 +124,7 @@ namespace umd::doc
         /* spans ; may be also called within mpost btex/etex */
         virtual void em_start() { out.emit( "{\\em{}" ); }
         virtual void em_stop()  { out.emit( "}" ); }
-        virtual void tt_start() { out.emit( "{\\code{}" ); }
+        virtual void tt_start() { out.emit( "\\code{" ); }
         virtual void tt_stop()  { out.emit( "}" ); }
         virtual void bf_start() { out.emit( "{\\bf\\realbf{}" ); }
         virtual void bf_stop()  { out.emit( "}" ); }

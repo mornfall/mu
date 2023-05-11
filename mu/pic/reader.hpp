@@ -93,16 +93,16 @@ namespace umd::pic::reader
             {
                 case U'◀': if ( !shade() ) set_shade( 4 );
                 case U'◄': if ( !shade() ) set_shade( 3 );
-                case U'◁': if ( !shade() ) set_shade( 2 );
-                case U'◅': if ( !shade() ) set_shade( 1 );
+                case U'◅': if ( !shade() ) set_shade( 2 );
+                case U'◁': if ( !shade() ) set_shade( 1 );
                            _head = true;
                 case U'╶': set_attach( east );
                            set_arrow( west );
                            break;
                 case U'▶': if ( !shade() ) set_shade( 4 );
                 case U'►': if ( !shade() ) set_shade( 3 );
-                case U'▷': if ( !shade() ) set_shade( 2 );
-                case U'▻': if ( !shade() ) set_shade( 1 );
+                case U'▻': if ( !shade() ) set_shade( 2 );
+                case U'▷': if ( !shade() ) set_shade( 1 );
                            _head = true;
                 case U'╴': set_attach( west );
                            set_arrow( east );
@@ -116,7 +116,7 @@ namespace umd::pic::reader
                            set_arrow( north );
                            break;
                 case U'▼': if ( !shade() ) set_shade( 4 );
-                case U'▽': if ( !shade() ) set_shade( 2 );
+                case U'▽': if ( !shade() ) set_shade( 1 );
                            _head = true;
                 case U'╵': set_attach( north ); set_arrow( south ); break;
 

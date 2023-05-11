@@ -24,6 +24,20 @@
   \definefontsynonym [SerifCaps]   [Serif]                 [features=smallcaps]
 \stoptypescript
 
+\starttypescript [serif] [iosev]
+  \definefontsynonym [Serif]       [name:iosevka-toil-extralight] [features=default,fallbacks=aleofb]
+  \definefontsynonym [SerifItalic] [name:iosevka-toil-extralightitalic] [features=default]
+  \definefontsynonym [SerifBold]   [name:iosevka-toil-demi]       [features=default]
+  \definefontsynonym [SerifCaps]   [Serif]                        [features=smallcaps]
+\stoptypescript
+
+\starttypescript [sans] [iosev]
+  \definefontsynonym [Sans]       [name:iosevka-aulos-extralight]       [features=default,fallbacks=aleofb]
+  \definefontsynonym [SansItalic] [name:iosevka-aulos-extralightitalic] [features=default]
+  \definefontsynonym [SansBold]   [name:iosevka-aulos-demi]       [features=default]
+  \definefontsynonym [SansCaps]   [Sans]                          [features=smallcaps]
+\stoptypescript
+
 \starttypescript [mono] [iosev]
   \definefontsynonym [Mono]       [name:iosevka-slab-extralight] [features=iocode,fallbacks=djvumath]
   \definefontsynonym [MonoItalic] [name:iosevka-slab-extralight-italic] [features=iocode]
@@ -39,6 +53,13 @@
   \definetypeface [aleo] [tt] [mono]  [iosev]    [default] [rscale=0.93]
   \definetypeface [aleo] [mm] [math]  [xccl]     [default]
   \definetypeface [aleo] [ss] [sans]  [lato]     [default]
+\stoptypescript
+
+\starttypescript  [iosev]
+  \definetypeface [iosev] [rm] [serif] [iosev]    [default]
+  \definetypeface [iosev] [tt] [mono]  [iosev]    [default]
+  \definetypeface [iosev] [mm] [math]  [xccl]     [default]
+  \definetypeface [iosev] [ss] [sans]  [iosev]    [default]
 \stoptypescript
 
 % work around my inability to make \mathrm work correctly with xccl
@@ -58,7 +79,7 @@
 
 \definefontfeature[default][default][protrusion=quality,expansion=quality]
 \setupalign[hz,hanging]
-\setupbodyfont[aleo]
+\setupbodyfont[iosev]
 \defineMPinstance[mathfun][format=metafun] % for svgtex
 \setupMPinstance[metafun][initializsations=yes,textstyle={\setupbodyfont[sans,\notesize]}]
 

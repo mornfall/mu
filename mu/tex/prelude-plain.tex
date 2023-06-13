@@ -1,0 +1,20 @@
+\input{prelude-context.tex}
+
+\def\beforetable{\blank[small]\strut\hskip-2.5pt}
+\def\aftertable{\blank[small]}
+\def\tablemargin{0pt}
+
+\setuphead
+  [section]
+  [align=right,
+   sectionnumber=yes,
+   placehead=yes,
+   page=no,
+   aftersection={},
+   sectionstarter=,
+   sectionstopper=,
+   number=yes]
+
+\startalignment[center]
+\switchtobodyfont[\titlesize]\mmtitle\blank[big]
+\stopalignment

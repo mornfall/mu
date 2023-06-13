@@ -21,15 +21,16 @@ struct w_doctype : doc::w_noop
 };
 
 template< typename writer, typename... args_t >
-void convert( std::u32string_view buf, args_t... args )
+void convert( std::string outfn, std::u32string_view buf, args_t... args )
 {
-    doc::stream out( std::cout );
+    std::unique_ptr< std::ofstream > file( outfn == "-" ? nullptr : new std::ofstream( outfn.c_str() ) );
+    doc::stream out( file ? *file : std::cout );
     writer w( out, args... );
     doc::convert conv( buf, w );
     conv.run();
 }
 
-int doctype( std::u32string_view buf, std::u32string dt, std::string embed )
+int doctype( std::u32string_view buf, std::u32string dt, std::string embed, std::string out )
 {
     w_doctype wdt;
 
@@ -40,10 +41,10 @@ int doctype( std::u32string_view buf, std::u32string dt, std::string embed )
         dt = wdt.type;
     }
 
-    if      ( dt == U"slides" ) convert< doc::w_slides >( buf );
-    else if ( dt == U"lnotes" ) convert< doc::w_lnotes >( buf );
-    else if ( dt == U"html" )   convert< doc::w_html >( buf, embed );
-    else if ( dt == U"paper" )  convert< doc::w_paper >( buf );
+    if      ( dt == U"slides" ) convert< doc::w_slides >( out, buf );
+    else if ( dt == U"lnotes" ) convert< doc::w_lnotes >( out, buf );
+    else if ( dt == U"html" )   convert< doc::w_html >( out, buf, embed );
+    else if ( dt == U"paper" )  convert< doc::w_paper >( out, buf );
     else
     {
         std::cerr << "unknown document type " << to_utf8( dt ) << std::endl;
@@ -60,7 +61,7 @@ int main( int argc, const char **argv )
 
     std::u32string dt;
     const char *fn = argv[ 1 ];
-    std::string embed;
+    std::string embed, out;
 
     for ( int i = 1; i < argc; ++i )
     {
@@ -68,6 +69,8 @@ int main( int argc, const char **argv )
             dt = U"html", fn = argv[ i + 1 ];
         if ( argv[ i ] == std::string( "--embed" ) )
             embed = argv[ i + 1 ], fn = argv[ i + 2 ];
+        if ( argv[ i ] == std::string( "-o" ) )
+            out = argv[ i + 1 ], fn = argv[ i + 2 ];
     }
 
     std::u32string buf;
@@ -77,5 +80,5 @@ int main( int argc, const char **argv )
     else
         buf = read_file( std::cin );
 
-    return doctype( buf, dt, embed );
+    return doctype( buf, dt, embed, out );
 }

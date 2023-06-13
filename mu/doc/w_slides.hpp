@@ -14,7 +14,7 @@ namespace umd::doc
 
         w_slides( stream &out ) : w_context( out )
         {
-            format = U"slides";
+            doctype = U"slides";
         }
 
         void meta_end() override

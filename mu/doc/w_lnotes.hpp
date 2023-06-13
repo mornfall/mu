@@ -9,7 +9,7 @@ namespace umd::doc
 {
     struct w_lnotes : w_context
     {
-        w_lnotes( stream &out ) : w_context( out ) { format = U"lnotes"; }
+        w_lnotes( stream &out ) : w_context( out ) { doctype = U"lnotes"; }
         int nest_level = 0;
 
         void heading_start( int level, std::u32string_view num ) override

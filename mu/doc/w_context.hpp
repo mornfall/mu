@@ -11,7 +11,7 @@ namespace umd::doc
 {
     struct w_context : w_tex
     {
-        w_context( stream &out ) : w_tex( out ) { format = U"context"; }
+        w_context( stream &out ) : w_tex( out ) { doctype = U"context"; }
 
         std::stack< int > section_level;
 

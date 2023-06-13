@@ -15,7 +15,7 @@ namespace umd::doc
         w_tex( stream &out ) : out( out ) {}
 
         bool _in_math = false;
-        sv format;
+        sv format, doctype;
 
         std::string heading_cmd( int l )
         {
@@ -30,14 +30,18 @@ namespace umd::doc
         {
             if ( key == U"format" )
                 format = value;
+            if ( key == U"doctype" )
+                doctype = value;
 
             out.emit( "\\def\\mm", key, "{", value, "}\n" );
         }
 
         virtual void meta_end()
         {
-            if ( !format.empty() )
-                out.emit( "\\input{prelude-", format, ".tex}\n" );
+            if ( format.empty() )
+                format = doctype;
+
+            out.emit( "\\input{prelude-", format, ".tex}\n" );
         }
 
         virtual void text( std::u32string_view t )

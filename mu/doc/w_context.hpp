@@ -153,7 +153,7 @@ namespace umd::doc
             for ( auto c : ci )
                 out.emit( "\\setupTABLE[c][", std::to_string( ++i ), "][", setup( c ), "]\n" );
 
-            out.emit( "\\beforetable\\bTABLE[boffset=0pt,loffset=2pt,roffset=2pt]",
+            out.emit( "\\beforetable\\bTABLE[boffset=0pt,loffset=\\tablemargin,roffset=\\tablemargin]",
                       table_rules ? "[bottomframe=on]" : "" );
         }
 

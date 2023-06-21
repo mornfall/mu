@@ -23,11 +23,11 @@ namespace umd::doc
             out.buffer( "not_slides" );
         }
 
-        void heading_start( int l, sv num ) override
+        void heading_start( int l, sv num, sv ref ) override
         {
             last_head = l;
             slide_start();
-            w_context::heading_start( l, num );
+            w_context::heading_start( l, num, ref );
         }
 
         void heading_stop() override

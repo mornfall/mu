@@ -38,7 +38,7 @@ namespace umd::doc
             section_level.push( level );
         }
 
-        virtual void heading_start( int level, std::u32string_view num )
+        void heading_start( int level, sv num, sv ref ) override
         {
             close_sections( level );
             open_section( level, num );

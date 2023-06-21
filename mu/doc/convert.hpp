@@ -137,6 +137,9 @@ namespace umd::doc
         void ensure_list( int l, list::type t );
         bool try_enum();
 
+        template< typename flush_t > void span_start( flush_t, span );
+        template< typename flush_t > void span_stop( flush_t, span );
+
         void emit_quote();
         void end_quote();
 

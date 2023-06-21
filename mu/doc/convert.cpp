@@ -232,6 +232,9 @@ namespace umd::doc
                 alpha = std::islower( letter ) ? lower : upper;
             }
 
+        if ( !digits && alpha == none )
+            return false;
+
         if ( l.size() < 2 || l[ 0 ] != U'.' || l[ 1 ] != U' ' )
             return false;
 

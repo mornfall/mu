@@ -62,7 +62,7 @@ int main( int argc, const char **argv )
 
     std::u32string dt;
     const char *fn = argv[ 1 ];
-    std::string embed, out;
+    std::string embed, out = "-";
 
     for ( int i = 1; i < argc; ++i )
     {

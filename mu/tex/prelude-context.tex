@@ -95,26 +95,3 @@
 \registerctxluafile{syn-shell}      {1.001}
 
 \let\center\raggedcenter
-
-%
-% metapost graphics
-%
-
-\startMPinclusions[+]
-input roundrect;
-color fg, shade_a, shade_b, shade_c, shade_d, fg_a, fg_b, fg_c, fg_d, fg_e;
-fg := black;
-
-fg_a := (0.10, 0.60, 0.60);
-fg_b := (0.10, 0.10, 0.60);
-fg_c := (0.60, 0.10, 0.10);
-fg_d := (0.10, 0.60, 0.10);
-fg_e := (0.60, 0.60, 0.10);
-
-shade_d := (0.52, 0.52, 0.52);
-shade_c := (0.64, 0.64, 0.64);
-shade_b := (0.76, 0.76, 0.76);
-shade_a := (0.88, 0.88, 0.88);
-picture dotted;
-dotted := dashpattern( on 1 off 1.5 );
-\stopMPinclusions

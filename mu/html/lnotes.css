@@ -35,7 +35,7 @@ a:link, a:visited { color: navy; text-decoration: none; }
 }
 
 #toc ol { padding-inline-start: 1em; display: block; }
-div ol, div ul { margin-block-start: .7ex; margin-block-end: 1.4ex; }
+div ol, div ul { margin-block-start: .5em; margin-block-end: 1.4ex; }
 li > ol { padding-inline-start: 1.2em; list-style-type: lower-alpha; }
 
 .footnote { display: flex; flex-direction: row; font-size: smaller; }
@@ -47,11 +47,15 @@ td { padding: 2pt; }
 .center { text-align: center; margin-top: 6pt; margin-bottom: 6pt; }
 .right  { text-align: right; }
 h1, h2, h3 { font-family: "Aleo Regular"; font-weight: normal; }
+
 h3 { display: inline; font-size: 100%; font-weight: bold; }
 h3 + .par { display: inline; }
+a + .par { display: inline; }
+a + .par + .par { margin-top: .5em }
+h3:before { content: ' '; display: block; margin-top: .5em; }
 
-div { padding-bottom: .7ex; }
-pre { padding-top: 0; padding-bottom: .7ex; margin-top: .7ex; margin-bottom: .7ex; }
+div { padding-bottom: .5em; }
+pre { padding-top: 0; padding-bottom: .5em; margin-top: .5em; margin-bottom: .5em; }
 img { display: block; max-width: 97%; margin: 1.5ex auto 1.5ex auto; }
 
 .hrule { border-top: 1px solid black; }

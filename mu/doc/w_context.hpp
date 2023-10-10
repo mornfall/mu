@@ -200,7 +200,7 @@ namespace umd::doc
         void small_stop() override { out.emit( "\\switchtobodyfont[\\bodysize]" ); }
 
         /* paging */
-        void pagebreak() override { out.emit( "\\stopmakeup\\startmakeup[slide]", "\n" ); }
+        void pagebreak() override { out.emit( "\\pagebreak\n" ); }
         void hrule( char32_t ) override
         {
             out.emit( "\\startalignment[center]\\startMPcode\n",

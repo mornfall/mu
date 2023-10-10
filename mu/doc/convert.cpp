@@ -325,6 +325,12 @@ namespace umd::doc
                     break;
                 case 0x2028:
                     flush(); w.linebreak(); break;
+                case '\t':
+                    flush(); w.tab(); break;
+                case U' ':
+                    if ( _spans.size() == 1 && is_ref( _spans.top() ) )
+                        span_stop( flush, _spans.top() );
+                    break;
                 default:
                     if ( !in_math && sup.find( c ) != sup.npos )
                         emit_footnote( flush, c );

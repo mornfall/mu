@@ -263,6 +263,8 @@ namespace umd::doc
                     break;
                 case 0x2028:
                     flush(); w.linebreak(); break;
+                case '\t':
+                    flush(); w.tab(); break;
                 default:
                     if ( !in_math && sup.find( c ) != sup.npos )
                         emit_footnote( flush, c );

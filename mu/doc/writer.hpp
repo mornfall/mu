@@ -137,6 +137,7 @@ namespace umd::doc
         virtual void paragraph() {}
         virtual void pagebreak() {}
         virtual void linebreak() {}
+        virtual void tab() {}
         virtual void hrule( char32_t ) {}
 
         virtual void nest_start() {}

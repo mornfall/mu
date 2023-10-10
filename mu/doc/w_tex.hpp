@@ -143,6 +143,7 @@ namespace umd::doc
 
         virtual void code_line( std::u32string_view l ) { out.emit( l, "\n" ); }
         virtual void paragraph() { out.emit( "\n" ); }
+        virtual void linebreak() { out.emit( "\\\\" ); }
         virtual void tab() { out.emit( "\\strut\\hfill\\strut{}" ); }
     };
 

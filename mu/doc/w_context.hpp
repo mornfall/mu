@@ -185,7 +185,7 @@ namespace umd::doc
         /* blocks */
         void code_start( sv type ) override
         {
-            out.emit( "\\starttyping[margin=10pt,option=", type, "]\n" );
+            out.emit( "\\starttyping[margin=\\codemargin,option=", type, "]\n" );
         }
 
         void code_line( sv l ) override { out.emit( l, "\n" ); }

@@ -41,11 +41,12 @@ int doctype( std::u32string_view buf, std::u32string dt, std::string embed, std:
         dt = wdt.type;
     }
 
-    if      ( dt == U"slides" ) convert< doc::w_slides >( out, buf );
-    else if ( dt == U"lnotes" ) convert< doc::w_lnotes >( out, buf );
-    else if ( dt == U"plain" )  convert< doc::w_context >( out, buf );
-    else if ( dt == U"html" )   convert< doc::w_html >( out, buf, embed );
-    else if ( dt == U"paper" )  convert< doc::w_paper >( out, buf );
+    if      ( dt == U"slides" )   convert< doc::w_slides >( out, buf );
+    else if ( dt == U"lnotes" )   convert< doc::w_lnotes >( out, buf );
+    else if ( dt == U"workbook" ) convert< doc::w_lnotes >( out, buf );
+    else if ( dt == U"plain" )    convert< doc::w_context >( out, buf );
+    else if ( dt == U"html" )     convert< doc::w_html >( out, buf, embed );
+    else if ( dt == U"paper" )    convert< doc::w_paper >( out, buf );
     else
     {
         std::cerr << "unknown document type " << to_utf8( dt ) << std::endl;

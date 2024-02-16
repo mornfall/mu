@@ -8,15 +8,15 @@
 \setuppagenumbering[alternative=doublesided]
 \def\lfoottext{\pagenumber/\lastpagenumber\hfill\mmtitle, \currentdate}
 \def\rfoottext{\hfill\pagenumber/\lastpagenumber}
-\setupfootertexts[\footfont{\rfoottext}\hskip-61mm][][][\hskip-61mm\footfont{\lfoottext}]
+\setupfootertexts[\footfont{\rfoottext}][][][\footfont{\lfoottext}]
 
 \setuplayout
   [width=fit,
-   backspace=20mm,
-   topspace=15mm,
-   bottomspace=8mm,
+   backspace=8mm,
+   topspace=8mm,
+   bottomspace=4mm,
    footer=8mm,
-   margin=15mm]
+   margin=7mm]
 
 \setupfootnotes
   [bodyfont=\footsize,

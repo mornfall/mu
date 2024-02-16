@@ -43,8 +43,8 @@
 \setuphead
   [subsection]
   [style={\switchtobodyfont[\subsectionsize]},
-   before={\blank[10pt]},
-   after={\blank[big]},
+   before={},
+   after={\nowhitespace},
    align=right,
    margin=0pt,
    sectionstarter=]
@@ -52,6 +52,7 @@
 \setuphead
   [subsubsection]
   [style={\switchtobodyfont[\subsubsectionsize]\realbf},
+   before={},
    numberstyle={\sectionbar},
    textdistance=3pt,
    distance=3pt]
@@ -64,6 +65,12 @@
   [distance=-2pt,
    before={\blank[3pt]},
    after={\blank[3pt]}]
+
+\setuptyping
+  [before={\switchtobodyfont[\codesize]\blank[6pt]\blank[disable]},
+   after={}]
+
+\setupformula[spacebefore=0pt,spaceafter=nowhite]
 
 \definestartstop[SynSnippetKeyword]  [\c!color=darkred,\c!style=boldface]
 \definestartstop[SynSnippetOperator] [\c!color=darkyellow]
@@ -96,3 +103,4 @@
   \stopsectioncolumns
 
 \stopnarrow
+\setupwhitespace[6pt]
